@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.8.0](https://github.com/ayenisholah/traverse/compare/v0.7.1...v0.8.0) (2026-11-08)
+
+
+### Features
+
+* **advisories:** serve osv advisories in the graph ([68b079c](https://github.com/ayenisholah/traverse/commit/68b079c7653d45f25094ae39db083cc732a3c331))
+* **packages:** serve npm data in the graph ([bca690a](https://github.com/ayenisholah/traverse/commit/bca690a0123ff59c81b01f8e4f02471c8cb29284))
+* **repo-checks:** add personal data scrubbing for recordings ([d3febe0](https://github.com/ayenisholah/traverse/commit/d3febe0d0ed8e9c9d36a18b29ff498c5f7142816))
+* **repo-checks:** remove contact details from recordings ([d5d3125](https://github.com/ayenisholah/traverse/commit/d5d3125559324a6b2e50105c6a8bbdd16e08195b))
+* **repo-checks:** scrub ip addresses from recordings ([711ae65](https://github.com/ayenisholah/traverse/commit/711ae6566cf1faae780e8ce9a94a39046cfcfd8e))
+* **repositories:** serve github data in the graph ([54ea50c](https://github.com/ayenisholah/traverse/commit/54ea50c14f6f9b590fc5939c6ccea4ee6949556c))
+* **subgraph-kit:** add a bounded upstream fetch ([f73514a](https://github.com/ayenisholah/traverse/commit/f73514a924f841f3aac898264c6d5934ca45192b))
+* **subgraph-kit:** add caching, retries and limits for upstream calls ([8650674](https://github.com/ayenisholah/traverse/commit/86506747fc4725437981c39e9eb5ca8bf4ba5ef9))
+* **subgraph-kit:** add the shared subgraph server ([a9dda59](https://github.com/ayenisholah/traverse/commit/a9dda595a80e86def0fec7adab972105325ac66b))
+* **subgraph-kit:** let a 404 count as a source failure ([ddcff3f](https://github.com/ayenisholah/traverse/commit/ddcff3f8f68e73879f18490d6f91254a9452654b))
+* **subgraph-kit:** share formats, endpoint checks and test helpers ([63e924b](https://github.com/ayenisholah/traverse/commit/63e924b7682f452f440b105b2f137d9f8d4700ab))
+
+
+### Bug Fixes
+
+* **packages:** resolve the code scanning findings ([9b31f6e](https://github.com/ayenisholah/traverse/commit/9b31f6e75ed52f907139b5e72acaa489a76096fb))
+
 ## [0.7.1](https://github.com/ayenisholah/traverse/compare/v0.7.0...v0.7.1) (2026-11-06)
 
 
