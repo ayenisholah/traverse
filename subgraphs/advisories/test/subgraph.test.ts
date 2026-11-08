@@ -736,22 +736,30 @@ describe("caching an empty list", () => {
     ]);
   });
 
-  it("[FR-SG-6] won't serve a cached list that breaks the rules on the way in", async () => {
+  it.each([
+    ["summary", { summary: "ask person@example.org" }],
+    ["ID", { id: "me@example.org" }],
+    ["fix version", { fixedIn: "mail me@example.org" }],
+  ])("[FR-SG-6] won't serve a cached advisory with a forged %s", async (_, change) => {
     const cache = memoryCache();
     const forged = {
       id: "GHSA-1234",
-      summary: "ask person@example.org",
+      summary: "Prototype pollution",
       severity: null,
-      fixedIn: null,
+      fixedIn: "1.0.1",
+      ...change,
     };
     cache.store.set(
       "OSV:v1:https://osv.example:query:ms@*#",
       JSON.stringify({ value: { advisories: [forged] }, storedAt: 0 }),
     );
+    const fetch = vi.fn<typeof globalThis.fetch>(() =>
+      Promise.resolve(Response.json({ vulns: [{ id: "GHSA-9999" }] })),
+    );
     const osv = createOsvClient({
       upstream: createUpstream({
         source: "OSV",
-        fetch: () => Promise.resolve(Response.json({ vulns: [{ id: "GHSA-9999" }] })),
+        fetch,
         cache,
         logger: () => silentLogger,
         now: () => 1,
@@ -760,6 +768,7 @@ describe("caching an empty list", () => {
     });
 
     expect((await osv.advisories("ms", undefined))?.map(({ id }) => id)).toEqual(["GHSA-9999"]);
+    expect(fetch).toHaveBeenCalled();
   });
 
   it("[FR-SG-6] keys each version separately, because the fix depends on it", async () => {

@@ -426,4 +426,46 @@ describe("caching", () => {
     expect(missing).toBeNull();
     expect(upstream).toHaveBeenCalledTimes(2);
   });
+
+  const goodEntry = { stars: 1, owner: "expressjs", latestRelease: "v1.0.0" };
+  const cachedClient = (value: unknown) => {
+    const cache = memoryCache();
+    cache.store.set(
+      "GitHub:v1:https://api.github.com:expressjs/express",
+      JSON.stringify({ value, storedAt: 0 }),
+    );
+    const upstream = vi.fn<typeof fetch>((_, init) =>
+      Promise.resolve(replay(init?.body as string)),
+    );
+    const github = createGithubClient({
+      upstream: createUpstream({
+        source: "GitHub",
+        fetch: upstream,
+        cache,
+        logger: () => silentLogger,
+        now: () => 1,
+      }),
+      graphqlUrl: "https://api.github.com/graphql",
+      token: TOKEN,
+    });
+    return { github, upstream };
+  };
+
+  it.each([
+    ["owner", { owner: "me@example.org" }],
+    ["release", { latestRelease: "mail me@example.org" }],
+  ])("[FR-SG-6] won't serve a cached repository with a forged %s", async (_, change) => {
+    const { github, upstream } = cachedClient({ ...goodEntry, ...change });
+
+    expect(await github.repository(EXPRESS)).toMatchObject({ owner: "expressjs" });
+    expect(await github.repository(EXPRESS)).not.toMatchObject(change);
+    expect(upstream).toHaveBeenCalledOnce();
+  });
+
+  it("[FR-SG-6] serves a cached repository that keeps the rules", async () => {
+    const { github, upstream } = cachedClient(goodEntry);
+
+    expect(await github.repository(EXPRESS)).toMatchObject(goodEntry);
+    expect(upstream).not.toHaveBeenCalled();
+  });
 });
