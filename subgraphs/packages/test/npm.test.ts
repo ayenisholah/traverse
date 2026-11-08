@@ -249,4 +249,69 @@ describe("caching", () => {
     expect(await npm.latest("ms")).toMatchObject({ license: null, repositoryUrl: null });
     expect(fetch).toHaveBeenCalledTimes(1);
   });
+  const fresh = {
+    version: "2.0.0",
+    license: "MIT",
+    repository: "github:owner/repo",
+    dependencies: { a: "^1.0.0" },
+    versions: { "2.0.0": {} },
+    downloads: 7,
+  };
+  const forgedClient = (key: string, value: unknown) => {
+    const cache = memoryCache();
+    cache.store.set(key, JSON.stringify({ value, storedAt: 0 }));
+    const fetch = vi.fn<typeof globalThis.fetch>(() => Promise.resolve(Response.json(fresh)));
+    const upstream = (source: string) =>
+      createUpstream({ source, fetch, cache, logger: () => silentLogger, now: () => 1 });
+    const npm = createNpmClient({
+      registry: upstream("npm"),
+      downloads: upstream("npm downloads"),
+      registryUrl: "https://r",
+      downloadsUrl: "https://d",
+    });
+    return { npm, fetch };
+  };
+  const goodLatest = {
+    latestVersion: "1.0.0",
+    license: "MIT",
+    repositoryUrl: null,
+    dependencies: [{ name: "a", range: "^1.0.0" }],
+  };
+
+  it.each([
+    ["version", { latestVersion: "me@example.org" }],
+    ["licence", { license: "mail me@example.org" }],
+    ["repository", { repositoryUrl: "me@example.org" }],
+    ["dependency name", { dependencies: [{ name: "me@example.org", range: "^1.0.0" }] }],
+    ["dependency range", { dependencies: [{ name: "a", range: "me@example.org" }] }],
+  ])("[FR-SG-6] won't serve a cached package with a forged %s", async (_, change) => {
+    const { npm, fetch } = forgedClient("npm:v1:https://r:latest:ms", { ...goodLatest, ...change });
+
+    expect((await npm.latest("ms"))?.latestVersion).toBe("2.0.0");
+    expect(fetch).toHaveBeenCalledOnce();
+  });
+
+  it("[FR-SG-6] serves a cached package that keeps the rules", async () => {
+    const { npm, fetch } = forgedClient("npm:v1:https://r:latest:ms", goodLatest);
+
+    expect((await npm.latest("ms"))?.latestVersion).toBe("1.0.0");
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("[FR-SG-6] won't serve a cached version list with a forged version", async () => {
+    const { npm, fetch } = forgedClient("npm:v1:https://r:versions:ms", [
+      "1.0.0",
+      "me@example.org",
+    ]);
+
+    expect(await npm.versions("ms")).toEqual(["2.0.0"]);
+    expect(fetch).toHaveBeenCalledOnce();
+  });
+
+  it("[FR-SG-6] won't serve a cached download count out of range", async () => {
+    const { npm, fetch } = forgedClient("npm downloads:v1:https://d:ms", -1);
+
+    expect(await npm.weeklyDownloads("ms")).toBe(7);
+    expect(fetch).toHaveBeenCalledOnce();
+  });
 });
