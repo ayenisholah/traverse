@@ -13,6 +13,7 @@
     "packages/*/*.config.ts",
     "subgraphs/*/src/**/*.ts",
     "subgraphs/*/test/**/*.ts",
+    "router/test/**/*.ts",
     "*.config.ts"
   ]
 }

@@ -26,6 +26,7 @@
     "test:demo": "BASE_PATH=/traverse npm run build:web && BASE_PATH=/traverse npm run test:e2e",
     "generate:tokens": "node scripts/generate-tokens.ts",
     "generate:demo": "node scripts/generate-demo-graph.ts",
+    "generate:router": "node scripts/generate-router.ts",
     "check:deps": "depcruise \"{packages,subgraphs,apps,infra,scripts}/**/*.{ts,tsx}\" --config .dependency-cruiser.cjs",
     "check:dupes": "jscpd --config .jscpd.json",
     "check:unused": "knip",
@@ -58,6 +59,7 @@
     "eslint": "^10.14.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "globals": "^17.14.0",
+    "jose": "6.2.15",
     "jscpd": "^5.4.2",
     "jsdom": "^31.0.0",
     "knip": "^6.44.1",
@@ -66,7 +68,8 @@
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.72.1",
     "vite": "^8.3.6",
-    "vitest": "^4.1.12"
+    "vitest": "^4.1.12",
+    "yaml": "2.9.1"
   },
   "overrides": {
     "@wundergraph/composition": {

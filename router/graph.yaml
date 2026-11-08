@@ -1,0 +1,16 @@
+# Input for `wgc router compose`. Run `npm run generate:router` after changing a subgraph's schema.
+# The routing URLs are where the local stack runs each subgraph.
+version: 1
+subgraphs:
+  - name: packages
+    routing_url: http://127.0.0.1:4101/graphql
+    schema:
+      file: ../subgraphs/packages/schema.graphqls
+  - name: repositories
+    routing_url: http://127.0.0.1:4102/graphql
+    schema:
+      file: ../subgraphs/repositories/schema.graphqls
+  - name: advisories
+    routing_url: http://127.0.0.1:4103/graphql
+    schema:
+      file: ../subgraphs/advisories/schema.graphqls

@@ -13,7 +13,11 @@ export default defineConfig({
         test: {
           ...shared,
           name: "node",
-          include: ["packages/*/test/**/*.test.ts", "subgraphs/*/test/**/*.test.ts"],
+          include: [
+            "packages/*/test/**/*.test.ts",
+            "subgraphs/*/test/**/*.test.ts",
+            "router/test/*.test.ts",
+          ],
           exclude: ["{packages,subgraphs}/*/test/integration/**"],
           environment: "node",
         },
