@@ -1,6 +1,6 @@
 # Progress
 
-**Updated:** 2026-11-06
+**Updated:** 2026-11-08
 
 Read this first. It says what's done, what's in progress and what's left, so any agent can resume after a session ends unexpectedly. Update it in the same commit as the work.
 
@@ -12,6 +12,9 @@ Traverse is built on WunderGraph Cosmo and helps frontend developers explore a f
 
 | Date | Work | PR |
 |---|---|---|
+| 2026-11-08 | README roadmap and status brought up to date: M1 waits on user feedback, M2 is in progress, the three subgraphs are built, and the Action example pins `v0.8.0`. | `docs/readme-roadmap` |
+| 2026-11-08 | Released `v0.8.0` to npm with provenance, after approving the release pull request's workflow runs by API. Deleted the stale `signalbox` release and `@types/node` 26 branches. | #44 |
+| 2026-11-08 | Forged-entry tests for every check run on cache entries read back, each proven by removing the check. Found by the guardrail review of upstream resilience. | #48 |
 | 2026-11-05 | Repository tooling and README | #1, #2 |
 | 2026-11-05 | Specification, requirements and project documents | #3 |
 | 2026-11-05 | `AGENTS.md` and `CLAUDE.md` | #4 |
@@ -58,7 +61,8 @@ Nothing. Start the next item below.
 In order:
 
 1. M2: `feat/local-router`, then close the milestone.
-2. Set aside by the owner on 2026-11-06: three frontend developers trying Traverse on their own repositories, for `docs/USER_FEEDBACK.md`. It's the last M1 exit item, and only the owner can arrange it.
+2. `fix/upstream-limits` (FR-SG-6), from the guardrail review of #48: cap `Retry-After`, so one 429 can't pause a source until restart, and stop one client's batch from filling the shared 500-slot queue.
+3. Set aside by the owner on 2026-11-06: three frontend developers trying Traverse on their own repositories, for `docs/USER_FEEDBACK.md`. It's the last M1 exit item, and only the owner can arrange it.
 
 ## Blocked
 
@@ -113,4 +117,8 @@ In order:
 - The page must import only types from `graph-core`. A Playwright test fails if the composer reaches the map page.
 - Merge pull requests with `gh pr merge --rebase --delete-branch` once checks pass on the current commit.
 - Force-pushes need the owner's approval or the owner's own terminal.
+- The owner asked about an Aurora or RDS database on 2026-11-08, and chose to plan it and finish M2 first. The engine stays RDS Postgres, as `SPEC.md` says, and Aurora would need an ADR. Postgres in Docker comes with `feat/workspace-subgraph` (M4), and RDS in CDK with `feat/data-stack` (M6), after account setup and the owner's confirmation of the first deploy.
+- The owner chose to keep using the local AWS CLI user for read-only lookups. Its keys stay on that machine and never reach the repository or CI, where GR-5 applies.
+- Release pull requests from `github-actions[bot]` wait for workflow approval. Approve the runs on the current head with `gh api -X POST repos/ayenisholah/traverse/actions/runs/<id>/approve`, after reading the diff.
+- After a publish, npm can return 404 for a few seconds. Check again before treating it as a failure.
 - Shell commands run in zsh, where an unquoted `$VAR` doesn't split into words. After a bulk edit, confirm the result with a search, not an exit code.
