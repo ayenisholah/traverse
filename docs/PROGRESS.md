@@ -12,6 +12,7 @@ Traverse is built on WunderGraph Cosmo and helps frontend developers explore a f
 
 | Date | Work | PR |
 |---|---|---|
+| 2026-11-08 | `router/`: the three subgraphs composed behind the pinned router, with a hardened public config. Persisted operations only, from local files; cost limits that also cover persisted operations; anonymous reads, with invalid tokens refused. The GR-1 check requires every risky setting written out literally, and a second check holds the deployment's environment to six known variables, after the guardrail review got APQ, MCP and wildcard CORS through environment variables. A Docker e2e suite in `verify` runs the join, GR-2, the limits, the token rules and a GitHub outage on the pinned image. FR-GW-2, FR-GW-4, FR-SG-5, FR-SG-6, GR-1 and GR-2 are done, and M2 is done. | `feat/local-router` |
 | 2026-11-08 | README roadmap and status brought up to date: M1 waits on user feedback, M2 is in progress, the three subgraphs are built, and the Action example pins `v0.8.0`. | `docs/readme-roadmap` |
 | 2026-11-08 | Released `v0.8.0` to npm with provenance, after approving the release pull request's workflow runs by API. Deleted the stale `signalbox` release and `@types/node` 26 branches. | #44 |
 | 2026-11-08 | Forged-entry tests for every check run on cache entries read back, each proven by removing the check. Found by the guardrail review of upstream resilience. | #48 |
@@ -60,9 +61,10 @@ Nothing. Start the next item below.
 
 In order:
 
-1. M2: `feat/local-router`, then close the milestone.
+1. After `feat/local-router` merges, run `upstream-check.yml` once by hand, and mark FR-SG-10 done if it passes.
 2. `fix/upstream-limits` (FR-SG-6), from the guardrail review of #48: cap `Retry-After`, so one 429 can't pause a source until restart, and stop one client's batch from filling the shared 500-slot queue.
-3. Set aside by the owner on 2026-11-06: three frontend developers trying Traverse on their own repositories, for `docs/USER_FEEDBACK.md`. It's the last M1 exit item, and only the owner can arrange it.
+3. M3: `feat/web-server`, then `feat/sandbox-router`, `feat/route-view` and `feat/package-explorer`. Ask the owner first about React Flow and Monaco, which `SPEC.md` still lists.
+4. Set aside by the owner on 2026-11-06: three frontend developers trying Traverse on their own repositories, for `docs/USER_FEEDBACK.md`. It's the last M1 exit item, and only the owner can arrange it.
 
 ## Blocked
 
@@ -96,16 +98,18 @@ In order:
 - The Action uses `GITHUB_TOKEN` only, because comments are matched on the `github-actions[bot]` login.
 - The owner decided the public router allows anonymous reads and refuses invalid tokens (ADR 0015).
 - Fields from a separate upstream are nullable in `SPEC.md`, because a non-null failure would null the whole `Package` (FR-SG-6).
-- GR-1's config check in `feat/local-router` must ban `engine.debug.always_include_query_plan`, and cover `introspection.enabled` and `playground.enabled` as well as the deprecated forms (C-37, C-42).
+- The router reads its environment before `router/config.yaml` (C-50), expands variables into its raw text, comments included (C-43), and merges every file in `CONFIG_PATH` (C-44). So the file writes every risky setting out literally (ADR 0017), and a deployment (M7) must pass `findUnsafeRouterEnvironment` from `packages/repo-checks`: only `CONFIG_PATH` (one file) and the six `ROUTER_*` variables, each in a strict format. Test that in the CDK task definition. The guardrail review found APQ, MCP and CORS bypasses through the environment before this.
+- Run `npm run generate:router` after changing a subgraph schema or `router/operations`. It needs Docker, and runs `wgc` 0.133.6 in a container with no network, so `wgc` never becomes a dependency (C-49). A test fails if the output is stale.
+- `npm run test:router` needs Docker and host networking. It runs the subgraphs on ports 4101 to 4103 and the router on 3902 and 3903, so stop anything using them first.
+- The depth limit is 3, the deepest the schema allows (C-45). A new nested field needs the limit raised on purpose, and the depth test then needs a deeper operation.
 - `feat:` commits open release pull requests that publish to npm when merged, so merge those deliberately.
 - For `workspace` in M4: add a shared `requireUser` helper, and make the subgraph refuse to start without auth settings. U-22 must be answered first.
 - Run the guardrail mutations again after changing `packages/subgraph-kit`: its review showed tests can pass with a guard removed.
-- After `feat/local-router` merges, run `upstream-check.yml` once by hand to prove the default `GITHUB_TOKEN` can read GitHub GraphQL, and mark FR-SG-10 done.
 - `subgraphs/repositories` serves no private repository, because a package can name any repository. Release tags holding `@` read as no release, by choice (GR-16).
 - Changing a schema's output shape means bumping `CACHE_VERSION` in `packages/subgraph-kit/src/upstream.ts`, or old entries are read as the new shape.
 - `querySchema` in `subgraphs/advisories` is strict, so a new OSV response field fails closed. The scheduled check will report that, and the schema then needs updating.
 - Hold upstream text to an allow-list, never a list of what to refuse. Review found ten ways past an email pattern. Schemas clean as they parse, so `fetchJson` output is safe to cache.
-- `traverse.json` stays on the Cosmo demo. Adding the real subgraphs would compose them with it, so `feat/local-router` gets its own config beside `router/`, where the operations are.
+- `traverse.json` stays on the Cosmo demo. Adding the real subgraphs would compose them with it, so the router composes from `router/graph.yaml` instead, beside its operations.
 - The Cosmo demo schemas define no owners, so the map shows "No owner set". The owner chose a config file, filled in by each team and kept in their repository, which `packages/cli` reads as `traverse.json`. A global store of owners was rejected: names aren't unique, ownership is private, and nobody could verify entries. Never invent owners.
 - FR-WB-1 is marked done, but no real owner has appeared on screen yet, and the map doesn't read `traverse.json`. Check whether Cosmo labels or `CODEOWNERS` could replace the config file.
 - The map is a keyboard-first list, not a React Flow canvas. `SPEC.md` still lists React Flow, so the owner should decide whether a visual canvas is wanted.

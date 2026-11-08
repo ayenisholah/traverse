@@ -1,6 +1,6 @@
 # Verification
 
-**Updated:** 2026-11-06
+**Updated:** 2026-11-08
 
 This file records proof that isn't a named test. Each gate below was run on a clean tree, where it passed, and then on a planted violation, where it failed. Exit codes were checked one at a time.
 
@@ -126,3 +126,19 @@ The pause plant first passed, because fake timers can't tell 300 ms from 0 ms. A
 ## Required checks (FR-DP-7)
 
 `verify` is a required status check in the `protect-main` ruleset. `gh api repos/ayenisholah/traverse/rules/branches/main` lists it, alongside the pull request, linear history, deletion and force-push rules. On 2026-11-06, release #15 showed as mergeable with the rule active, after a passing `verify`.
+
+## Router gates (GR-1, GR-2, FR-GW-4)
+
+Run on 2026-11-08 against the pinned router image, with each violation planted in a working tree and then removed.
+
+| Gate | Command | Planted violation | Result |
+|---|---|---|---|
+| GR-1 config | `npx vitest run router/test/config.test.ts` | `dev_mode: true` | Failed, `dev_mode` named |
+| GR-1 config | `npx vitest run router/test/config.test.ts` | `query_plans_enabled: ${PLANS}` | Failed, `query_plans_enabled` named |
+| GR-1 config | `npx vitest run router/test/config.test.ts` | `"*"` as the CORS origin | Failed, `cors.allow_origins` named |
+| GR-1 config | `npx vitest run router/test/config.test.ts` | The `playground` block removed, leaving the default | Failed, `playground.enabled` named |
+| Composition | `npx vitest run router/test/config.test.ts` | A field added to the `advisories` schema | Failed, stale config named |
+| Persisted operations | `npx vitest run router/test/config.test.ts` | A field added to `router/operations/package.graphql` | Failed, stale operations named |
+| Cost limits | `npm run test:router` | Field limit raised from 60 to 500 | 1 of 19 failed, the field limit test |
+| GR-1 config | `npx vitest run router/test/config.test.ts` | The `automatic_persisted_queries`, `mcp`, `condition` and `on_error` settings each removed, `match_origins: [".*"]`, and an unknown variable in a value and in a comment | Failed each time |
+| Environment | Pinned image with `APQ_ENABLED`, `MCP_ENABLED`, `CORS_MATCH_ORIGINS` and the block condition set | Run against the fixed config | Registration refused, text blocked, no CORS header, no MCP listener |

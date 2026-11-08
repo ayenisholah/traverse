@@ -64,6 +64,8 @@
 | The assistant runs up cost | Per-session limits and a spend alarm | GR-15 |
 | A GitHub token leaks | Read-only, held in Secrets Manager, used only on the server | FR-SG-3, GR-9 |
 | An upstream outage or rate limit takes the app down | Caching, retries and clear partial results | FR-SG-6 |
+| A deployment turns a banned router setting back on | The router reads its environment before the file (C-50), so `router/config.yaml` writes every risky setting out literally, including APQ, MCP, ConnectRPC, CORS patterns and the block's condition, and a test fails otherwise. Variables are expanded into the raw text (C-43), so the file may use only six known ones, and `findUnsafeRouterEnvironment` holds a deployment's whole environment to those, each in a strict format, with a single-file `CONFIG_PATH` (C-44). The e2e harness runs the router under that check | GR-1, GR-2 |
+| A costly operation exhausts the graph | Persisted operations only, with depth, field, root field and alias limits enforced on them too, and a 1MB body cap (C-45, C-46) | FR-GW-4, GR-2 |
 
 ## Accepted risks
 
@@ -74,4 +76,5 @@
 - Subgraphs keep introspection on, because `_service` exposes their SDL anyway and only the router can reach them.
 - A person spelling an address out in words in an advisory summary can't be detected. Summaries are curated vulnerability titles, and none of 309 real ones held an address.
 - Advisories use the package name as given, so a representation sent straight to the subgraph with the wrong case gets an empty list. Through the router, the `packages` subgraph resolves the name first.
+- The depth limit equals the deepest operation the schema allows, so no valid operation exceeds it today. The e2e suite proves the limit is enforced by lowering it on a second router.
 - If a Redis host stops answering connection attempts, a command can wait up to its 1-second connect timeout before counting as a miss.

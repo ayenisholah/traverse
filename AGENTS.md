@@ -10,9 +10,11 @@ npm run test:coverage        # tests with the 100% per-file gate
 npm run build:web            # static export of the web app
 npm run generate:tokens      # regenerate the CSS from packages/design-tokens
 npm run generate:demo        # regenerate the demo graph from graph/cosmo-demo
+npm run generate:router      # recompose the router config and persisted operations (Docker)
 npm run test:integration     # integration tests, after a build
 npm run test:e2e             # Playwright on the static export, after a build
 npm run test:demo            # rebuilds for /traverse, and tests it as GitHub Pages serves it
+npm run test:router          # the real graph behind the pinned router image (Docker)
 node scripts/record-upstream.ts npm  # print real responses for tests, as JSON
 node scripts/check-upstream.ts      # run each client against its live source (GITHUB_TOKEN)
 npm run check:deps           # module boundaries
@@ -52,7 +54,7 @@ npm run check:progress       # the branch updates docs/PROGRESS.md
 | `subgraphs/advisories`   | OSV advisories for a package and version               |
 | `subgraphs/`             | Planned: workspace                                     |
 | `graph/cosmo-demo`       | Cosmo demo schemas behind the public demo              |
-| `router/`                | Planned: router config and local composition           |
+| `router/`                | Public router config, persisted operations, e2e tests  |
 | `infra/`                 | Planned: CDK app and reusable constructs               |
 
 ## Order of truth

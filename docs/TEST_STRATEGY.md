@@ -10,9 +10,9 @@ Tests come first, and a bug fix starts with a failing test.
 | Component | Pages and components render, and axe finds no violations | Vitest, Testing Library, axe-core, jsdom | Every pull request |
 | Property | Rules that must hold for any input, such as workspace scoping | fast-check | Every pull request |
 | Mutation | Tests catch breakage in auth, workspace scoping and policy code | Stryker | Scheduled, and on those modules |
-| Integration | Parts working together for real: the built export now, Postgres and Redis later | Vitest, Docker Compose | Every pull request |
-| Contract | Subgraphs compose, and persisted operations stay valid | `wgc`, schema snapshots | Every pull request |
-| End to end | A user's journey in a real browser against the static export, and later the pinned router with real auth and safelist | Playwright, `@axe-core/playwright`, Docker Compose | Every pull request |
+| Integration | Parts working together for real: the built export, the CLI, and subgraphs as real processes, with Postgres later | Vitest | Every pull request |
+| Contract | Subgraphs compose, and the router's composed config and persisted operations match the schemas and operations in the repository | `wgc` in a container, stale-output tests | Every pull request |
+| End to end | A user's journey in a real browser against the static export, and the real graph behind the pinned router image with its public config, tokens and persisted operations | Playwright, `@axe-core/playwright`, Vitest, Docker | Every pull request |
 | Infrastructure | Resources, IAM and guardrails | CDK assertions, `cdk-nag` | Every pull request |
 | Post-deploy | A release works where it landed | Smoke tests | Every deploy |
 | Load and resilience | SLOs, scaling and recovery | k6, AWS FIS | Before launch, then on demand |
@@ -30,6 +30,8 @@ axe can't judge colour contrast under jsdom (W-4), so component tests prove noth
 | Feature | Integration | `apps/*/test/integration/`, `packages/*/test/integration/` |
 | Feature | Playwright end to end, including an axe check | `apps/*/test/e2e/` |
 | Public demo | Playwright with relative URLs, on a `/traverse` build and after each deploy | `apps/web/test/demo/` |
+| Router config | Unit: GR-1 and GR-2 on the public config, and stale generated files | `router/test/*.test.ts` |
+| Router behaviour | End to end on the pinned image, with the public config unchanged | `router/test/e2e/` |
 
 A pure function has no screen to drive, so it needs no Playwright test of its own. The feature that uses it does. The CLI has no browser at all: its integration tests run the real command, install the packed tarball, and a real pull request proves the Action end to end.
 

@@ -44,9 +44,9 @@ The assistant only adds to deterministic results, through Amazon Bedrock.
 | ID | Requirement | Acceptance check | Verified by | Milestone | Status |
 |---|---|---|---|---|---|
 | FR-GW-1 | Serve the federated graph over HTTPS. | A persisted operation returns data from every subgraph; plain HTTP redirects to HTTPS. | e2e | M7 | planned |
-| FR-GW-2 | Reject invalid JWTs. | Expired, wrong-audience and wrongly signed tokens are refused and reach no subgraph. A request with no token gets public data only. | e2e | M2 | planned |
+| FR-GW-2 | Reject invalid JWTs. | Expired, wrong-audience and wrongly signed tokens are refused and reach no subgraph. A request with no token gets public data only. | e2e | M2 | done |
 | FR-GW-3 | Keep serving if the Cosmo CDN is unavailable. | With the CDN blocked, running tasks and newly started tasks serve the last good configuration. | resilience | M10 | planned |
-| FR-GW-4 | Limit request cost. | Operations over the depth or field limits, and bodies over the size limit, are rejected. | e2e | M2 | planned |
+| FR-GW-4 | Limit request cost. | Operations over the depth or field limits, and bodies over the size limit, are rejected. | e2e | M2 | done |
 | FR-GW-5 | Rate limit each client. | A client over its limit is rejected while other clients are unaffected. | e2e | M7 | planned |
 | FR-GW-6 | Filter hostile traffic at the edge. | A request matching a managed WAF rule or the rate rule is blocked before it reaches the router. | staging | M6 | planned |
 | FR-GW-7 | Report health accurately. | `/health/ready` fails while the router can't serve or is draining, and load balancer targets follow it. | staging | M7 | planned |
@@ -61,8 +61,8 @@ The assistant only adds to deterministic results, through Amazon Bedrock.
 | FR-SG-2 | `packages` serves npm data. | A real package's versions, licence, dependencies and downloads match the npm registry. | contract | M2 | done |
 | FR-SG-3 | `repositories` serves GitHub data. | A real repository's stars, releases and owner match GitHub, and the token stays on the server. | contract | M2 | done |
 | FR-SG-4 | `advisories` serves OSV data. | Advisories for a real package version match OSV. | contract | M2 | done |
-| FR-SG-5 | Join data across subgraphs. | One operation returns a package, its repository and its advisories from three subgraphs. | e2e | M2 | planned |
-| FR-SG-6 | Degrade when a source fails. | If one upstream fails or rate limits, other fields still return, the error is clear, and repeat reads come from cache. | integration | M2 | planned |
+| FR-SG-5 | Join data across subgraphs. | One operation returns a package, its repository and its advisories from three subgraphs. | e2e | M2 | done |
+| FR-SG-6 | Degrade when a source fails. | If one upstream fails or rate limits, other fields still return, the error is clear, and repeat reads come from cache. | integration | M2 | done |
 | FR-SG-7 | Every subgraph shares one kit. | A new subgraph gets health, auth context, logging and shutdown by supplying only a schema and resolvers. | unit | M2 | done |
 | FR-SG-8 | Migrations are safe during rollout. | The previous release's tests pass against the migrated schema. | integration | M7 | planned |
 | FR-SG-9 | `workspace` stores users' work. | Saved drafts and screen maps survive a restart. | integration | M4 | planned |
@@ -116,8 +116,8 @@ Guardrails are enforced by tests or policy, never by convention alone.
 
 | ID | Requirement | Acceptance check | Verified by | Milestone | Status |
 |---|---|---|---|---|---|
-| GR-1 | The public production router never enables dev mode, playground, introspection, query plans or wildcard CORS. | A test parses the production router config and fails on each setting, proven with a planted violation of each. | unit | M2 | planned |
-| GR-2 | The public production router runs persisted operations only. | A non-persisted operation is rejected. | e2e | M2 | planned |
+| GR-1 | The public production router never enables dev mode, playground, introspection, query plans or wildcard CORS. | A test parses the production router config and fails on each setting, proven with a planted violation of each. | unit | M2 | done |
+| GR-2 | The public production router runs persisted operations only. | A non-persisted operation is rejected. | e2e | M2 | done |
 | GR-3 | The user ID comes from the verified JWT, never client input. | No operation accepts a user ID, and a forged header has no effect. | integration | M4 | planned |
 | GR-4 | GraphQL variables, personal data and secrets never reach logs or telemetry. | Variables sent in a test request appear in no log, span or metric. | e2e | M8 | planned |
 | GR-5 | No long-lived AWS keys anywhere. | A CDK test rejects IAM users and access keys, and CI holds no AWS secrets. | infrastructure | M6 | planned |
