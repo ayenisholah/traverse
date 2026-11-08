@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.9.0](https://github.com/ayenisholah/traverse/compare/v0.8.0...v0.9.0) (2026-11-08)
+
+
+### Features
+
+* **repo-checks:** check the public router config and environment ([850b3ea](https://github.com/ayenisholah/traverse/commit/850b3ea4c747a7707974d73c8826f099920c7606))
+* **router:** compose the subgraphs behind a hardened public router config ([437c1f6](https://github.com/ayenisholah/traverse/commit/437c1f6ac02499ddfa8bc1a223b1097464353543))
+
 ## [0.8.0](https://github.com/ayenisholah/traverse/compare/v0.7.1...v0.8.0) (2026-11-08)
 
 
