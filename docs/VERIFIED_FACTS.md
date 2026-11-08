@@ -123,6 +123,7 @@ The versions below are the only ones whose docs count. Upgrades change this tabl
 | W-22 | A Pages deployment ID is the commit SHA. Once cancelled, it stays `deployment_cancelled`, and rerunning that run fails within seconds. | `tested` | [Run 42246560098](https://github.com/ayenisholah/traverse/actions/runs/42246560098), attempt 2 |
 | W-23 | GitHub Pages serves `/traverse/impact` from `impact.html`, and redirects `/traverse` to `/traverse/` with a 301. The Web Worker, fonts and links work under that path. | `tested` | [Run 42249140309](https://github.com/ayenisholah/traverse/actions/runs/42249140309) |
 | W-24 | `buildSubgraphSchema` in `@apollo/subgraph` 2.15.1 takes an array of modules. A single `{ typeDefs, resolvers }` object fails with `doc.definitions is not iterable`. | `tested` | `packages/subgraph-kit`, 2026-11-06 |
+| W-25 | `ioredis` 6.0.0 opens a connection with `HELLO 3`, `CLIENT SETINFO` twice and `INFO`, and needs a reply to each before it's ready. A refused `HELLO` is fatal, not a fallback. With `enableOfflineQueue: false`, a command before ready fails at once. `commandTimeout: 500` ends a hung `GET` at about 500 ms. | `tested` | A fake server in `packages/subgraph-kit/test/support/fake-redis.ts`, 2026-11-08 |
 
 ## AWS
 

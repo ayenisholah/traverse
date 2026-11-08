@@ -14,6 +14,7 @@ npm run test:integration     # integration tests, after a build
 npm run test:e2e             # Playwright on the static export, after a build
 npm run test:demo            # rebuilds for /traverse, and tests it as GitHub Pages serves it
 node scripts/record-upstream.ts npm  # print real responses for tests, as JSON
+node scripts/check-upstream.ts      # run each client against its live source (GITHUB_TOKEN)
 npm run check:deps           # module boundaries
 npm run check:dupes          # duplicated code
 npm run check:unused         # unused files, exports, dependencies
