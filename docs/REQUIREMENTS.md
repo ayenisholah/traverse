@@ -66,7 +66,7 @@ The assistant only adds to deterministic results, through Amazon Bedrock.
 | FR-SG-7 | Every subgraph shares one kit. | A new subgraph gets health, auth context, logging and shutdown by supplying only a schema and resolvers. | unit | M2 | done |
 | FR-SG-8 | Migrations are safe during rollout. | The previous release's tests pass against the migrated schema. | integration | M7 | planned |
 | FR-SG-9 | `workspace` stores users' work. | Saved drafts and screen maps survive a restart. | integration | M4 | planned |
-| FR-SG-10 | Notice upstream changes. | A scheduled check against the live sources fails if a recorded response no longer matches their shape. | CI | M2 | planned |
+| FR-SG-10 | Notice upstream changes. | A scheduled check against the live sources fails if a recorded response no longer matches their shape. | CI | M2 | done |
 
 ## Delivery
 

@@ -1,6 +1,6 @@
 # Progress
 
-**Updated:** 2026-11-08
+**Updated:** 2026-11-09
 
 Read this first. It says what's done, what's in progress and what's left, so any agent can resume after a session ends unexpectedly. Update it in the same commit as the work.
 
@@ -12,6 +12,8 @@ Traverse is built on WunderGraph Cosmo and helps frontend developers explore a f
 
 | Date | Work | PR |
 |---|---|---|
+| 2026-11-09 | FR-SG-10 done: `upstream-check.yml`, run by hand on `main`, passed against live npm, GitHub and OSV, with the default `GITHUB_TOKEN` reading GitHub GraphQL ([run 42534288485](https://github.com/ayenisholah/traverse/actions/runs/42534288485)). The first attempt failed once on npm downloads, which answered normally from a local run and on the re-run. | `docs/upstream-check-proof` |
+| 2026-11-09 | `feat/local-router` merged, which closes M2. CodeQL flagged operation text from a file going out in an e2e request, fixed by taking the hash from the generated file's name. gitleaks flagged `wgc`'s schema hashes in `router/config.json`, allowed on one rule with the owner's approval. | #50 |
 | 2026-11-08 | `router/`: the three subgraphs composed behind the pinned router, with a hardened public config. Persisted operations only, from local files; cost limits that also cover persisted operations; anonymous reads, with invalid tokens refused. The GR-1 check requires every risky setting written out literally, and a second check holds the deployment's environment to six known variables, after the guardrail review got APQ, MCP and wildcard CORS through environment variables. A Docker e2e suite in `verify` runs the join, GR-2, the limits, the token rules and a GitHub outage on the pinned image. FR-GW-2, FR-GW-4, FR-SG-5, FR-SG-6, GR-1 and GR-2 are done, and M2 is done. | `feat/local-router` |
 | 2026-11-08 | README roadmap and status brought up to date: M1 waits on user feedback, M2 is in progress, the three subgraphs are built, and the Action example pins `v0.8.0`. | `docs/readme-roadmap` |
 | 2026-11-08 | Released `v0.8.0` to npm with provenance, after approving the release pull request's workflow runs by API. Deleted the stale `signalbox` release and `@types/node` 26 branches. | #44 |
@@ -61,10 +63,9 @@ Nothing. Start the next item below.
 
 In order:
 
-1. After `feat/local-router` merges, run `upstream-check.yml` once by hand, and mark FR-SG-10 done if it passes.
-2. `fix/upstream-limits` (FR-SG-6), from the guardrail review of #48: cap `Retry-After`, so one 429 can't pause a source until restart, and stop one client's batch from filling the shared 500-slot queue.
-3. M3: `feat/web-server`, then `feat/sandbox-router`, `feat/route-view` and `feat/package-explorer`. Ask the owner first about React Flow and Monaco, which `SPEC.md` still lists.
-4. Set aside by the owner on 2026-11-06: three frontend developers trying Traverse on their own repositories, for `docs/USER_FEEDBACK.md`. It's the last M1 exit item, and only the owner can arrange it.
+1. `fix/upstream-limits` (FR-SG-6), from the guardrail review of #48: cap `Retry-After`, so one 429 can't pause a source until restart, and stop one client's batch from filling the shared 500-slot queue.
+2. M3: `feat/web-server`, then `feat/sandbox-router`, `feat/route-view` and `feat/package-explorer`. Ask the owner first about React Flow and Monaco, which `SPEC.md` still lists.
+3. Set aside by the owner on 2026-11-06: three frontend developers trying Traverse on their own repositories, for `docs/USER_FEEDBACK.md`. It's the last M1 exit item, and only the owner can arrange it.
 
 ## Blocked
 
@@ -99,6 +100,7 @@ In order:
 - The owner decided the public router allows anonymous reads and refuses invalid tokens (ADR 0015).
 - Fields from a separate upstream are nullable in `SPEC.md`, because a non-null failure would null the whole `Package` (FR-SG-6).
 - The router reads its environment before `router/config.yaml` (C-50), expands variables into its raw text, comments included (C-43), and merges every file in `CONFIG_PATH` (C-44). So the file writes every risky setting out literally (ADR 0017), and a deployment (M7) must pass `findUnsafeRouterEnvironment` from `packages/repo-checks`: only `CONFIG_PATH` (one file) and the six `ROUTER_*` variables, each in a strict format. Test that in the CDK task definition. The guardrail review found APQ, MCP and CORS bypasses through the environment before this.
+- `upstream-check.yml` fails on any upstream error, so a brief npm, GitHub or OSV outage turns it red with no shape change, as on 2026-11-09. Re-run it before treating a failure as a shape change. Ask the owner before adding retries to it.
 - `.gitleaks.toml` allows a 40-character hex value only in `router/config.json` and only for `generic-api-key`, because `wgc` keys schemas by SHA-1. The owner approved it on 2026-11-09. A global `[allowlist]` in gitleaks 8.24.3 ignores `condition` and would allow anything in that file, so keep it on the rule.
 - Run `npm run generate:router` after changing a subgraph schema or `router/operations`. It needs Docker, and runs `wgc` 0.133.6 in a container with no network, so `wgc` never becomes a dependency (C-49). A test fails if the output is stale.
 - `npm run test:router` needs Docker and host networking. It runs the subgraphs on ports 4101 to 4103 and the router on 3902 and 3903, so stop anything using them first.

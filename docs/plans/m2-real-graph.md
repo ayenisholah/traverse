@@ -1,6 +1,6 @@
 # M2: Real graph
 
-**Status:** Done on 2026-11-08. FR-SG-10 waits for the first run of `upstream-check.yml` after the merge.
+**Status:** Done on 2026-11-09, with FR-SG-10 proven by a run of `upstream-check.yml` on `main`.
 
 **Outcome:** one federated query returns live npm, GitHub and OSV data through the pinned Cosmo Router, in Docker. No AWS access is needed.
 
