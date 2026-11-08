@@ -51,6 +51,8 @@ jobs:
         run: npm run build:web
       - name: Integration tests
         run: npm run test:integration
+      - name: Router end-to-end tests, on the pinned router image
+        run: npm run test:router
       - name: Install the Playwright browser
         run: npx playwright install --with-deps chromium
       - name: End-to-end tests

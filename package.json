@@ -24,6 +24,7 @@
     "test:integration": "vitest run --config vitest.integration.config.ts",
     "test:e2e": "playwright test --config apps/web/playwright.config.ts",
     "test:demo": "BASE_PATH=/traverse npm run build:web && BASE_PATH=/traverse npm run test:e2e",
+    "test:router": "vitest run --config vitest.router.config.ts",
     "generate:tokens": "node scripts/generate-tokens.ts",
     "generate:demo": "node scripts/generate-demo-graph.ts",
     "generate:router": "node scripts/generate-router.ts",
