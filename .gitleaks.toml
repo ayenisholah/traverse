@@ -1,0 +1,16 @@
+# Gitleaks' default rules, plus one narrow allowlist on one rule.
+[extend]
+useDefault = true
+
+# wgc keys each schema in router/config.json's stringStorage by its SHA-1, which generic-api-key
+# reads as a secret. Only a 40-character hex value in that generated file is allowed, and only for
+# this rule. A global allowlist in the pinned gitleaks (8.24.3) ignores `condition`, so it would
+# allow anything in the file.
+[[rules]]
+id = "generic-api-key"
+[[rules.allowlists]]
+description = "Schema hashes in the generated router config"
+condition = "AND"
+paths = ['''(^|/)router/config\.json$''']
+regexTarget = "secret"
+regexes = ['''^[0-9a-f]{40}$''']
