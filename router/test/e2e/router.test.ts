@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { readdirSync } from "node:fs";
 import { generateKeyPair } from "jose";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { recordings as advisories } from "../../../subgraphs/advisories/test/helpers.ts";
@@ -17,7 +17,11 @@ afterAll(async () => {
   await stack.stop();
 });
 
-const PACKAGE = readFileSync("router/operations/package.graphql", "utf8");
+// The shipped operation, by the name of its generated file, which is its hash (C-34).
+// router/test/config.test.ts proves that file matches router/operations/package.graphql.
+const shipped = readdirSync("router/persisted/operations");
+if (shipped.length !== 1) throw new Error("Pick the operation by name now there's more than one");
+const PACKAGE_HASH = String(shipped[0]).replace(/\.json$/, "");
 const sha256 = (body: string) => createHash("sha256").update(body).digest("hex");
 
 interface GraphqlResponse {
@@ -44,7 +48,7 @@ const persisted = (hash: string, variables: Record<string, unknown> = {}) => ({
   extensions: { persistedQuery: { version: 1, sha256Hash: hash } },
 });
 
-const express = persisted(sha256(PACKAGE), { name: "express" });
+const express = persisted(PACKAGE_HASH, { name: "express" });
 const DEEPEST = `query Deepest { package(name: "express") { repository { url } } }`;
 const bearer = (token: string) => ({ authorization: `Bearer ${token}` });
 
@@ -77,7 +81,9 @@ describe("the public router", { timeout: 60_000 }, () => {
 
   it("[GR-2] rejects an operation sent as text", async () => {
     const before = await stack.subgraphRequests();
-    const { json } = await post({ query: PACKAGE, variables: { name: "express" } });
+    const { json } = await post({
+      query: `query AsText { package(name: "express") { name } }`,
+    });
 
     expect(json.data ?? null).toBeNull();
     expect(json.errors?.[0]?.message).toBe("non-persisted operation is blocked");
@@ -195,7 +201,7 @@ describe("the public router", { timeout: 60_000 }, () => {
   it("[FR-SG-6] still serves the package and advisories when GitHub fails", async () => {
     stack.blockGithub(true);
     try {
-      const { json } = await post(persisted(sha256(PACKAGE), { name: "ms" }));
+      const { json } = await post(persisted(PACKAGE_HASH, { name: "ms" }));
 
       expect(json.data?.package).toEqual(
         expect.objectContaining({
