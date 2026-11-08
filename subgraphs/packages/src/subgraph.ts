@@ -4,10 +4,9 @@ import {
   isSafeEndpoint,
   type Subgraph,
   type SubgraphDependencies,
-  type UpstreamFetch,
 } from "@traverse/subgraph-kit";
 import { z } from "zod";
-import { createNpmClient, type PackageData } from "./npm.ts";
+import { createNpmClient, NPM_DOWNLOADS_URL, NPM_REGISTRY_URL, type PackageData } from "./npm.ts";
 
 const typeDefs = readFileSync(new URL("../schema.graphqls", import.meta.url), "utf8");
 
@@ -18,39 +17,38 @@ const endpoint = (official: string) =>
     .default(official);
 
 const environmentSchema = z.object({
-  NPM_REGISTRY_URL: endpoint("https://registry.npmjs.org"),
-  NPM_DOWNLOADS_URL: endpoint("https://api.npmjs.org"),
+  NPM_REGISTRY_URL: endpoint(NPM_REGISTRY_URL),
+  NPM_DOWNLOADS_URL: endpoint(NPM_DOWNLOADS_URL),
 });
 
-interface PackagesDependencies extends SubgraphDependencies {
-  fetch?: UpstreamFetch;
-}
-
 export const createPackagesSubgraph = ({
-  fetch = globalThis.fetch,
   env = process.env,
   ...dependencies
-}: PackagesDependencies = {}): Subgraph => {
-  const { NPM_REGISTRY_URL, NPM_DOWNLOADS_URL } = environmentSchema.parse(env);
-  const npm = createNpmClient({
-    fetch,
-    registryUrl: NPM_REGISTRY_URL,
-    downloadsUrl: NPM_DOWNLOADS_URL,
-  });
+}: SubgraphDependencies = {}): Subgraph => {
+  const { NPM_REGISTRY_URL: registryUrl, NPM_DOWNLOADS_URL: downloadsUrl } =
+    environmentSchema.parse(env);
 
   return createSubgraph(
     {
       name: "packages",
       typeDefs,
-      resolvers: {
-        Query: {
-          package: (_: unknown, { name }: { name: string }) => npm.latest(name),
-        },
-        Package: {
-          __resolveReference: ({ name }: Pick<PackageData, "name">) => npm.latest(name),
-          versions: ({ name }: PackageData) => npm.versions(name),
-          weeklyDownloads: ({ name }: PackageData) => npm.weeklyDownloads(name),
-        },
+      resolvers: ({ upstream }) => {
+        const npm = createNpmClient({
+          registry: upstream("npm"),
+          downloads: upstream("npm downloads"),
+          registryUrl,
+          downloadsUrl,
+        });
+        return {
+          Query: {
+            package: (_: unknown, { name }: { name: string }) => npm.latest(name),
+          },
+          Package: {
+            __resolveReference: ({ name }: Pick<PackageData, "name">) => npm.latest(name),
+            versions: ({ name }: PackageData) => npm.versions(name),
+            weeklyDownloads: ({ name }: PackageData) => npm.weeklyDownloads(name),
+          },
+        };
       },
     },
     { ...dependencies, env },

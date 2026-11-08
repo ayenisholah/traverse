@@ -5,6 +5,7 @@ import { findPersonalData } from "@traverse/repo-checks";
 import type { Subgraph } from "@traverse/subgraph-kit";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { expectEntrypointToRun } from "../../../packages/subgraph-kit/test/support/run-subgraph.ts";
+import { checkNpm } from "../src/live-check.ts";
 import { createPackagesSubgraph } from "../src/subgraph.ts";
 import { fixture, recordingsFile, replay } from "./helpers.ts";
 
@@ -31,6 +32,7 @@ const start = async (upstream: typeof fetch, logs: string[] = []) => {
   running = createPackagesSubgraph({
     fetch: upstream,
     env: { PORT: "0", SHUTDOWN_DRAIN_MS: "0" },
+    sleep: () => Promise.resolve(),
     logStream: { write: (line: string) => void logs.push(line) },
   });
   return `http://127.0.0.1:${await running.listen()}/graphql`;
@@ -365,5 +367,21 @@ describe("the entrypoint", () => {
     vi.stubEnv("SHUTDOWN_DRAIN_MS", "0");
 
     await expectEntrypointToRun(() => import("../src/main.ts"));
+  });
+});
+
+describe("the live check", () => {
+  it("[FR-SG-10] passes when npm answers as recorded", async () => {
+    expect(await checkNpm(fromRecordings)).toEqual([]);
+  });
+
+  it("[FR-SG-10] names each check that fails", async () => {
+    const failing: typeof fetch = () => Promise.resolve(new Response("{}", { status: 404 }));
+
+    expect(await checkNpm(failing)).toEqual([
+      "npm latest: unexpected answer",
+      "npm versions: unexpected answer",
+      "npm downloads: unexpected answer",
+    ]);
   });
 });

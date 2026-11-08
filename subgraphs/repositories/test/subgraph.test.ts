@@ -1,14 +1,18 @@
 import { readFileSync } from "node:fs";
 import { composeGraph, findFieldOwners } from "@traverse/graph-core";
 import { findPersonalData } from "@traverse/repo-checks";
+import { createUpstream } from "@traverse/subgraph-kit";
 import { describe, expect, it, vi } from "vitest";
 import {
   expectEntrypointToRun,
+  memoryCache,
   readSchemas,
+  silentLogger,
   stubUpstream,
   useSubgraph,
 } from "../../../packages/subgraph-kit/test/support/run-subgraph.ts";
-import { repositorySchema } from "../src/github.ts";
+import { createGithubClient, repositorySchema } from "../src/github.ts";
+import { checkGithub } from "../src/live-check.ts";
 import { createRepositoriesSubgraph } from "../src/subgraph.ts";
 import { recordings, recordingsFile, replay } from "./helpers.ts";
 
@@ -384,5 +388,42 @@ describe("the entrypoint", () => {
     await entities(url, [repository(EXPRESS)]);
 
     expect(upstream.mock.calls.map(([input]) => input)).toContain("https://api.github.com/graphql");
+  });
+});
+
+describe("the live check", () => {
+  it("[FR-SG-10] passes when GitHub answers as recorded", async () => {
+    expect(await checkGithub(fromRecordings, TOKEN)).toEqual([]);
+  });
+
+  it("[FR-SG-10] reports a failure without quoting GitHub's answer", async () => {
+    expect(await checkGithub(answering({ message: TOKEN }, 401), TOKEN)).toEqual([
+      "GitHub repository: failed",
+    ]);
+  });
+});
+
+describe("caching", () => {
+  it("[FR-SG-6] keeps two repositories of one owner apart", async () => {
+    const upstream = vi.fn<typeof fetch>((_, init) =>
+      Promise.resolve(replay(init?.body as string)),
+    );
+    const github = createGithubClient({
+      upstream: createUpstream({
+        source: "GitHub",
+        fetch: upstream,
+        cache: memoryCache(),
+        logger: () => silentLogger,
+      }),
+      graphqlUrl: "https://api.github.com/graphql",
+      token: TOKEN,
+    });
+
+    const express = await github.repository(EXPRESS);
+    const missing = await github.repository("https://github.com/expressjs/nothing");
+
+    expect(express).toMatchObject({ owner: "expressjs" });
+    expect(missing).toBeNull();
+    expect(upstream).toHaveBeenCalledTimes(2);
   });
 });

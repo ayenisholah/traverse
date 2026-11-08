@@ -1,11 +1,11 @@
 import {
-  fetchJson,
-  fetchRequired,
+  cachePolicy,
   invalidInput,
   isPackageName,
   isVersion,
   upstreamError,
-  type UpstreamFetch,
+  type CachePolicy,
+  type Upstream,
 } from "@traverse/subgraph-kit";
 import { compare, gt, lt, lte, valid } from "semver";
 import { z } from "zod";
@@ -23,11 +23,34 @@ export interface OsvClient {
 }
 
 interface OsvOptions {
-  fetch: UpstreamFetch;
+  upstream: Upstream;
   baseUrl: string;
 }
 
-const SOURCE = "OSV";
+export const OSV_URL = "https://api.osv.dev";
+
+const MINUTE = 60;
+
+// No stale answers at all. During an outage, a stale list could hide an advisory published since,
+// so an error is more honest. An empty list means "safe", so it's kept for less time.
+const advisoryPolicy = cachePolicy({
+  fresh: 60 * MINUTE,
+  stale: 60 * MINUTE,
+  missing: 10 * MINUTE,
+});
+
+interface Page {
+  advisories: AdvisoryData[];
+  nextPage?: string | undefined;
+}
+
+const pagePolicy = (page: Page | null): CachePolicy => {
+  const isEmpty = page?.advisories.length === 0 && page.nextPage === undefined;
+  const seconds = (isEmpty ? 5 : 15) * MINUTE;
+  return { freshSeconds: seconds, staleSeconds: seconds };
+};
+
+export const SOURCE = "OSV";
 const ADVISORY_ID = /^[a-z0-9][a-z0-9-]{2,63}$/i;
 const SEVERITIES = ["LOW", "MODERATE", "HIGH", "CRITICAL"] as const;
 const MAX_SUMMARY_LENGTH = 300;
@@ -199,21 +222,40 @@ const requireVersion = (version: unknown): string | undefined => {
   return version;
 };
 
-export const createOsvClient = ({ fetch, baseUrl }: OsvOptions): OsvClient => {
-  const query = (name: string, version: string | undefined, pageToken: string | undefined) =>
-    fetchRequired({
-      source: SOURCE,
-      url: `${baseUrl}/v1/query`,
-      schema: querySchema({ name, version }),
-      fetch,
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        package: { name, ecosystem: "npm" },
-        ...(version !== undefined && { version }),
-        ...(pageToken !== undefined && { page_token: pageToken }),
-      }),
-    });
+// What the cache may hold, checked again on the way back out, with the same rules as on the way in.
+const advisoryStored = z
+  .object({
+    id: z.string().regex(ADVISORY_ID),
+    summary: z.string(),
+    severity: z.enum(SEVERITIES).nullable(),
+    fixedIn: z.string().regex(FIX_VERSION).nullable(),
+  })
+  .refine(({ id, summary }) => cleanSummary(summary, id) === summary);
+
+const pageStored = z.object({
+  advisories: z.array(advisoryStored),
+  nextPage: z.string().optional(),
+});
+
+export const createOsvClient = ({ upstream, baseUrl }: OsvOptions): OsvClient => {
+  const query = async (name: string, version: string | undefined, pageToken: string | undefined) =>
+    (await upstream.call({
+      key: `query:${name}@${version ?? "*"}#${pageToken ?? ""}`,
+      policy: pagePolicy,
+      stored: pageStored,
+      request: {
+        url: `${baseUrl}/v1/query`,
+        schema: querySchema({ name, version }),
+        method: "POST",
+        notFoundIsFailure: true,
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          package: { name, ecosystem: "npm" },
+          ...(version !== undefined && { version }),
+          ...(pageToken !== undefined && { page_token: pageToken }),
+        }),
+      },
+    })) as Page;
 
   const allPages = async (name: string, version: string | undefined): Promise<AdvisoryData[]> => {
     const found: AdvisoryData[] = [];
@@ -233,11 +275,11 @@ export const createOsvClient = ({ fetch, baseUrl }: OsvOptions): OsvClient => {
       isPackageName(name) ? allPages(name, requireVersion(version)) : null,
     advisory: (id) =>
       typeof id === "string" && ADVISORY_ID.test(id)
-        ? fetchJson({
-            source: SOURCE,
-            url: `${baseUrl}/v1/vulns/${id}`,
-            schema: advisorySchema,
-            fetch,
+        ? upstream.call({
+            key: `vuln:${id}`,
+            policy: advisoryPolicy,
+            stored: advisoryStored,
+            request: { url: `${baseUrl}/v1/vulns/${id}`, schema: advisorySchema },
           })
         : Promise.resolve(null),
   };

@@ -8,6 +8,13 @@ const isTrustedKeyUrl = (url: string): boolean => {
   return protocol === "https:" || (protocol === "http:" && isLocalService);
 };
 
+// Plain redis:// sends the password and cached data unencrypted, so it's only for a local service.
+const isTrustedRedisUrl = (url: string): boolean => {
+  const { protocol, hostname } = new URL(url);
+  const isLocalService = !hostname.includes(".") || hostname === "127.0.0.1";
+  return protocol === "rediss:" || (protocol === "redis:" && isLocalService);
+};
+
 const environmentSchema = z
   .object({
     PORT: integer("4000").pipe(z.number().max(65_535)),
@@ -20,6 +27,10 @@ const environmentSchema = z
       .optional(),
     JWT_AUDIENCE: z.string().min(1).optional(),
     JWT_ISSUER: z.string().min(1).optional(),
+    REDIS_URL: z
+      .url({ abort: true })
+      .refine(isTrustedRedisUrl, "must use rediss://, or redis:// to a local service")
+      .optional(),
   })
   .refine(
     ({ JWKS_URL, JWT_AUDIENCE, JWT_ISSUER }) =>
@@ -39,6 +50,7 @@ export interface SubgraphConfig {
   drainMs: number;
   closeMs: number;
   jwt: JwtConfig | undefined;
+  redisUrl: string | undefined;
 }
 
 /** A subgraph can't run on a bad environment, so this throws at startup. */
@@ -51,5 +63,6 @@ export const parseConfig = (env: Record<string, string | undefined>): SubgraphCo
     drainMs: parsed.SHUTDOWN_DRAIN_MS,
     closeMs: parsed.SHUTDOWN_CLOSE_MS,
     jwt: url && audience && issuer ? { url, audience, issuer } : undefined,
+    redisUrl: parsed.REDIS_URL,
   };
 };

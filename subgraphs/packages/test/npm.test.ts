@@ -1,3 +1,8 @@
+import { createDirectUpstream, createUpstream } from "@traverse/subgraph-kit";
+import {
+  memoryCache,
+  silentLogger,
+} from "../../../packages/subgraph-kit/test/support/run-subgraph.ts";
 import { describe, expect, it, vi } from "vitest";
 import { createNpmClient, downloadsSchema, latestSchema, versionsSchema } from "../src/npm.ts";
 import { fixture } from "./helpers.ts";
@@ -16,7 +21,12 @@ const ADDRESSES = [
 ];
 
 const client = (fetch: typeof globalThis.fetch) =>
-  createNpmClient({ fetch, registryUrl: "https://r", downloadsUrl: "https://d" });
+  createNpmClient({
+    registry: createDirectUpstream("npm", fetch),
+    downloads: createDirectUpstream("npm downloads", fetch),
+    registryUrl: "https://r",
+    downloadsUrl: "https://d",
+  });
 
 describe("latestSchema", () => {
   it.each(ADDRESSES)("[GR-16] keeps %s out of everything it outputs", (address) => {
@@ -157,5 +167,86 @@ describe("createNpmClient", () => {
     await client(fetch).versions("ms");
 
     expect(timeout).toHaveBeenCalledWith(15_000);
+  });
+});
+
+describe("caching", () => {
+  it("[FR-SG-6] keeps names that differ only in case apart", async () => {
+    const fetch = vi.fn<typeof globalThis.fetch>((input) =>
+      Promise.resolve(
+        Response.json({ version: (input as string).includes("JSONStream") ? "1.3.5" : "0.0.1" }),
+      ),
+    );
+    const npm = createNpmClient({
+      registry: createUpstream({
+        source: "npm",
+        fetch,
+        cache: memoryCache(),
+        logger: () => silentLogger,
+      }),
+      downloads: createDirectUpstream("npm downloads", fetch),
+      registryUrl: "https://r",
+      downloadsUrl: "https://d",
+    });
+
+    expect((await npm.latest("JSONStream"))?.latestVersion).toBe("1.3.5");
+    expect((await npm.latest("jsonstream"))?.latestVersion).toBe("0.0.1");
+  });
+
+  it("[FR-SG-6] reads its own entries back from the cache, checked against the same rules", async () => {
+    const body = {
+      version: "1.0.0",
+      license: "MIT",
+      repository: "github:owner/repo",
+      dependencies: { a: "^1.0.0", b: "file:../b" },
+      versions: { "1.0.0": {} },
+      downloads: 5,
+    };
+    const fetch = vi.fn<typeof globalThis.fetch>(() => Promise.resolve(Response.json(body)));
+    const cache = memoryCache();
+    const upstream = (source: string) =>
+      createUpstream({ source, fetch, cache, logger: () => silentLogger });
+    const npm = createNpmClient({
+      registry: upstream("npm"),
+      downloads: upstream("npm downloads"),
+      registryUrl: "https://r",
+      downloadsUrl: "https://d",
+    });
+
+    const first = [
+      await npm.latest("ms"),
+      await npm.versions("ms"),
+      await npm.weeklyDownloads("ms"),
+    ];
+    const second = [
+      await npm.latest("ms"),
+      await npm.versions("ms"),
+      await npm.weeklyDownloads("ms"),
+    ];
+
+    expect(second).toEqual(first);
+    expect(fetch).toHaveBeenCalledTimes(3);
+  });
+
+  it("[FR-SG-6] reads back a package with no licence or repository", async () => {
+    const fetch = vi.fn<typeof globalThis.fetch>(() =>
+      Promise.resolve(Response.json({ version: "1.0.0" })),
+    );
+    const npm = createNpmClient({
+      registry: createUpstream({
+        source: "npm",
+        fetch,
+        cache: memoryCache(),
+        logger: () => silentLogger,
+      }),
+      downloads: createDirectUpstream("npm downloads", fetch),
+      registryUrl: "https://r",
+      downloadsUrl: "https://d",
+    });
+
+    await npm.latest("ms");
+
+    expect(await npm.latest("ms")).toMatchObject({ license: null, repositoryUrl: null });
+    expect(fetch).toHaveBeenCalledTimes(1);
   });
 });

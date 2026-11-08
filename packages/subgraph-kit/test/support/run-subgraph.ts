@@ -5,7 +5,9 @@ import { createServer, type IncomingHttpHeaders, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { join } from "node:path";
 import { afterEach, expect, vi } from "vitest";
+import type { Cache } from "../../src/cache.ts";
 import type { Subgraph, SubgraphDependencies } from "../../src/index.ts";
+import { createLogger } from "../../src/logging.ts";
 
 export interface RunningSubgraph {
   child: ChildProcess;
@@ -91,6 +93,7 @@ export const useSubgraph = (create: CreateSubgraph, env: Record<string, string> 
         create({
           fetch: upstream,
           env: { PORT: "0", SHUTDOWN_DRAIN_MS: "0", ...env },
+          sleep: () => Promise.resolve(),
           logStream: { write: (line: string) => void logs.push(line) },
         }),
       ),
@@ -119,3 +122,19 @@ export const readSchemas = (...names: string[]): { name: string; sdl: string }[]
       "utf8",
     ),
   }));
+
+export const silentLogger = createLogger("test", "silent", undefined);
+
+/** A cache that lives for one test, with the store open for inspection. */
+export const memoryCache = (): Cache & { store: Map<string, string> } => {
+  const store = new Map<string, string>();
+  return {
+    store,
+    get: (key) => Promise.resolve(store.get(key) ?? null),
+    set: (key, value) => {
+      store.set(key, value);
+      return Promise.resolve();
+    },
+    close: () => Promise.resolve(),
+  };
+};

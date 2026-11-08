@@ -4,6 +4,8 @@ import { connect } from "node:net";
 import { createLocalJWKSet, exportJWK, generateKeyPair, SignJWT, type CryptoKey } from "jose";
 import { GraphQLError } from "graphql";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { z } from "zod";
+import { hangingRedis } from "./support/fake-redis.ts";
 import { createSubgraph, type Subgraph, type SubgraphDependencies } from "../src/index.ts";
 
 const typeDefs = /* GraphQL */ `
@@ -584,6 +586,140 @@ describe("shutdown", () => {
       expect(lines().map(({ msg }) => msg)).toContain("request");
     });
   });
+});
+
+describe("upstream tools", () => {
+  const upstreamTypeDefs = 'type Query { value: String } type Thing @key(fields: "id") { id: ID! }';
+
+  it("[FR-SG-7] gives resolvers an upstream that retries without waiting in tests", async () => {
+    const responses = [new Response("{}", { status: 503 }), Response.json({ value: "ok" })];
+    const fetch = vi.fn<typeof globalThis.fetch>(() =>
+      Promise.resolve(responses.shift() as Response),
+    );
+    running = createSubgraph(
+      {
+        name: "test",
+        typeDefs: upstreamTypeDefs,
+        resolvers: ({ upstream }) => {
+          const source = upstream("example");
+          return {
+            Query: {
+              value: async () => {
+                const found = await source.call({
+                  key: "value",
+                  policy: () => ({ freshSeconds: 1, staleSeconds: 1 }),
+                  stored: z.object({ value: z.string() }),
+                  request: { url: "https://example.org", schema: z.object({ value: z.string() }) },
+                });
+                return found?.value;
+              },
+            },
+          };
+        },
+      },
+      { env: quick, fetch, sleep: () => Promise.resolve(), signals: new EventEmitter() },
+    );
+    const url = `http://127.0.0.1:${await running.listen()}`;
+
+    expect((await query(url, { query: "{ value }" })).data?.value).toBe("ok");
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it("[FR-SG-6] refuses more entities than the router would ever send", async () => {
+    const url = await start();
+    const representations = Array.from({ length: 501 }, (_, id) => ({ __typename: "Thing", id }));
+
+    const result = await query(url, {
+      query: "query Q($r: [_Any!]!) { _entities(representations: $r) { ... on Thing { id } } }",
+      variables: { r: representations },
+    });
+
+    expect(result.errors?.[0]).toMatchObject({
+      message: "Too many entities in one request.",
+      extensions: { code: "BAD_USER_INPUT" },
+    });
+  });
+
+  it("[FR-SG-6] counts entities across aliases, so they can't get around the limit", async () => {
+    const url = await start();
+    const batch = (from: number) =>
+      Array.from({ length: 300 }, (_, id) => ({ __typename: "Thing", id: from + id }));
+
+    const result = await query(url, {
+      query: `query Q($a: [_Any!]!, $b: [_Any!]!) {
+        a: _entities(representations: $a) { ... on Thing { id } }
+        b: _entities(representations: $b) { ... on Thing { id } }
+      }`,
+      variables: { a: batch(0), b: batch(300) },
+    });
+
+    expect(result.errors?.[0]?.message).toBe("Too many entities in one request.");
+  });
+
+  it("[FR-SG-6] allows a batch of entities the router could send", async () => {
+    const url = await start();
+    const representations = Array.from({ length: 500 }, (_, id) => ({ __typename: "Thing", id }));
+
+    const result = await query(url, {
+      query: "query Q($r: [_Any!]!) { _entities(representations: $r) { ... on Thing { id } } }",
+      variables: { r: representations },
+    });
+
+    expect(result.errors).toBeUndefined();
+  });
+
+  it("[FR-SG-7] starts a subgraph with no entities", async () => {
+    running = createSubgraph(
+      {
+        name: "test",
+        typeDefs: "type Query { a: String }",
+        resolvers: { Query: { a: () => "a" } },
+      },
+      { env: quick, signals: new EventEmitter() },
+    );
+    const url = `http://127.0.0.1:${await running.listen()}`;
+
+    expect((await query(url, { query: "{ a }" })).data?.a).toBe("a");
+  });
+
+  it("[FR-SG-6] connects to Redis when REDIS_URL is set, and closes it on shutdown", async () => {
+    const redis = await hangingRedis();
+    running = createSubgraph(
+      { name: "test", typeDefs, resolvers },
+      { env: { ...quick, REDIS_URL: redis.url }, signals: new EventEmitter() },
+    );
+    await running.listen();
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    let closed = false;
+    void redis.closed.then(() => (closed = true));
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(closed).toBe(false);
+
+    await running.shutdown();
+
+    await vi.waitFor(() => {
+      expect(closed).toBe(true);
+    });
+    redis.server.close();
+  });
+
+  it.each(["http://cache", "not a url", "redis://cache.example.com"])(
+    "[FR-SG-6] refuses REDIS_URL=%j",
+    (REDIS_URL) => {
+      expect(() =>
+        createSubgraph({ name: "test", typeDefs, resolvers }, { env: { REDIS_URL } }),
+      ).toThrow(/REDIS_URL/);
+    },
+  );
+
+  it.each(["rediss://cache.example.com", "redis://cache", "redis://127.0.0.1:6379"])(
+    "[FR-SG-6] accepts REDIS_URL=%j",
+    (REDIS_URL) => {
+      expect(() =>
+        createSubgraph({ name: "test", typeDefs, resolvers }, { env: { REDIS_URL } }),
+      ).not.toThrow();
+    },
+  );
 });
 
 describe("configuration", () => {
