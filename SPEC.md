@@ -89,11 +89,11 @@ flowchart TD
 
 ### Environments
 
-| Environment | Purpose                                    | Shape                                       |
-| ----------- | ------------------------------------------ | ------------------------------------------- |
-| Local       | Development and end-to-end tests           | Docker Compose with the pinned router image |
-| Staging     | Proving changes, load and resilience tests | Same stacks, smaller, single NAT gateway    |
-| Production  | Live traffic                               | 3 Availability Zones, Multi-AZ data stores  |
+| Environment | Purpose                                    | Shape                                      |
+| ----------- | ------------------------------------------ | ------------------------------------------ |
+| Local       | Development and end-to-end tests           | Docker, with the pinned router image       |
+| Staging     | Proving changes, load and resilience tests | Same stacks, smaller, single NAT gateway   |
+| Production  | Live traffic                               | 3 Availability Zones, Multi-AZ data stores |
 
 ### Router sizing
 

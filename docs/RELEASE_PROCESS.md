@@ -4,7 +4,7 @@
 
 | Environment | Purpose | Status |
 |---|---|---|
-| Local | Development with Docker Compose | Planned, M2 |
+| Local | The real graph in Docker, behind the pinned router image (`npm run test:router`) | In use |
 | CI | Throwaway services on each run | In use |
 | Staging | Proving releases | Planned, M7 |
 | Production | Live traffic | Planned, M11 |
