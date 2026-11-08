@@ -1,0 +1,21 @@
+query Package($name: String!, $version: String) {
+  package(name: $name) {
+    name
+    latestVersion
+    license
+    weeklyDownloads
+    repositoryUrl
+    repository {
+      url
+      stars
+      owner
+      latestRelease
+    }
+    advisories(version: $version) {
+      id
+      summary
+      severity
+      fixedIn
+    }
+  }
+}

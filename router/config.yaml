@@ -1,0 +1,101 @@
+# The public router (GR-1, GR-2). router/test/config.test.ts fails if this file enables dev mode,
+# the playground, introspection, query plans or wildcard CORS, or lets non-persisted operations run.
+# Every key is checked against config.schema.json at router@0.366.1.
+#
+# The router reads its environment first and lays this file on top, so a key left out here could
+# still be set by an environment variable (C-50). Every setting that matters is written out, even
+# where it matches the default. Variables are expanded into the raw text, comments included, before
+# parsing (C-43), so only known ones appear, and the environment must pass findUnsafeRouterEnvironment.
+version: "1"
+
+listen_addr: ${ROUTER_LISTEN_ADDR}
+json_log: true
+log_level: info
+
+dev_mode: false
+demo_mode: false
+introspection:
+  enabled: false
+playground:
+  enabled: false
+# The deprecated forms read the same environment variables, so they're set too (C-42).
+introspection_enabled: false
+playground_enabled: false
+# Overrides engine.debug.always_include_query_plan, so no plan can leak from this router (C-37).
+query_plans_enabled: false
+engine:
+  debug:
+    always_include_query_plan: false
+# MCP's get_schema hands out the whole schema, even with introspection off (C-51).
+mcp:
+  enabled: false
+connect_rpc:
+  enabled: false
+
+cors:
+  allow_origins:
+    - ${ROUTER_CORS_ORIGIN}
+  match_origins: []
+
+execution_config:
+  file:
+    path: ${ROUTER_EXECUTION_CONFIG}
+
+# Persisted operations come from local files, which needs no Cosmo plan (C-33, C-34).
+storage_providers:
+  file_system:
+    - id: operations
+      path: ${ROUTER_OPERATIONS_DIR}
+persisted_operations:
+  disabled: false
+  storage:
+    provider_id: operations
+    object_prefix: operations
+
+# Clients can't register operations of their own.
+automatic_persisted_queries:
+  enabled: false
+
+security:
+  block_non_persisted_operations:
+    enabled: true
+    # Set, so the environment can't supply a condition that lets operations through.
+    condition: "true"
+  complexity_limits:
+    mode: enforce
+    # package { repository { url } } is depth 3, the deepest this schema allows (C-45). A field
+    # that nests deeper is refused until this changes on purpose.
+    depth:
+      enabled: true
+      limit: 3
+    total_fields:
+      enabled: true
+      limit: 60
+    root_fields:
+      enabled: true
+      limit: 3
+    root_field_aliases:
+      enabled: true
+      limit: 0
+traffic_shaping:
+  router:
+    # The smallest size the router allows.
+    max_request_body_size: 1MB
+
+# Anonymous reads get public data, and an invalid token is refused (ADR 0015, C-36).
+authentication:
+  jwt:
+    on_error: reject
+    jwks:
+      - url: ${ROUTER_JWKS_URL}
+        audiences:
+          - ${ROUTER_JWT_AUDIENCE}
+authorization:
+  require_authentication: false
+
+# Subgraphs verify the token again themselves (C-40).
+headers:
+  all:
+    request:
+      - op: propagate
+        named: Authorization

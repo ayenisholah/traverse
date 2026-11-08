@@ -1,0 +1,1 @@
+{"version":1,"body":"query Package($name: String!, $version: String) {\n  package(name: $name) {\n    name\n    latestVersion\n    license\n    weeklyDownloads\n    repositoryUrl\n    repository {\n      url\n      stars\n      owner\n      latestRelease\n    }\n    advisories(version: $version) {\n      id\n      summary\n      severity\n      fixedIn\n    }\n  }\n}\n"}
