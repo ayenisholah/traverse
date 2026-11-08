@@ -51,11 +51,13 @@
 | A request exhausts a subgraph or blocks its shutdown | A 1 MB body limit, a parser token limit, only `POST /graphql` routed, and a forced close after a bounded wait | FR-SG-7 |
 | A client's text or a secret reaches subgraph logs | Paths, aliases, messages and stacks aren't logged, and the shared logger drops sensitive fields itself | GR-4, FR-OB-6 |
 | A subgraph trusts a claim it shouldn't | Tokens are verified again, with algorithm, audience, issuer, `exp` and `sub` checks, and `sub` must be a non-empty string | GR-3 |
-| An upstream response carries personal data or hostile text | Every field is held to the format it should have, and OSV's prose `summary` is normalised, capped and replaced by the ID if it holds anything address-shaped, all before it leaves `fetchJson`, so a cache can't hold anything else. Redirects are refused, and responses are capped at 16 MB | GR-13, GR-16 |
+| An upstream response carries personal data or hostile text | Every field is held to the format it should have, and OSV's prose `summary` is normalised, capped and replaced by the ID if it holds anything address-shaped, all as it's parsed, so a cache can't hold anything else. Redirects are refused, and responses are capped at 16 MB | GR-13, GR-16 |
 | The GitHub token reaches the wrong place | It's sent only to GitHub's endpoint or a local service, refused redirects, and kept out of errors and logs | FR-SG-3 |
 | A package names a private repository to read it through Traverse's token | Private repositories are treated as missing, whatever the token can read | FR-SG-3 |
-| One request spends the GitHub budget through many entities | Owner and name lengths are bounded. Dedupe and a concurrency limit land with `feat/upstream-resilience`, before any deployment | FR-SG-6 |
+| One request spends a source's budget | Identical calls share one upstream request. Each source has a concurrency limit and a queue of 500, and an operation may hold at most 500 entities across all its aliases. Retries stop after three tries or a 20-second deadline that counts queueing, a wait longer than 5 seconds isn't retried, and a 429 pauses that source | FR-SG-6 |
 | A vulnerable package looks safe | An empty list only comes from OSV's own empty answer: an unknown response shape, a bad version, a partial page set or a bad withdrawal date is an error. `fixedIn` must fall outside every affected range for this npm package, and OSV's address can't be changed to anything else | FR-SG-4 |
+| The cache serves a wrong or stale advisory list | Keys name the question, including version, page and the source's origin, and carry a version for the stored shape. Every entry read back is checked against the same rules as on the way in, and a future time counts as a miss. OSV answers are never served stale: an outage is an error, not an old list | FR-SG-6, GR-16 |
+| Redis is down or slow | Commands time out after 500 ms and count as a miss, and writes never hold up an answer. Plain `redis://` is only allowed to a local service | FR-SG-6, NFR-7 |
 | A pasted schema contains hostile content | Parsed as data in a Web Worker, rendered escaped, and kept in the browser unless saved | FR-WB-2 |
 | Upstream text carries script or instructions | Rendered escaped, and treated as data in prompts | GR-13 |
 | Prompt injection steers the assistant | Output validated before it's shown, and it can't reach the graph or a mutation | GR-12, GR-13 |
@@ -72,3 +74,4 @@
 - Subgraphs keep introspection on, because `_service` exposes their SDL anyway and only the router can reach them.
 - A person spelling an address out in words in an advisory summary can't be detected. Summaries are curated vulnerability titles, and none of 309 real ones held an address.
 - Advisories use the package name as given, so a representation sent straight to the subgraph with the wrong case gets an empty list. Through the router, the `packages` subgraph resolves the name first.
+- If a Redis host stops answering connection attempts, a command can wait up to its 1-second connect timeout before counting as a miss.
