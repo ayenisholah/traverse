@@ -30,6 +30,7 @@ This file records proof that isn't a named test. Each gate below was run on a cl
 | Tests | `CI=1 npm test` | Test marked `.only` | Exit 1, `.only` refused |
 | Commit messages | `npx commitlint` | Attribution line, filler subject, schedule label | Exit 1, each rule reported |
 | Secrets | `gitleaks` 8.24.3 over full history | Committed AWS key and GitHub token | Exit 1, two leaks found |
+| Secrets allowlist | `gitleaks` 8.24.3 with `.gitleaks.toml` | In `router/config.json`, a GitHub token, and a generic key that isn't hex; the same schema hash in another file | Each caught, while the real config's three schema hashes pass |
 | Dependencies | `npm audit --omit=dev --audit-level=high` | Project depending on `lodash` 4.17.20 | Exit 1 |
 
 The traceability run first passed on the `done` plant, because a test fixture named a real ID and counted as evidence. Fixtures now use a prefix no real requirement has.
