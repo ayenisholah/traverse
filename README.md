@@ -12,7 +12,7 @@ Explore a federated GraphQL graph from the frontend, built on [WunderGraph Cosmo
 Traverse answers two questions for frontend developers: **which subgraphs does my query touch, and what breaks if this schema changes?**
 
 > [!NOTE]
-> **Status: early development.** Today the repository holds the specification, the quality gates, a searchable graph map and an impact check on the Cosmo demo, a CLI on npm and a GitHub Action that check a repository, the design tokens, and the core that composes a graph, finds who owns a field and works out what a schema change breaks. The rest of this page is planned and not built yet.
+> **Status: early development.** Today the repository holds the specification, the quality gates, a searchable graph map and an impact check on the Cosmo demo, a CLI on npm and a GitHub Action that check a repository, the design tokens, and the core that composes a graph, finds who owns a field and works out what a schema change breaks. It also holds three subgraphs that serve live npm, GitHub and OSV data, with caching and retries, which don't run behind the Cosmo Router yet. The rest of this page is planned and not built yet.
 
 **[Try the demo](https://ayenisholah.github.io/traverse/)**, on the Cosmo demo schemas, with no sign-in.
 
@@ -47,14 +47,14 @@ Traverse complements these tools, and doesn't replace them:
 
 ## Real data
 
-The project's own graph serves live public data, joined across subgraphs:
+The project's own graph serves live public data. The first three subgraphs are built, and the Cosmo Router joins them in M2:
 
-| Subgraph       | Source   | Data                                        |
-| -------------- | -------- | ------------------------------------------- |
-| `packages`     | npm      | Versions, licences, dependencies, downloads |
-| `repositories` | GitHub   | Stars, releases, owners                     |
-| `advisories`   | OSV      | Known vulnerabilities                       |
-| `workspace`    | Postgres | Your saved drafts and screen maps           |
+| Subgraph       | Source   | Data                                        | Status  |
+| -------------- | -------- | ------------------------------------------- | ------- |
+| `packages`     | npm      | Versions, licences, dependencies, downloads | Built   |
+| `repositories` | GitHub   | Stars, releases, owners                     | Built   |
+| `advisories`   | OSV      | Known vulnerabilities                       | Built   |
+| `workspace`    | Postgres | Your saved drafts and screen maps           | Planned |
 
 ## Planned architecture
 
@@ -128,7 +128,7 @@ jobs:
       pull-requests: write
     steps:
       - uses: actions/checkout@v7
-      - uses: ayenisholah/traverse@v0.7.1
+      - uses: ayenisholah/traverse@v0.8.0
 ```
 
 To run it locally, use `npx @ayenis/traverse check --base origin/main`, on Node 24 or later.
@@ -175,16 +175,16 @@ Every gate except CodeQL was proven to fail on a planted violation. See [verific
 
 ## Roadmap
 
-| Milestone | Outcome                                            | Status      |
-| --------- | -------------------------------------------------- | ----------- |
-| M0        | Tooling, specification, quality gates              | Done        |
-| M1        | Public demo and CLI, on real schemas               | In progress |
-| M2        | Real graph behind the Cosmo Router                 | Planned     |
-| M3        | Live query routes and the Package explorer         | Planned     |
-| M4        | Accounts and saved workspaces                      | Planned     |
-| M5        | AI assistant on Amazon Bedrock                     | Planned     |
-| M6 to M8  | AWS network, services and observability            | Planned     |
-| M9 to M11 | Delivery pipeline, resilience proof and production | Planned     |
+| Milestone | Outcome                                            | Status                                   |
+| --------- | -------------------------------------------------- | ---------------------------------------- |
+| M0        | Tooling, specification, quality gates              | Done                                     |
+| M1        | Public demo and CLI, on real schemas               | Waiting on user feedback                 |
+| M2        | Real graph behind the Cosmo Router                 | In progress: subgraphs done, router next |
+| M3        | Live query routes and the Package explorer         | Planned                                  |
+| M4        | Accounts and saved workspaces                      | Planned                                  |
+| M5        | AI assistant on Amazon Bedrock                     | Planned                                  |
+| M6 to M8  | AWS network, services and observability            | Planned                                  |
+| M9 to M11 | Delivery pipeline, resilience proof and production | Planned                                  |
 
 ## Documentation
 
