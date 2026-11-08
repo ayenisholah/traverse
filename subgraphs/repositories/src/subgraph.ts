@@ -4,14 +4,11 @@ import {
   isSafeEndpoint,
   type Subgraph,
   type SubgraphDependencies,
-  type UpstreamFetch,
 } from "@traverse/subgraph-kit";
 import { z } from "zod";
-import { createGithubClient } from "./github.ts";
+import { createGithubClient, GITHUB_GRAPHQL_URL } from "./github.ts";
 
 const typeDefs = readFileSync(new URL("../schema.graphqls", import.meta.url), "utf8");
-
-const GITHUB_GRAPHQL_URL = "https://api.github.com/graphql";
 
 const environmentSchema = z.object({
   GITHUB_TOKEN: z.string().min(1),
@@ -25,30 +22,27 @@ const environmentSchema = z.object({
     .default(GITHUB_GRAPHQL_URL),
 });
 
-interface RepositoriesDependencies extends SubgraphDependencies {
-  fetch?: UpstreamFetch;
-}
-
 export const createRepositoriesSubgraph = ({
-  fetch = globalThis.fetch,
   env = process.env,
   ...dependencies
-}: RepositoriesDependencies = {}): Subgraph => {
+}: SubgraphDependencies = {}): Subgraph => {
   const { GITHUB_TOKEN: token, GITHUB_GRAPHQL_URL: graphqlUrl } = environmentSchema.parse(env);
-  const github = createGithubClient({ fetch, graphqlUrl, token });
 
   return createSubgraph(
     {
       name: "repositories",
       typeDefs,
-      resolvers: {
-        Repository: {
-          __resolveReference: ({ url }: { url?: unknown }) => github.repository(url),
-        },
-        Package: {
-          repository: ({ repositoryUrl }: { repositoryUrl?: unknown }) =>
-            github.repository(repositoryUrl),
-        },
+      resolvers: ({ upstream }) => {
+        const github = createGithubClient({ upstream: upstream("GitHub"), graphqlUrl, token });
+        return {
+          Repository: {
+            __resolveReference: ({ url }: { url?: unknown }) => github.repository(url),
+          },
+          Package: {
+            repository: ({ repositoryUrl }: { repositoryUrl?: unknown }) =>
+              github.repository(repositoryUrl),
+          },
+        };
       },
     },
     { ...dependencies, env },

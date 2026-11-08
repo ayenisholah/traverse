@@ -1,4 +1,4 @@
-import { fetchRequired, type UpstreamFetch } from "@traverse/subgraph-kit";
+import { cachePolicy, type Upstream } from "@traverse/subgraph-kit";
 import { z } from "zod";
 
 interface RepositoryData {
@@ -13,10 +13,14 @@ export interface GithubClient {
 }
 
 interface GithubOptions {
-  fetch: UpstreamFetch;
+  upstream: Upstream;
   graphqlUrl: string;
   token: string;
 }
+
+export const GITHUB_GRAPHQL_URL = "https://api.github.com/graphql";
+
+const policy = cachePolicy({ fresh: 3600, stale: 24 * 3600, missing: 10 * 60 });
 
 const REPOSITORY_URL = /^https:\/\/github\.com\/([a-z0-9][a-z0-9-]{0,38})\/([\w.-]{1,100})$/i;
 const LOGIN = /^[a-z0-9][a-z0-9-]{0,38}$/i;
@@ -87,18 +91,33 @@ export const repositorySchema = z
     };
   });
 
-export const createGithubClient = ({ fetch, graphqlUrl, token }: GithubOptions): GithubClient => ({
+// What the cache may hold, checked again on the way back out.
+const repositoryStored = z.object({
+  stars: z.number().int().min(0).max(MAX_INT),
+  owner: z.string().regex(LOGIN),
+  latestRelease: z.string().regex(TAG).nullable(),
+});
+
+export const createGithubClient = ({
+  upstream,
+  graphqlUrl,
+  token,
+}: GithubOptions): GithubClient => ({
   repository: async (url) => {
     const [, owner, name] = REPOSITORY_URL.exec(typeof url === "string" ? url : "") ?? [];
     if (owner === undefined || name === undefined) return null;
-    const document = await fetchRequired({
-      source: "GitHub",
-      url: graphqlUrl,
-      schema: repositorySchema,
-      fetch,
-      method: "POST",
-      headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
-      body: JSON.stringify({ query: QUERY, variables: { owner, name } }),
+    const document = await upstream.call({
+      key: `${owner}/${name}`.toLowerCase(),
+      policy,
+      stored: repositoryStored,
+      request: {
+        url: graphqlUrl,
+        schema: repositorySchema,
+        method: "POST",
+        notFoundIsFailure: true,
+        headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+        body: JSON.stringify({ query: QUERY, variables: { owner, name } }),
+      },
     });
     return document && { url: url as string, ...document };
   },

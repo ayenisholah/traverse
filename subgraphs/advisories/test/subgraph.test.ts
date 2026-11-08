@@ -2,15 +2,20 @@
 import { readFileSync } from "node:fs";
 import { composeGraph, findFieldOwners } from "@traverse/graph-core";
 import { findPersonalData } from "@traverse/repo-checks";
+import { createDirectUpstream, createUpstream } from "@traverse/subgraph-kit";
 import { describe, expect, it, vi } from "vitest";
 import {
   expectEntrypointToRun,
+  memoryCache,
+  silentLogger,
   readSchemas,
   stubUpstream,
   useSubgraph,
 } from "../../../packages/subgraph-kit/test/support/run-subgraph.ts";
 import { advisorySchema, createOsvClient, querySchema } from "../src/osv.ts";
+import { checkOsv } from "../src/live-check.ts";
 import { createAdvisoriesSubgraph } from "../src/subgraph.ts";
+
 import { recordings, recordingsFile, replay } from "./helpers.ts";
 
 const PLANTED = "planted.person@example.org";
@@ -182,7 +187,10 @@ describe("the advisories subgraph", () => {
 
 describe("paging", () => {
   const client = (fetch: typeof globalThis.fetch) =>
-    createOsvClient({ fetch, baseUrl: "https://osv.example" });
+    createOsvClient({
+      upstream: createDirectUpstream("OSV", fetch),
+      baseUrl: "https://osv.example",
+    });
   const page = (id: string, next?: string) =>
     Response.json({ vulns: [{ id }], ...(next !== undefined && { next_page_token: next }) });
 
@@ -623,5 +631,157 @@ describe("the entrypoint", () => {
     await entities(url, [packageNamed("express")]);
 
     expect(upstream.mock.calls.map(([input]) => input)).toContain("https://api.osv.dev/v1/query");
+  });
+});
+
+describe("the live check", () => {
+  it("[FR-SG-10] passes when OSV answers as recorded", async () => {
+    expect(await checkOsv(fromRecordings)).toEqual([]);
+  });
+
+  it("[FR-SG-10] fails when OSV says a known-vulnerable version is safe", async () => {
+    expect(await checkOsv(answering({}))).toEqual(["OSV advisories: unexpected answer"]);
+  });
+});
+
+const cachedOsv = (fetch: typeof globalThis.fetch, now: () => number) =>
+  createOsvClient({
+    upstream: createUpstream({
+      source: "OSV",
+      fetch,
+      cache: memoryCache(),
+      logger: () => silentLogger,
+      now,
+      sleep: () => Promise.resolve(),
+    }),
+    baseUrl: "https://osv.example",
+  });
+
+describe("caching an empty list", () => {
+  it("[FR-SG-6] never serves a stale 'no advisories' once OSV fails", async () => {
+    let calls = 0;
+    const flaky: typeof fetch = () => {
+      calls += 1;
+      return Promise.resolve(calls === 1 ? Response.json({}) : new Response("{}", { status: 503 }));
+    };
+    let now = 0;
+    const osv = cachedOsv(flaky, () => now);
+
+    expect(await osv.advisories("ms", undefined)).toEqual([]);
+    now += 6 * 60 * 1000;
+
+    await expect(osv.advisories("ms", undefined)).rejects.toMatchObject({
+      message: "OSV is unavailable.",
+    });
+  });
+
+  it("[FR-SG-6] serves no stale list, which could hide an advisory published since", async () => {
+    let calls = 0;
+    const flaky: typeof fetch = () => {
+      calls += 1;
+      return Promise.resolve(
+        calls === 1
+          ? Response.json({ vulns: [{ id: "GHSA-1234" }] })
+          : new Response("{}", { status: 503 }),
+      );
+    };
+    let now = 0;
+    const osv = cachedOsv(flaky, () => now);
+
+    expect(await osv.advisories("ms", undefined)).toHaveLength(1);
+    now += 16 * 60 * 1000;
+
+    await expect(osv.advisories("ms", undefined)).rejects.toMatchObject({
+      message: "OSV is unavailable.",
+    });
+  });
+
+  it("[FR-SG-6] serves no stale advisory by ID either", async () => {
+    let calls = 0;
+    const flaky: typeof fetch = () => {
+      calls += 1;
+      return Promise.resolve(
+        calls === 1 ? Response.json({ id: "GHSA-1234" }) : new Response("{}", { status: 503 }),
+      );
+    };
+    let now = 0;
+    const osv = cachedOsv(flaky, () => now);
+
+    expect(await osv.advisory("GHSA-1234")).toMatchObject({ id: "GHSA-1234" });
+    now += 61 * 60 * 1000;
+
+    await expect(osv.advisory("GHSA-1234")).rejects.toMatchObject({
+      message: "OSV is unavailable.",
+    });
+  });
+
+  it("[FR-SG-6] keys each page separately", async () => {
+    const pages = [
+      Response.json({ vulns: [{ id: "AAA-1" }], next_page_token: "two" }),
+      Response.json({ vulns: [{ id: "AAA-2" }] }),
+    ];
+    const osv = createOsvClient({
+      upstream: createUpstream({
+        source: "OSV",
+        fetch: () => Promise.resolve(pages.shift() as Response),
+        cache: memoryCache(),
+        logger: () => silentLogger,
+      }),
+      baseUrl: "https://osv.example",
+    });
+
+    expect((await osv.advisories("ms", undefined))?.map(({ id }) => id)).toEqual([
+      "AAA-1",
+      "AAA-2",
+    ]);
+  });
+
+  it("[FR-SG-6] won't serve a cached list that breaks the rules on the way in", async () => {
+    const cache = memoryCache();
+    const forged = {
+      id: "GHSA-1234",
+      summary: "ask person@example.org",
+      severity: null,
+      fixedIn: null,
+    };
+    cache.store.set(
+      "OSV:v1:https://osv.example:query:ms@*#",
+      JSON.stringify({ value: { advisories: [forged] }, storedAt: 0 }),
+    );
+    const osv = createOsvClient({
+      upstream: createUpstream({
+        source: "OSV",
+        fetch: () => Promise.resolve(Response.json({ vulns: [{ id: "GHSA-9999" }] })),
+        cache,
+        logger: () => silentLogger,
+        now: () => 1,
+      }),
+      baseUrl: "https://osv.example",
+    });
+
+    expect((await osv.advisories("ms", undefined))?.map(({ id }) => id)).toEqual(["GHSA-9999"]);
+  });
+
+  it("[FR-SG-6] keys each version separately, because the fix depends on it", async () => {
+    const bodies: string[] = [];
+    const recordingFetch: typeof fetch = (_, init) => {
+      bodies.push(init?.body as string);
+      return Promise.resolve(Response.json({}));
+    };
+    const osv = createOsvClient({
+      upstream: createUpstream({
+        source: "OSV",
+        fetch: recordingFetch,
+        cache: memoryCache(),
+        logger: () => silentLogger,
+      }),
+      baseUrl: "https://osv.example",
+    });
+
+    await osv.advisories("ms", "1.0.0");
+    await osv.advisories("ms", "2.0.0");
+    await osv.advisories("ms", "1.0.0");
+
+    expect(bodies).toHaveLength(2);
   });
 });
