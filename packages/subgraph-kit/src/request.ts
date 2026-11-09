@@ -70,13 +70,19 @@ const parseJson = (text: string): unknown => {
   }
 };
 
-/** Seconds or an HTTP date, as `Retry-After` allows. Anything else gives no hint. */
+// A source's answer sets how long the whole source is left alone, so a huge value, or one that
+// overflows to Infinity, would stop it until restart. A minute is longer than any real hint seen.
+const MAX_RETRY_AFTER_MS = 60_000;
+
+const bounded = (ms: number): number => Math.min(MAX_RETRY_AFTER_MS, Math.max(0, ms));
+
+/** Seconds or an HTTP date, as `Retry-After` allows, up to a minute. Anything else gives no hint. */
 export const retryAfterMs = (header: string | null, now: number): number | undefined => {
   if (header === null || header.trim() === "") return undefined;
   const seconds = Number(header);
-  if (Number.isFinite(seconds)) return Math.max(0, seconds * 1000);
+  if (Number.isFinite(seconds)) return bounded(seconds * 1000);
   const date = Date.parse(header);
-  return Number.isNaN(date) ? undefined : Math.max(0, date - now);
+  return Number.isNaN(date) ? undefined : bounded(date - now);
 };
 
 /**
