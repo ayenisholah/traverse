@@ -769,3 +769,69 @@ describe("configuration", () => {
     expect(process.listenerCount("SIGTERM")).toBe(before);
   });
 });
+
+describe("upstream queue", () => {
+  const entities = (count: number, prefix: string) => ({
+    query: "query($r: [_Any!]!) { _entities(representations: $r) { ... on Thing { name } } }",
+    variables: {
+      r: Array.from({ length: count }, (_, index) => ({ __typename: "Thing", id: prefix + index })),
+    },
+  });
+
+  it("[FR-SG-6] keeps room for another request while one request's batch fills the queue", async () => {
+    let open: () => void = () => undefined;
+    const opened = new Promise<void>((resolve) => {
+      open = resolve;
+    });
+    const fetch = vi.fn<typeof globalThis.fetch>(async () => {
+      await opened;
+      return new Response(JSON.stringify({ value: "answer" }));
+    });
+    const value = z.object({ value: z.string() });
+    logged = [];
+    running = createSubgraph(
+      {
+        name: "test",
+        typeDefs,
+        resolvers: ({ upstream }) => {
+          const source = upstream("source");
+          return {
+            ...resolvers,
+            Thing: {
+              __resolveReference: async ({ id }: { id: string }) => ({
+                id,
+                name: (
+                  await source.call({
+                    key: id,
+                    policy: () => ({ freshSeconds: 1, staleSeconds: 1 }),
+                    stored: value,
+                    request: { url: "https://source.example", schema: value },
+                  })
+                )?.value,
+              }),
+            },
+          };
+        },
+      },
+      {
+        env: quick,
+        logStream: { write: (line: string) => void logged.push(line) },
+        signals: new EventEmitter(),
+        fetch,
+      },
+    );
+    const url = `http://127.0.0.1:${await running.listen()}`;
+
+    const batch = query(url, entities(500, "a"));
+    await vi.waitFor(() => {
+      expect(fetch).toHaveBeenCalledTimes(4);
+    });
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    const other = query(url, entities(10, "b"));
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    open();
+
+    expect((await other).errors).toBeUndefined();
+    expect((await batch).errors).toHaveLength(6);
+  });
+});

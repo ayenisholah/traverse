@@ -41,7 +41,15 @@ export const createSubgraph = (
   const verifyUser = config.jwt ? createUserVerifier(keys, config.jwt) : noUser;
   const cache = config.redisUrl === undefined ? undefined : createRedisCache(config.redisUrl);
   const upstream = (source: string) =>
-    createUpstream({ source, fetch, cache, logger: scope.current, ...(sleep && { sleep }) });
+    createUpstream({
+      source,
+      fetch,
+      cache,
+      logger: scope.current,
+      // Each request runs with its own logger, so that names the request.
+      owner: scope.current,
+      ...(sleep && { sleep }),
+    });
   const yoga = createGraphql(definition, { upstream }, verifyUser, scope);
 
   const server = createServer(

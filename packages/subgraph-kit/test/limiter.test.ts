@@ -83,4 +83,45 @@ describe("createLimiter", () => {
 
     expect(await limiter.run(() => Promise.resolve("next"))).toBe("next");
   });
+
+  it("[FR-SG-6] makes room for a new owner in a queue another owner filled, then takes turns", async () => {
+    const limiter = createLimiter(1, 3);
+    const { open, opened } = gate();
+    const started: string[] = [];
+    const run = (owner: string, name: string) =>
+      limiter.run(async () => {
+        started.push(name);
+        if (name === "a0") await opened;
+        return name;
+      }, owner);
+
+    const first = run("a", "a0");
+    const [a1, a2, a3] = [run("a", "a1"), run("a", "a2"), run("a", "a3")];
+    const b1 = run("b", "b1");
+
+    await expect(a3).rejects.toBeInstanceOf(LimitReached);
+    open();
+    expect(await Promise.all([first, a1, a2, b1])).toEqual(["a0", "a1", "a2", "b1"]);
+    expect(started).toEqual(["a0", "a1", "b1", "a2"]);
+  });
+
+  it("[FR-SG-6] refuses work from anyone once every owner holds an even share", async () => {
+    const limiter = createLimiter(1, 2);
+    const { open, opened } = gate();
+    const first = limiter.run(() => opened, "a");
+    const queued = [
+      limiter.run(() => Promise.resolve("a1"), "a"),
+      limiter.run(() => Promise.resolve("b1"), "b"),
+    ];
+
+    for (const owner of ["a", "b", "c"]) {
+      await expect(limiter.run(() => Promise.resolve(owner), owner)).rejects.toBeInstanceOf(
+        LimitReached,
+      );
+    }
+
+    open();
+    await first;
+    expect(await Promise.all(queued)).toEqual(["a1", "b1"]);
+  });
 });
