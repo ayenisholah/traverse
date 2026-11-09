@@ -241,6 +241,20 @@ describe("createUpstream", () => {
     expect(await call("c")).toEqual({ value: "later" });
   });
 
+  it("[FR-SG-6] tries again after a minute, however long a rate limit asks to wait", async () => {
+    const { call, fetch, advance } = setup({
+      responses: [() => json({}, 429, { "retry-after": "1e308" }), () => json({ value: "later" })],
+    });
+
+    await expect(call("a")).rejects.toThrow();
+    advance(59);
+    await expect(call("b")).rejects.toThrow();
+    expect(fetch).toHaveBeenCalledTimes(1);
+
+    advance(2);
+    expect(await call("c")).toEqual({ value: "later" });
+  });
+
   it("[FR-SG-6] gives each try only the time left before the deadline", async () => {
     const timeout = vi.spyOn(AbortSignal, "timeout");
     const { call, advance } = setup({
