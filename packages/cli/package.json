@@ -1,6 +1,6 @@
 {
   "name": "@ayenis/traverse",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "description": "Finds the operations and screens a federated schema change breaks.",
   "license": "MIT",
   "repository": {

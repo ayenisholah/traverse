@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.9.1](https://github.com/ayenisholah/traverse/compare/v0.9.0...v0.9.1) (2026-11-09)
+
+
+### Bug Fixes
+
+* **subgraph-kit:** cap Retry-After at a minute ([a89a3fa](https://github.com/ayenisholah/traverse/commit/a89a3fa283505e66f0dd92ea834c892ca73f7fe4))
+* **subgraph-kit:** share each source's queue fairly between requests ([a740334](https://github.com/ayenisholah/traverse/commit/a7403344243f7ed5f5741cfae55058cfd6398c33))
+
 ## [0.9.0](https://github.com/ayenisholah/traverse/compare/v0.8.0...v0.9.0) (2026-11-08)
 
 
