@@ -1,7 +1,7 @@
 import { GraphQLError } from "graphql";
 import { z } from "zod";
 import type { Cache } from "./cache.ts";
-import { createLimiter, LimitReached } from "./limiter.ts";
+import { createLimiter, type Limiter } from "./limiter.ts";
 import { MAX_REPRESENTATIONS } from "./limits.ts";
 import { createLogger, type Logger } from "./logging.ts";
 import {
@@ -52,6 +52,8 @@ export interface UpstreamOptions {
   sleep?: (ms: number) => Promise<void>;
   concurrency?: number;
   queueLimit?: number;
+  /** Names the incoming request, so one request's batch can't take every place in the queue. */
+  owner?: () => unknown;
 }
 
 interface Entry<T> {
@@ -168,6 +170,54 @@ const createAttempts = (
   return { run };
 };
 
+interface Queued<T> {
+  done: Promise<Outcome<T>>;
+  /** Another request wants the same answer, so it gets its own place in the queue. */
+  claim: (by: unknown) => void;
+}
+
+/**
+ * One fetch per answer, however many requests want it. Each of them holds a place in the queue,
+ * and the first place to come up runs it, so a request never waits behind, or is dropped with,
+ * another request's batch. The deadline counts from when that place was taken.
+ */
+const createQueue = (
+  limiter: Limiter,
+  fetch: UpstreamFetch,
+  now: () => number,
+  sleep: (ms: number) => Promise<void>,
+) => {
+  const attempts = createAttempts(fetch, now, sleep);
+  return <T>(request: UpstreamRequest<T>, first: unknown): Queued<T> => {
+    const { promise, resolve, reject } = Promise.withResolvers<Outcome<T>>();
+    const owners = new Set<unknown>();
+    let started = false;
+
+    const claim = (by: unknown): void => {
+      if (started || owners.has(by)) return;
+      owners.add(by);
+      const queuedAt = now();
+      const turn = async (): Promise<void> => {
+        if (started) return;
+        started = true;
+        try {
+          resolve(await attempts.run(request, queuedAt));
+        } catch (error) {
+          reject(error);
+        }
+      };
+      // Only a full queue rejects a turn. The answer fails once no one is left waiting for one.
+      limiter.run(turn, by).catch(() => {
+        owners.delete(by);
+        if (!started && owners.size === 0) resolve({ kind: "failed", reason: "queue-full" });
+      });
+    };
+
+    claim(first);
+    return { done: promise, claim };
+  };
+};
+
 export const createUpstream = ({
   source,
   fetch,
@@ -177,30 +227,21 @@ export const createUpstream = ({
   sleep = defaultSleep,
   concurrency = 4,
   queueLimit = MAX_REPRESENTATIONS,
+  owner = () => undefined,
 }: UpstreamOptions): Upstream => {
-  const limiter = createLimiter(concurrency, queueLimit);
-  const inFlight = new Map<string, Promise<unknown>>();
+  const queue = createQueue(createLimiter(concurrency, queueLimit), fetch, now, sleep);
+  const inFlight = new Map<string, { value: Promise<unknown>; claim: (by: unknown) => void }>();
   const warn: Warn = (reason, message) => logger().warn({ source, reason }, message);
   const store = createCacheAccess(cache, warn, now);
-  const attempts = createAttempts(fetch, now, sleep);
   const age = (entry: Entry<unknown>): number => now() - entry.storedAt;
 
-  const limited = async <T>(request: UpstreamRequest<T>): Promise<Outcome<T>> => {
-    const started = now();
-    try {
-      return await limiter.run(() => attempts.run(request, started));
-    } catch (error) {
-      if (error instanceof LimitReached) return { kind: "failed", reason: "queue-full" };
-      throw error;
-    }
-  };
-
   const refresh = async <T>(
-    { policy, request }: UpstreamCall<T>,
+    { policy }: UpstreamCall<T>,
     key: string,
     cached: Entry<T> | undefined,
+    done: Promise<Outcome<T>>,
   ): Promise<T | null> => {
-    const outcome = await limited(request);
+    const outcome = await done;
     if (outcome.kind !== "failed") {
       const value = outcome.kind === "ok" ? outcome.value : null;
       // Not awaited: a slow Redis shouldn't hold up everyone waiting on this key.
@@ -220,6 +261,7 @@ export const createUpstream = ({
    * want the same key, and if it fails, a stale answer is better than none (FR-SG-6).
    */
   const call = async <T>(upstreamCall: UpstreamCall<T>): Promise<T | null> => {
+    const by = owner();
     // The origin keeps a local stand-in's answers apart from the real source's, if they share Redis.
     const { origin } = new URL(upstreamCall.request.url);
     const key = `${source}:v${CACHE_VERSION}:${origin}:${upstreamCall.key}`;
@@ -227,10 +269,16 @@ export const createUpstream = ({
     if (cached && age(cached) < upstreamCall.policy(cached.value).freshSeconds * 1000) {
       return cached.value;
     }
-    const pending = inFlight.get(key) ?? refresh(upstreamCall, key, cached);
-    inFlight.set(key, pending);
+    const shared = inFlight.get(key);
+    if (shared) {
+      shared.claim(by);
+      return (await shared.value) as T | null;
+    }
+    const { done, claim } = queue(upstreamCall.request, by);
+    const value = refresh(upstreamCall, key, cached, done);
+    inFlight.set(key, { value, claim });
     try {
-      return (await pending) as T | null;
+      return await value;
     } finally {
       inFlight.delete(key);
     }

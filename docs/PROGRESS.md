@@ -12,6 +12,8 @@ Traverse is built on WunderGraph Cosmo and helps frontend developers explore a f
 
 | Date | Work | PR |
 |---|---|---|
+| 2026-11-09 | Upstream limits, from the guardrail review of #48. `Retry-After` is capped at a minute: `1e308` used to parse as `Infinity` and pause a source until restart. Each source's queue now takes requests in turn, and when it's full a newcomer takes the place of the newest work from whichever request holds the most. One request's 500-entity batch can't keep the next request out, even for a key the batch also asked for: the guardrail review found that a second request joined the batch's place for a shared key, so it waited behind the batch or was dropped with it. Each request now holds its own place, and one fetch still serves them all. Proven in a subgraph by removing the request wiring, which leaves the second request with 6 errors. Fairness is per request; many parallel requests are left to the router's limits. | `fix/upstream-limits` |
+| 2026-11-09 | Released `v0.9.0` to npm with provenance, after approving the release pull request's workflow runs by API. | #51 |
 | 2026-11-09 | FR-SG-10 done: `upstream-check.yml`, run by hand on `main`, passed against live npm, GitHub and OSV, with the default `GITHUB_TOKEN` reading GitHub GraphQL ([run 42534288485](https://github.com/ayenisholah/traverse/actions/runs/42534288485)). The first attempt failed once on npm downloads, which answered normally from a local run and on the re-run. | `docs/upstream-check-proof` |
 | 2026-11-09 | `feat/local-router` merged, which closes M2. CodeQL flagged operation text from a file going out in an e2e request, fixed by taking the hash from the generated file's name. gitleaks flagged `wgc`'s schema hashes in `router/config.json`, allowed on one rule with the owner's approval. | #50 |
 | 2026-11-08 | `router/`: the three subgraphs composed behind the pinned router, with a hardened public config. Persisted operations only, from local files; cost limits that also cover persisted operations; anonymous reads, with invalid tokens refused. The GR-1 check requires every risky setting written out literally, and a second check holds the deployment's environment to six known variables, after the guardrail review got APQ, MCP and wildcard CORS through environment variables. A Docker e2e suite in `verify` runs the join, GR-2, the limits, the token rules and a GitHub outage on the pinned image. FR-GW-2, FR-GW-4, FR-SG-5, FR-SG-6, GR-1 and GR-2 are done, and M2 is done. | `feat/local-router` |
@@ -63,9 +65,8 @@ Nothing. Start the next item below.
 
 In order:
 
-1. `fix/upstream-limits` (FR-SG-6), from the guardrail review of #48: cap `Retry-After`, so one 429 can't pause a source until restart, and stop one client's batch from filling the shared 500-slot queue.
-2. M3: `feat/web-server`, then `feat/sandbox-router`, `feat/route-view` and `feat/package-explorer`. Ask the owner first about React Flow and Monaco, which `SPEC.md` still lists.
-3. Set aside by the owner on 2026-11-06: three frontend developers trying Traverse on their own repositories, for `docs/USER_FEEDBACK.md`. It's the last M1 exit item, and only the owner can arrange it.
+1. M3: `feat/web-server`, then `feat/sandbox-router`, `feat/route-view` and `feat/package-explorer`. Ask the owner first about React Flow and Monaco, which `SPEC.md` still lists.
+2. Set aside by the owner on 2026-11-06: three frontend developers trying Traverse on their own repositories, for `docs/USER_FEEDBACK.md`. It's the last M1 exit item, and only the owner can arrange it.
 
 ## Blocked
 

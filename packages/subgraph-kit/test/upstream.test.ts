@@ -90,6 +90,57 @@ const setup = ({
   };
 };
 
+const values = (list: string[]) => list.map((value) => ({ value }));
+
+/**
+ * A source that answers only when told, one slot at a time, so a test can fill its queue. Calls
+ * belong to whichever request `as` last named.
+ */
+const slowSource = ({ queueLimit }: { queueLimit: number }) => {
+  const logs: string[] = [];
+  const pending: ((response: Response) => void)[] = [];
+  const fetch = vi.fn<typeof globalThis.fetch>(
+    () =>
+      new Promise((resolve) => {
+        pending.push(resolve);
+      }),
+  );
+  let owner = "first request";
+  const upstream = createUpstream({
+    source: "npm",
+    fetch,
+    cache: undefined,
+    logger: () => createLogger("test", "info", { write: (line: string) => void logs.push(line) }),
+    owner: () => owner,
+    sleep: () => Promise.resolve(),
+    concurrency: 1,
+    queueLimit,
+  });
+  return {
+    fetch,
+    logs,
+    call: (key: string) =>
+      upstream.call({
+        key,
+        policy,
+        stored: schema,
+        request: { url: "https://npm.example", schema },
+      }),
+    as: (name: string) => {
+      owner = name;
+    },
+    /** Answers each call in the order the source receives them. */
+    answer: async (answers: string[]) => {
+      for (const value of answers) {
+        await vi.waitFor(() => {
+          expect(pending).toHaveLength(1);
+        });
+        pending.shift()?.(json({ value }));
+      }
+    },
+  };
+};
+
 describe("createUpstream", () => {
   it("[FR-SG-6] serves a fresh answer from the cache, with no upstream call", async () => {
     const { call, fetch } = setup({ responses: [() => json({ value: "first" })] });
@@ -408,48 +459,67 @@ describe("createUpstream", () => {
   });
 
   it("[FR-SG-6] fails extra work once the queue is full, instead of calling upstream", async () => {
-    const logs: string[] = [];
-    const pending: ((response: Response) => void)[] = [];
-    const fetch = vi.fn<typeof globalThis.fetch>(
-      () =>
-        new Promise((resolve) => {
-          pending.push(resolve);
-        }),
-    );
-    const upstream = createUpstream({
-      source: "GitHub",
-      fetch,
-      cache: undefined,
-      logger: () => createLogger("test", "info", { write: (line: string) => void logs.push(line) }),
-      sleep: () => Promise.resolve(),
-      concurrency: 1,
-      queueLimit: 1,
-    });
-    const call = (key: string) =>
-      upstream.call({
-        key,
-        policy,
-        stored: schema,
-        request: { url: "https://api.example", schema },
-      });
+    const { call, fetch, logs, answer } = slowSource({ queueLimit: 1 });
 
     const first = call("a");
     const queued = call("b");
     const refused = call("c");
 
-    await expect(refused).rejects.toMatchObject({ message: "GitHub is unavailable." });
+    await expect(refused).rejects.toMatchObject({ message: "npm is unavailable." });
     expect(fetch).toHaveBeenCalledTimes(1);
     expect(logs.join("\n")).toContain('"reason":"queue-full"');
-    await vi.waitFor(() => {
-      expect(pending).toHaveLength(1);
-    });
-    pending.shift()?.(json({ value: "a" }));
-    await vi.waitFor(() => {
-      expect(pending).toHaveLength(1);
-    });
-    pending.shift()?.(json({ value: "b" }));
+    await answer(["a", "b"]);
     expect(await first).toEqual({ value: "a" });
     expect(await queued).toEqual({ value: "b" });
+  });
+
+  it("[FR-SG-6] keeps room in the queue for a second request when the first fills it", async () => {
+    const { call, answer, as } = slowSource({ queueLimit: 2 });
+
+    const batch = ["a", "b", "c"].map(call);
+    as("second request");
+    const second = call("d");
+
+    await expect(batch[2]).rejects.toMatchObject({ message: "npm is unavailable." });
+    await answer(["a", "b", "d"]);
+    expect(await Promise.all([batch[0], batch[1], second])).toEqual(values(["a", "b", "d"]));
+  });
+
+  it("[FR-SG-6] gives a request its own place for a key another request queued", async () => {
+    const { call, fetch, answer, as } = slowSource({ queueLimit: 3 });
+
+    const batch = ["a0", "a1", "a2", "react"].map(call);
+    as("second request");
+    const second = call("react");
+    as("third request");
+    const third = call("c1");
+
+    await expect(batch[2]).rejects.toMatchObject({ message: "npm is unavailable." });
+    await answer(["a0", "a1", "react", "c1"]);
+    expect(await Promise.all([second, batch[3], third])).toEqual(values(["react", "react", "c1"]));
+    expect(fetch).toHaveBeenCalledTimes(4);
+  });
+
+  it("[FR-SG-6] answers a shared key in the turn of whichever request comes first", async () => {
+    const { call, fetch, answer, as } = slowSource({ queueLimit: 100 });
+
+    const batch = ["a0", "a1", "a2", "react"].map(call);
+    as("second request");
+    const second = call("react");
+
+    await answer(["a0", "a1", "react", "a2"]);
+    expect(await second).toEqual({ value: "react" });
+    expect(await Promise.all(batch)).toEqual(values(["a0", "a1", "a2", "react"]));
+    expect(fetch).toHaveBeenCalledTimes(4);
+  });
+
+  it("[FR-SG-6] holds one place for a key, however often one request repeats it", async () => {
+    const { call, answer } = slowSource({ queueLimit: 2 });
+
+    const calls = ["a0", "same", "same", "same", "a1"].map(call);
+
+    await answer(["a0", "same", "a1"]);
+    expect(await Promise.all(calls)).toEqual(values(["a0", "same", "same", "same", "a1"]));
   });
 
   it("[FR-SG-6] works without a cache when Redis is down, and logs it", async () => {

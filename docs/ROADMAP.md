@@ -52,6 +52,7 @@ Each branch is one pull request and lists the requirements it delivers. Plans fo
 | M2 | `feat/advisories-subgraph` | FR-SG-4 | Merged |
 | M2 | `feat/upstream-resilience` | FR-SG-6, FR-SG-10 | Merged |
 | M2 | `feat/local-router` | FR-GW-2, FR-GW-4, FR-SG-5, GR-1, GR-2 | Merged |
+| M2 | `fix/upstream-limits` | FR-SG-6 | Merged |
 | M3 | `feat/web-server` | FR-WB-12, GR-9 | Planned |
 | M3 | `feat/sandbox-router` | FR-GW-9, GR-11 | Planned |
 | M3 | `feat/route-view` | FR-WB-7 | Planned |
