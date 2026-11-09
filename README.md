@@ -128,7 +128,7 @@ jobs:
       pull-requests: write
     steps:
       - uses: actions/checkout@v7
-      - uses: ayenisholah/traverse@v0.8.0
+      - uses: ayenisholah/traverse@v0.9.1
 ```
 
 To run it locally, use `npx @ayenis/traverse check --base origin/main`, on Node 24 or later.

@@ -1,6 +1,6 @@
 # Roadmap
 
-**Updated:** 2026-11-08
+**Updated:** 2026-11-09
 
 Each branch is one pull request and lists the requirements it delivers. Plans for each milestone are in [`plans/`](plans/). [Progress](PROGRESS.md) shows the current state.
 
@@ -9,7 +9,7 @@ Each branch is one pull request and lists the requirements it delivers. Plans fo
 | M0 | Foundation: tooling, specification, quality gates | [Plan](plans/m0-foundation.md) | Done |
 | M1 | Public demo and CLI: graph map, impact check and a PR check, on real schemas | [Plan](plans/m1-workbench.md) | Waiting on user feedback |
 | M2 | Real graph: npm, GitHub and OSV subgraphs behind the pinned Cosmo Router | [Plan](plans/m2-real-graph.md) | Done |
-| M3 | Live routes: web server, sandbox router, query plans, Package explorer | [Plan](plans/m3-live-routes.md) | Planned |
+| M3 | Live routes: web server, sandbox router, query plans, Package explorer | [Plan](plans/m3-live-routes.md) | Next: owner decisions D-1 to D-3, then `feat/web-server` |
 | M4 | Accounts and saved workspaces | [Plan](plans/m4-accounts.md) | Planned |
 | M5 | AI assistant on Amazon Bedrock | [Plan](plans/m5-ai-assistant.md) | Planned |
 | M6 | Network, data and edge in CDK | [Plan](plans/m6-network-data-edge.md) | Planned |

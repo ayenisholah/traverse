@@ -12,7 +12,9 @@ Traverse is built on WunderGraph Cosmo and helps frontend developers explore a f
 
 | Date | Work | PR |
 |---|---|---|
-| 2026-11-09 | Upstream limits, from the guardrail review of #48. `Retry-After` is capped at a minute: `1e308` used to parse as `Infinity` and pause a source until restart. Each source's queue now takes requests in turn, and when it's full a newcomer takes the place of the newest work from whichever request holds the most. One request's 500-entity batch can't keep the next request out, even for a key the batch also asked for: the guardrail review found that a second request joined the batch's place for a shared key, so it waited behind the batch or was dropped with it. Each request now holds its own place, and one fetch still serves them all. Proven in a subgraph by removing the request wiring, which leaves the second request with 6 errors. Fairness is per request; many parallel requests are left to the router's limits. | `fix/upstream-limits` |
+| 2026-11-09 | M3 planned in detail in [the M3 plan](plans/m3-live-routes.md): three owner decisions to ask first, each branch's scope, facts to verify, tests and exit. `security.block_mutations` found in the pinned router's config schema (C-52, documented, not yet run). README Action example pinned to `v0.9.1`. | `docs/m3-plan` |
+| 2026-11-09 | Released `v0.9.1` to npm with provenance, after approving the release pull request's workflow runs by API. | #54 |
+| 2026-11-09 | Upstream limits, from the guardrail review of #48. `Retry-After` is capped at a minute: `1e308` used to parse as `Infinity` and pause a source until restart. Each source's queue now takes requests in turn, and when it's full a newcomer takes the place of the newest work from whichever request holds the most. One request's 500-entity batch can't keep the next request out, even for a key the batch also asked for: the guardrail review found that a second request joined the batch's place for a shared key, so it waited behind the batch or was dropped with it. Each request now holds its own place, and one fetch still serves them all. Proven in a subgraph by removing the request wiring, which leaves the second request with 6 errors. Fairness is per request; many parallel requests are left to the router's limits. | #53 |
 | 2026-11-09 | Released `v0.9.0` to npm with provenance, after approving the release pull request's workflow runs by API. | #51 |
 | 2026-11-09 | FR-SG-10 done: `upstream-check.yml`, run by hand on `main`, passed against live npm, GitHub and OSV, with the default `GITHUB_TOKEN` reading GitHub GraphQL ([run 42534288485](https://github.com/ayenisholah/traverse/actions/runs/42534288485)). The first attempt failed once on npm downloads, which answered normally from a local run and on the re-run. | `docs/upstream-check-proof` |
 | 2026-11-09 | `feat/local-router` merged, which closes M2. CodeQL flagged operation text from a file going out in an e2e request, fixed by taking the hash from the generated file's name. gitleaks flagged `wgc`'s schema hashes in `router/config.json`, allowed on one rule with the owner's approval. | #50 |
@@ -59,13 +61,18 @@ Traverse is built on WunderGraph Cosmo and helps frontend developers explore a f
 
 ## In progress
 
-Nothing. Start the next item below.
+Nothing. `main` is green at the merge of `docs/m3-plan`, no pull requests are open, and `0.9.1` is the latest release. Start the next item below.
 
 ## Next
 
 In order:
 
-1. M3: `feat/web-server`, then `feat/sandbox-router`, `feat/route-view` and `feat/package-explorer`. Ask the owner first about React Flow and Monaco, which `SPEC.md` still lists.
+1. M3, following [the M3 plan](plans/m3-live-routes.md):
+   1. First ask the owner D-1 to D-3 from the plan: Monaco, React Flow, and whether the GitHub Pages demo stays a static build. Record the answers.
+   2. `feat/web-server` (FR-WB-12, GR-9). Verify the Next.js dual build, the tRPC adapter and the codegen tool before writing code.
+   3. `feat/sandbox-router` (FR-GW-9, GR-11). Test C-52 on the pinned image first, and run `guardrail-reviewer`.
+   4. `feat/route-view` (FR-WB-7), which depends on D-1 and D-2.
+   5. `feat/package-explorer` (FR-WB-8, FR-WB-9). Decide between one call per dependency and a `packages(names:)` field.
 2. Set aside by the owner on 2026-11-06: three frontend developers trying Traverse on their own repositories, for `docs/USER_FEEDBACK.md`. It's the last M1 exit item, and only the owner can arrange it.
 
 ## Blocked
@@ -76,6 +83,14 @@ In order:
 
 ## Notes for the next session
 
+- **How a branch ships here** (the `feature-slice` and `open-pr` skills):
+  - Branch from `main` and write the failing test first.
+  - Run `npm run check` in a `node:24` clean clone in the scratchpad, plus `npm run test:router` on the host. Delete the clone straight after, because `/tmp` is in memory.
+  - Push, open the pull request, and merge with `gh pr merge --rebase --delete-branch --match-head-commit <sha>` once checks pass. The owner's standing instruction is to merge green pull requests.
+  - Then watch the workflows on `main`.
+- **Release pull requests publish to npm, so ask the owner before merging one.** On a yes, approve its runs (see below), wait for checks, merge, then confirm with `npm view @ayenis/traverse@<version> version`.
+- `/tmp` is a 12 GB tmpfs. On 2026-11-09, leftover clean clones filled it, and every shell command then failed with EDQUOT. If commands start failing, check `df -h /tmp`.
+- `[NFR-12]`'s 200 ms long-task check failed once (289 ms) while the machine was short on memory, and passed on the re-run. Re-run it once before investigating.
 - Generate `package-lock.json` in a `node:24` container. Older npm drops optional `@emnapi` entries, and `npm ci` then fails in CI.
 - Before pushing, run `npm ci` and `npm run check` on a clean clone in `node:24`, and stop if either fails.
 - Release pull requests get no CI until closed and reopened, and again after each update.
