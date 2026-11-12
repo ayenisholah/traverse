@@ -7,7 +7,7 @@
   "type": "module",
   "dependencies": {
     "@traverse/subgraph-kit": "*",
-    "semver": "^7.8.0",
+    "semver": "^7.8.6",
     "zod": "^4.0.0"
   },
   "devDependencies": {
