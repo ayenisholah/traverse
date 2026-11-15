@@ -112,7 +112,7 @@ Production starts with 3 tasks of 2 vCPU and 4 GB, and scales to 9 on CPU and re
 
 ## Web app
 
-A Next.js app in `apps/web`. Until M3 it's a static export with no server, hosted on GitHub Pages. From M3 it runs on a server.
+A Next.js app in `apps/web`. Until M3 it's a static export with no server, hosted on GitHub Pages. From M3 it runs on a server, and the public demo stays a static export of `/` and `/impact`.
 
 | Route                   | Purpose                                                             |
 | ----------------------- | ------------------------------------------------------------------- |
@@ -122,7 +122,7 @@ A Next.js app in `apps/web`. Until M3 it's a static export with no server, hoste
 | `/packages/[name]`      | Package explorer, on live data                                      |
 | `/sign-in`, `/sign-out` | Cognito sign-in and sign-out, needed only to save                   |
 
-- Stack: Next.js, React, TypeScript, Tailwind, Radix, tRPC, Zustand, Monaco and React Flow.
+- Stack: Next.js, React, TypeScript, Tailwind, Radix, tRPC, Zustand and CodeMirror 6 (ADR 0018). The route view is a list with an SVG outline, with no canvas library (ADR 0019).
 - Composition runs in a Web Worker with `@wundergraph/composition`, so the page keeps responding (FR-WB-2).
 - Pasted or uploaded SDL stays in the browser unless the user saves it.
 - The server holds the session and calls the routers, so browser code never handles tokens (GR-9).
