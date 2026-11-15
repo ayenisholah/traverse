@@ -19,3 +19,5 @@
 | [0015](0015-anonymous-public-reads.md) | Allow anonymous reads on the public router | Accepted |
 | [0016](0016-subgraph-kit.md) | Build subgraphs on GraphQL Yoga and @apollo/subgraph | Accepted |
 | [0017](0017-literal-router-config.md) | Write every risky router setting out, and hold the router's environment to a list | Accepted |
+| [0018](0018-codemirror-operation-editor.md) | Edit operations in CodeMirror 6, not Monaco | Accepted |
+| [0019](0019-route-view-list.md) | Show a route as an ordered list with an SVG outline | Accepted |

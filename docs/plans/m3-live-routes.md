@@ -2,23 +2,23 @@
 
 **Outcome:** the workbench runs real operations and shows each one's real route, and the Package explorer serves live data. No AWS access is needed.
 
-**Status:** Planned. Detailed on 2026-11-09, after M2 closed. Nothing is built yet.
+**Status:** Planned. Detailed on 2026-11-09, after M2 closed. The owner's decisions were recorded on 2026-11-16. Nothing is built yet.
 
-## Before starting: owner decisions
+## Owner decisions
 
-Ask these at the start of the first M3 session. Record each answer here and in `docs/PROGRESS.md`, and in an ADR where marked.
+Answered by the owner on 2026-11-16.
 
-| # | Question | Needed by | Recommendation |
+| # | Question | Answer | Record |
 |---|---|---|---|
-| D-1 | Keep Monaco, which `SPEC.md` lists, for the `/operations` editor? | `feat/route-view` | Ask. Monaco is heavy and hard to make fully keyboard- and screen-reader-friendly (NFR-9). A smaller editor, such as CodeMirror 6, is the alternative. Changing it needs a `SPEC.md` edit and an ADR. |
-| D-2 | Keep React Flow, which `SPEC.md` lists, for the route view? | `feat/route-view` | Ask. A query plan is a small tree of fetches, so an ordered, keyboard-navigable list with an SVG outline may serve FR-WB-7 and NFR-9 better than a node canvas. Changing it needs a `SPEC.md` edit and an ADR. |
-| D-3 | The public demo on GitHub Pages (FR-WB-15, done) is a static export. Once `apps/web` runs on a server, should the demo stay static (`/` and `/impact` only)? | `feat/web-server` | Keep it static, so FR-WB-15 can't regress and the demo needs no hosting. The server build adds the live routes. Prove both builds in the first branch. |
+| D-1 | Keep Monaco for the `/operations` editor? | No. Use CodeMirror 6, bundled with the app. | [ADR 0018](../adr/0018-codemirror-operation-editor.md) |
+| D-2 | Keep React Flow for the route view? | No. An ordered, keyboard-navigable list with an SVG outline. | [ADR 0019](../adr/0019-route-view-list.md) |
+| D-3 | Does the GitHub Pages demo stay a static export once `apps/web` runs on a server? | Yes: `/` and `/impact` only. The server build adds the live routes. | `SPEC.md`, web app |
 
 ## Work, in roadmap order
 
 ### 1. `feat/web-server` (FR-WB-12, GR-9)
 
-- **What:** move `apps/web` from `output: "export"` to a Node server runtime, with tRPC from browser to server. Keep a static build for the demo (D-3).
+- **What:** move `apps/web` from `output: "export"` to a Node server runtime, with tRPC from browser to server. The demo stays a static build of `/` and `/impact` (D-3).
 - **Typed operations (FR-WB-12):**
   - One set of `.graphql` documents feeds both the typed client and the public router's persisted operations.
   - `router/operations` already feeds `scripts/generate-router.ts`. Extend it, don't duplicate it.
@@ -27,6 +27,15 @@ Ask these at the start of the first M3 session. Record each answer here and in `
   - The Next.js version's support for one app built both as a static export and as a server.
   - The tRPC adapter for the app router.
   - The codegen tool and version, for example GraphQL Code Generator. Pin it and record it.
+- **Steps, in order:**
+  1. Verify the three facts above and record them. If one app can't build both ways on the pinned Next.js, stop and report it, because D-3 depends on it.
+  2. Two builds from one config. Today `next.config.ts` sets `output: "export"` and reads `BASE_PATH`, and `npm run check` runs `build:web`, `test:integration`, `test:e2e` and `test:demo` on the export. Keep those four passing unchanged on the static build, and add a server build with its own script and its own integration and Playwright runs.
+  3. The static build must leave out the live routes and the tRPC handler, and a test must fail if `/operations` or `/packages` appears in `apps/web/out`.
+  4. Typed operations from `router/operations`, which holds one document today, `package.graphql`.
+  5. A tRPC procedure that runs `Package` against the public router, and one page or test that calls it from the browser.
+  6. The bundle scan for GR-9, proven on a planted server-only value.
+- **Design point: the persisted hash.** `scripts/generate-router.ts` names each persisted operation by the SHA-256 of the file's exact bytes (C-34). The server must send that same hash, so the typed client can't reprint a document and hash the result. Either the generator emits the hash beside the types, or a contract test fails when the two differ. Decide in the branch, and say why.
+- **Where the server finds the routers:** from server-only settings, validated at start. None of them may carry the `NEXT_PUBLIC_` prefix, and the bundle scan covers that.
 - **GR-9 in M3:** sessions come in M4, so the M3 test is that the client bundle holds no secrets and no server-only env. Scan the built client chunks.
 - **Exit:** both builds pass every existing test; one real operation goes from browser to tRPC to the router; a planted schema mismatch fails the build.
 
@@ -46,7 +55,7 @@ Ask these at the start of the first M3 session. Record each answer here and in `
 ### 3. `feat/route-view` (FR-WB-7)
 
 - **What:** `/operations` takes a typed operation, sends it through the server to the sandbox router, and shows the plan as a route: the subgraphs and the fetch order.
-- **Depends on:** D-1 and D-2.
+- **Decided:** CodeMirror 6 for the editor (ADR 0018), and an ordered list with an SVG outline for the route (ADR 0019). Pin the CodeMirror packages and record them in verified facts first.
 - **Tests:**
   - Unit tests turn plan JSON (C-37 shape) into the route model, with recorded plans as fixtures.
   - An e2e test on the pinned router checks that the view matches the plan for the real `Package` operation.

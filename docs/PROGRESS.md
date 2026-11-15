@@ -1,6 +1,6 @@
 # Progress
 
-**Updated:** 2026-11-09
+**Updated:** 2026-11-16
 
 Read this first. It says what's done, what's in progress and what's left, so any agent can resume after a session ends unexpectedly. Update it in the same commit as the work.
 
@@ -12,6 +12,7 @@ Traverse is built on WunderGraph Cosmo and helps frontend developers explore a f
 
 | Date | Work | PR |
 |---|---|---|
+| 2026-11-16 | M3's owner decisions answered and recorded. D-1: CodeMirror 6 replaces Monaco for the `/operations` editor (ADR 0018). D-2: the route view is an ordered list with an SVG outline, not a React Flow canvas (ADR 0019). D-3: the GitHub Pages demo stays a static export of `/` and `/impact`. `SPEC.md` and [the M3 plan](plans/m3-live-routes.md) updated, and `feat/web-server` given its steps. | `docs/m3-decisions` |
 | 2026-11-09 | M3 planned in detail in [the M3 plan](plans/m3-live-routes.md): three owner decisions to ask first, each branch's scope, facts to verify, tests and exit. `security.block_mutations` found in the pinned router's config schema (C-52, documented, not yet run). README Action example pinned to `v0.9.1`. | `docs/m3-plan` |
 | 2026-11-09 | Released `v0.9.1` to npm with provenance, after approving the release pull request's workflow runs by API. | #54 |
 | 2026-11-09 | Upstream limits, from the guardrail review of #48. `Retry-After` is capped at a minute: `1e308` used to parse as `Infinity` and pause a source until restart. Each source's queue now takes requests in turn, and when it's full a newcomer takes the place of the newest work from whichever request holds the most. One request's 500-entity batch can't keep the next request out, even for a key the batch also asked for: the guardrail review found that a second request joined the batch's place for a shared key, so it waited behind the batch or was dropped with it. Each request now holds its own place, and one fetch still serves them all. Proven in a subgraph by removing the request wiring, which leaves the second request with 6 errors. Fairness is per request; many parallel requests are left to the router's limits. | #53 |
@@ -61,18 +62,17 @@ Traverse is built on WunderGraph Cosmo and helps frontend developers explore a f
 
 ## In progress
 
-Nothing. `main` is green at the merge of `docs/m3-plan`, no pull requests are open, and `0.9.1` is the latest release. Start the next item below.
+Nothing. `0.9.1` is the latest release. Start the next item below.
 
 ## Next
 
 In order:
 
 1. M3, following [the M3 plan](plans/m3-live-routes.md):
-   1. First ask the owner D-1 to D-3 from the plan: Monaco, React Flow, and whether the GitHub Pages demo stays a static build. Record the answers.
-   2. `feat/web-server` (FR-WB-12, GR-9). Verify the Next.js dual build, the tRPC adapter and the codegen tool before writing code.
-   3. `feat/sandbox-router` (FR-GW-9, GR-11). Test C-52 on the pinned image first, and run `guardrail-reviewer`.
-   4. `feat/route-view` (FR-WB-7), which depends on D-1 and D-2.
-   5. `feat/package-explorer` (FR-WB-8, FR-WB-9). Decide between one call per dependency and a `packages(names:)` field.
+   1. `feat/web-server` (FR-WB-12, GR-9). Verify the Next.js dual build, the tRPC adapter and the codegen tool before writing code. The typed client must send the same SHA-256 that `scripts/generate-router.ts` writes.
+   2. `feat/sandbox-router` (FR-GW-9, GR-11). Test C-52 on the pinned image first, and run `guardrail-reviewer`.
+   3. `feat/route-view` (FR-WB-7), on CodeMirror 6 and a list with an SVG outline (ADRs 0018 and 0019).
+   4. `feat/package-explorer` (FR-WB-8, FR-WB-9). Decide between one call per dependency and a `packages(names:)` field.
 2. Set aside by the owner on 2026-11-06: three frontend developers trying Traverse on their own repositories, for `docs/USER_FEEDBACK.md`. It's the last M1 exit item, and only the owner can arrange it.
 
 ## Blocked
@@ -131,10 +131,10 @@ In order:
 - `traverse.json` stays on the Cosmo demo. Adding the real subgraphs would compose them with it, so the router composes from `router/graph.yaml` instead, beside its operations.
 - The Cosmo demo schemas define no owners, so the map shows "No owner set". The owner chose a config file, filled in by each team and kept in their repository, which `packages/cli` reads as `traverse.json`. A global store of owners was rejected: names aren't unique, ownership is private, and nobody could verify entries. Never invent owners.
 - FR-WB-1 is marked done, but no real owner has appeared on screen yet, and the map doesn't read `traverse.json`. Check whether Cosmo labels or `CODEOWNERS` could replace the config file.
-- The map is a keyboard-first list, not a React Flow canvas. `SPEC.md` still lists React Flow, so the owner should decide whether a visual canvas is wanted.
+- The map is a keyboard-first list, and the route view will be one too (ADR 0019). No canvas library is planned.
 - After changing `graph/cosmo-demo` or `packages/graph-core`, run `npm run generate:demo`. A test fails if the data is stale.
 - CI on `main` took 9 minutes once, on `b04b7d8`, against 1 to 2 minutes usually. Watch for a repeat.
-- The impact check uses a plain `<textarea>`, not Monaco. `SPEC.md` still lists Monaco, and its React wrapper loads from a CDN by default, so the owner should decide.
+- The impact check uses a plain `<textarea>`, and keeps it. CodeMirror 6 is for `/operations` only (ADR 0018).
 - An unresolved CodeQL review thread blocks a merge even when every check passes, because `protect-main` requires threads to be resolved. Fix the finding, don't use `--admin`.
 - Messages to a dedicated worker have an empty `origin`, and `compose.worker.ts` relies on that.
 - The page must import only types from `graph-core`. A Playwright test fails if the composer reaches the map page.
