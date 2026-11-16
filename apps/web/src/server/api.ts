@@ -3,6 +3,7 @@ import { initTRPC, TRPCError } from "@trpc/server";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { z } from "zod";
 import { PackageOperation, type PackageQuery } from "../generated/operations.ts";
+import { advisoriesWithFixesSchema, repositorySchema } from "./answer-schemas.ts";
 import { checkDependencies } from "./dependency-check.ts";
 import { parseManifest } from "./manifest.ts";
 import { loadPackagePage } from "./package-page.ts";
@@ -48,24 +49,8 @@ const packageData = z.strictObject({
       license: z.string().nullable(),
       weeklyDownloads: z.number().nullable(),
       repositoryUrl: z.string().nullable(),
-      repository: z
-        .strictObject({
-          url: z.string(),
-          stars: z.number(),
-          owner: z.string(),
-          latestRelease: z.string().nullable(),
-        })
-        .nullable(),
-      advisories: z
-        .array(
-          z.strictObject({
-            id: z.string(),
-            summary: z.string(),
-            severity: z.string().nullable(),
-            fixedIn: z.string().nullable(),
-          }),
-        )
-        .nullable(),
+      repository: repositorySchema,
+      advisories: advisoriesWithFixesSchema,
     })
     .nullable(),
 }) satisfies z.ZodType<PackageQuery>;

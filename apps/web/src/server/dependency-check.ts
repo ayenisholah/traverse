@@ -1,27 +1,21 @@
 import { z } from "zod";
 import { DependencyOperation, type DependencyQuery } from "../generated/operations.ts";
 import type { DependencyResult, ManifestAnswer } from "../packages/types.ts";
+import { advisoriesWithFixesSchema } from "./answer-schemas.ts";
 import type { ManifestEntry } from "./manifest.ts";
 import type { RouterClient } from "./router-client.ts";
 
 // One request at a time per slot, so a long package.json doesn't arrive at the sources at once.
 const CONCURRENCY = 4;
 
-const advisory = z.strictObject({
-  id: z.string(),
-  summary: z.string(),
-  severity: z.string().nullable(),
-  fixedIn: z.string().nullable(),
-});
-
-// Exactly what the operation asks for (GR-16). The `satisfies` fails the build if they drift.
+// Exactly what the operation asks for. The `satisfies` fails the build if they drift.
 const dependencyData = z.strictObject({
   package: z
     .strictObject({
       name: z.string(),
       latestVersion: z.string(),
       license: z.string().nullable(),
-      advisories: z.array(advisory).nullable(),
+      advisories: advisoriesWithFixesSchema,
     })
     .nullable(),
 }) satisfies z.ZodType<DependencyQuery>;
