@@ -21,14 +21,14 @@ it("[FR-WB-12] sends a browser's call to the configured router, once it has sett
     async () => new Response(JSON.stringify({ data: { package: null } })),
   );
   vi.stubGlobal("fetch", fetch);
-  vi.stubEnv("PUBLIC_ROUTER_URL", "http://router.test");
+  vi.stubEnv("PUBLIC_ROUTER_URL", "https://router.test");
 
   const first = await GET(request());
   await GET(request());
 
   expect(await first.json()).toEqual({ result: { data: { package: null, incomplete: false } } });
   expect(fetch).toHaveBeenCalledTimes(2);
-  expect(fetch.mock.calls[0]?.[0]).toBe("http://router.test/graphql");
+  expect(fetch.mock.calls[0]?.[0]).toBe("https://router.test/graphql");
   expect(fetch.mock.calls[0]?.[1]?.body as string).toContain(PackageOperation.sha256);
 });
 
@@ -36,7 +36,7 @@ it("ends the process at start when a setting is missing, and says which one", ()
   const exit = vi.spyOn(process, "exit").mockImplementation(() => undefined as never);
   const write = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
 
-  vi.stubEnv("PUBLIC_ROUTER_URL", "http://router.test");
+  vi.stubEnv("PUBLIC_ROUTER_URL", "https://router.test");
   register();
   expect(exit).not.toHaveBeenCalled();
 

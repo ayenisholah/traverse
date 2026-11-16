@@ -25,7 +25,22 @@ describe("static export", () => {
       .sort();
 
     expect(pages).toEqual(["404.html", "_not-found.html", "impact.html", "index.html"]);
-    expect(readdirSync(out)).not.toContain("api");
+    // Every top-level entry, because a route handler exports as a file with any name at all.
+    expect(readdirSync(out).sort()).toEqual([
+      "404.html",
+      "__next.__PAGE__.txt",
+      "__next._full.txt",
+      "__next._tree.txt",
+      "_next",
+      "_not-found",
+      "_not-found.html",
+      "_not-found.txt",
+      "impact",
+      "impact.html",
+      "impact.txt",
+      "index.html",
+      "index.txt",
+    ]);
   });
 
   it("[FR-WB-1] prerenders the real graph, so the map shows before any script runs", () => {

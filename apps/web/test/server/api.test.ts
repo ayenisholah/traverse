@@ -3,7 +3,7 @@ import { PackageOperation } from "../../src/generated/operations.ts";
 import { handleApiRequest } from "../../src/server/api.ts";
 import type { RouterClient, RouterResult } from "../../src/server/router-client.ts";
 
-const routerThat = (result: RouterResult<unknown> | Error) => {
+const routerThat = (result: RouterResult | Error) => {
   const run = vi.fn(async () => {
     if (result instanceof Error) throw result;
     return result;
@@ -17,7 +17,15 @@ const call = async (input: unknown, router: RouterClient, path = "package") => {
   return { status: response.status, body: (await response.json()) as unknown };
 };
 
-const express = { name: "express", latestVersion: "5.3.0" };
+const express = {
+  name: "express",
+  latestVersion: "5.3.0",
+  license: "MIT",
+  weeklyDownloads: 1,
+  repositoryUrl: null,
+  repository: null,
+  advisories: [{ id: "GHSA-1", summary: "A summary", severity: null, fixedIn: "5.0.0" }],
+};
 
 describe("the package procedure", () => {
   it("[FR-WB-12] runs the generated Package operation with the caller's variables", async () => {
@@ -47,10 +55,57 @@ describe("the package procedure", () => {
   ])("refuses %s before the router is called", async (_, input) => {
     const { router, run } = routerThat({ ok: true, data: { package: null }, incomplete: false });
 
-    const { status } = await call(input, router);
+    const { status, body } = await call(input, router);
 
     expect(status).toBe(400);
+    expect(body).toMatchObject({ error: { message: "Invalid input" } });
+    expect(JSON.stringify(body)).not.toMatch(/passwd|drop/);
     expect(run).not.toHaveBeenCalled();
+  });
+
+  it("[GR-2] passes on only the name and version, whatever else the caller sends", async () => {
+    const { router, run } = routerThat({ ok: true, data: { package: null }, incomplete: false });
+    const input = {
+      name: "ms",
+      sha256: "0".repeat(64),
+      url: "http://evil.example",
+      extensions: {},
+    };
+    const url = `http://web.test/api/trpc/package?input=${encodeURIComponent(JSON.stringify(input))}`;
+    const request = new Request(url, {
+      headers: { cookie: "session=1", authorization: "Bearer x" },
+    });
+
+    await handleApiRequest(request, router);
+
+    expect(run).toHaveBeenCalledWith(PackageOperation, { name: "ms", version: null });
+  });
+
+  it.each([
+    [
+      "a field the operation never asked for",
+      { package: { ...express, maintainers: ["a@b.example"] } },
+    ],
+    ["a second root field", { package: express, viewer: { email: "a@b.example" } }],
+    ["a field of the wrong type", { package: { ...express, weeklyDownloads: "many" } }],
+    ["no package field at all", {}],
+  ])("[GR-16] answers 503, and sends none of it, when the router returns %s", async (_, data) => {
+    const { router } = routerThat({ ok: true, data, incomplete: false });
+
+    const { status, body } = await call({ name: "express" }, router);
+
+    expect(status).toBe(503);
+    expect(JSON.stringify(body)).not.toMatch(/example|express|many/);
+  });
+
+  it("marks its answers as live data that is only ever JSON", async () => {
+    const { router } = routerThat({ ok: true, data: { package: null }, incomplete: false });
+    const url = `http://web.test/api/trpc/package?input=${encodeURIComponent('{"name":"ms"}')}`;
+
+    const response = await handleApiRequest(new Request(url), router);
+
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(response.headers.get("x-content-type-options")).toBe("nosniff");
   });
 
   it("answers 503 when the graph doesn't answer", async () => {
@@ -78,10 +133,25 @@ describe("the package procedure", () => {
     expect(body).toMatchObject({ error: { message: "Something went wrong" } });
   });
 
-  it("has no procedure it wasn't given", async () => {
+  it("has no procedure it wasn't given, and doesn't repeat the path asked for", async () => {
     const { router } = routerThat({ ok: false });
 
-    expect((await call({}, router, "secrets")).status).toBe(404);
+    const { status, body } = await call({}, router, "<img src=x onerror=alert(1)>");
+
+    expect(status).toBe(404);
+    expect(body).toMatchObject({ error: { message: "Not found" } });
+    expect(JSON.stringify(body)).not.toContain("onerror");
+  });
+
+  it("doesn't repeat input it can't parse", async () => {
+    const { router } = routerThat({ ok: false });
+    const response = await handleApiRequest(
+      new Request("http://web.test/api/trpc/package?input=%7Bplanted-text"),
+      router,
+    );
+
+    expect(response.status).toBe(400);
+    expect(await response.text()).not.toContain("planted");
   });
 
   it("refuses several calls in one request, so one request is one router call", async () => {

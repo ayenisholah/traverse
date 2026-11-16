@@ -61,6 +61,17 @@ describe("the server build", () => {
     expect(await impact.text()).toContain('id="draft"');
   });
 
+  it("[GR-9] sends the router's address to no page", async () => {
+    const address = new URL(router.url).host;
+    const pages = await Promise.all(
+      ["/", "/impact", "/?_rsc=1"].map(async (path) =>
+        (await fetch(`${server.url}${path}`, { headers: { rsc: "1" } })).text(),
+      ),
+    );
+
+    expect(pages.join("")).not.toContain(address);
+  });
+
   it("doesn't name its framework in a header", async () => {
     expect((await fetch(server.url)).headers.get("x-powered-by")).toBeNull();
   });
