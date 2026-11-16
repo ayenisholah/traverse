@@ -145,14 +145,37 @@ describe("the route view's server on the sandbox router", { timeout: 60_000 }, (
     expect(text).not.toMatch(/GHSA|expressjs\/express|"MIT"/);
   });
 
+  it("[GR-13] passes on nothing a subgraph says when GitHub is down, and still returns the route", async () => {
+    stack.blockGithub(true);
+    try {
+      const { body, text } = await askRoute(operation, { name: "ms" });
+
+      expect(body.result.data.kind).toBe("route");
+      expect(text).not.toMatch(/UPSTREAM|unavailable|repositories'/i);
+    } finally {
+      stack.blockGithub(false);
+    }
+  });
+
+  it("[FR-WB-7] passes on the router's refusal of an operation over a limit", async () => {
+    const { body } = await askRoute(
+      `{ a: package(name: "express") { name } b: package(name: "ms") { name } }`,
+    );
+
+    expect(body.result.data.kind).toBe("refused");
+    expect(body.result.data.messages?.join(" ")).toMatch(/alias/i);
+  });
+
   it("[FR-WB-7] passes on the router's reason for refusing an operation", async () => {
     const unknown = await askRoute(`query Bad { package(name: "express") { nope } }`);
     const write = await askRoute(`mutation Write { __typename }`);
+    const subscription = await askRoute(`subscription Watch { __typename }`);
 
     expect(unknown.body.result.data).toEqual({
       kind: "refused",
       messages: ['Cannot query field "nope" on type "Package".'],
     });
     expect(write.body.result.data.kind).toBe("refused");
+    expect(subscription.body.result.data.kind).toBe("refused");
   });
 });

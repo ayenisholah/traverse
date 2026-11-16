@@ -38,6 +38,55 @@ describe("createSandboxClient", () => {
     expect(JSON.stringify(result)).not.toContain("upstream said");
   });
 
+  it("[GR-13] passes on no message from an operation that ran, even with no plan attached", async () => {
+    const { result } = await route({
+      data: { package: null },
+      errors: [{ message: "Failed to fetch from Subgraph 'repositories': upstream said hello" }],
+    });
+
+    expect(result).toEqual({ kind: "unavailable" });
+  });
+
+  it("[GR-13] treats data of null as an operation that ran", async () => {
+    const { result } = await route({ data: null, errors: [{ message: "upstream said hello" }] });
+
+    expect(result).toEqual({ kind: "unavailable" });
+  });
+
+  it.each([
+    ["a mutation", "mutation Write { star }"],
+    ["a subscription", "subscription Watch { added }"],
+    ["a mutation beside a query", "query Read { a } mutation Write { star }"],
+  ])("[GR-11] refuses %s before it leaves the server", async (_, operation) => {
+    const post = vi.fn(async () => packagePlan);
+
+    const result = await createSandboxClient(post).route(operation, {});
+
+    expect(result).toEqual({
+      kind: "refused",
+      messages: ["Only queries can run here: mutations and subscriptions can't."],
+    });
+    expect(post).not.toHaveBeenCalled();
+  });
+
+  it("leaves an operation it can't parse to the router, which explains the mistake", async () => {
+    const post = vi.fn(async () => ({ errors: [{ message: "unexpected token - got: EOF" }] }));
+
+    const result = await createSandboxClient(post).route("query Bad {", {});
+
+    expect(post).toHaveBeenCalled();
+    expect(result).toEqual({ kind: "refused", messages: ["unexpected token - got: EOF"] });
+  });
+
+  it("sends a query with fragments on, untouched", async () => {
+    const post = vi.fn(async () => packagePlan);
+    const operation = "query Q { ...F } fragment F on Query { a }";
+
+    await createSandboxClient(post).route(operation, {});
+
+    expect(post).toHaveBeenCalledWith({ query: operation, variables: {} });
+  });
+
   it("passes on why the router refused an operation it never ran", async () => {
     const { result } = await route({
       errors: [{ message: 'Cannot query field "nope" on type "Package".', path: ["query"] }],

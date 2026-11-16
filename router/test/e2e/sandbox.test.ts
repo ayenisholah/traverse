@@ -61,6 +61,8 @@ describe("the sandbox router on a graph that has writes", { timeout: 60_000 }, (
   let subgraph: Server;
   let sandbox: Router;
   const received: string[] = [];
+  // Set by a test, so the stand-in answers its next request as a failing subgraph would.
+  let failNext = false;
 
   beforeAll(async () => {
     subgraph = createServer((request, response) => {
@@ -68,9 +70,11 @@ describe("the sandbox router on a graph that has writes", { timeout: 60_000 }, (
       request.on("data", (chunk: Buffer) => (text += chunk.toString()));
       request.on("end", () => {
         received.push(text);
-        response
-          .writeHead(200, { "content-type": "application/json" })
-          .end(JSON.stringify({ data: { note: "hello", addNote: true } }));
+        const body = failNext
+          ? { data: { note: null }, errors: [{ message: "planted-subgraph-text" }] }
+          : { data: { note: "hello", addNote: true } };
+        failNext = false;
+        response.writeHead(200, { "content-type": "application/json" }).end(JSON.stringify(body));
       });
     }).listen(4104, "127.0.0.1");
     await once(subgraph, "listening");
@@ -95,6 +99,17 @@ describe("the sandbox router on a graph that has writes", { timeout: 60_000 }, (
     });
     // Proves the stand-in does see what the router sends, which the tests below rely on.
     expect(received.length).toBe(before + 1);
+  });
+
+  it("[GR-13] answers an operation that ran with a data key and its plan, even when the subgraph fails", async () => {
+    failNext = true;
+    const { json, text } = await post(sandbox.url, { query: "query Note { note }" });
+
+    // The web server passes messages on only when there's no data key at all (C-57), and this
+    // shows a failing subgraph's own text does come back here, so that rule is what keeps it out.
+    expect(Object.keys(json)).toContain("data");
+    expect(json.extensions?.queryPlan).toBeDefined();
+    expect(text).toContain("planted-subgraph-text");
   });
 
   it("[GR-11] refuses a mutation before it reaches a subgraph", async () => {

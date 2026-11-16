@@ -3,6 +3,7 @@ import { initTRPC, TRPCError } from "@trpc/server";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { z } from "zod";
 import { PackageOperation, type PackageQuery } from "../generated/operations.ts";
+import { readCapped } from "./read-capped.ts";
 import type { RouterClient } from "./router-client.ts";
 import type { SandboxClient } from "./sandbox-client.ts";
 
@@ -100,11 +101,31 @@ const api = t.router({
 /** What the browser's client may call, as a type only: none of this code reaches the browser. */
 export type Api = typeof api;
 
-/** Answers a browser's call. The browser never talks to a router itself. */
-export const handleApiRequest = (request: Request, context: Context): Promise<Response> =>
-  fetchRequestHandler({
+// Far above the largest call the procedures accept, so only a request no browser would send fails.
+const MAX_BODY_BYTES = 32_000;
+
+const tooLarge = (): Response =>
+  Response.json(
+    {
+      error: { message: "Request too large", data: { code: "PAYLOAD_TOO_LARGE", httpStatus: 413 } },
+    },
+    { status: 413, headers: { "cache-control": "no-store", "x-content-type-options": "nosniff" } },
+  );
+
+/**
+ * Answers a browser's call. The browser never talks to a router itself. tRPC reads a whole body
+ * before checking it, so a body is read here first, and only up to a size no real call reaches.
+ */
+export const handleApiRequest = async (request: Request, context: Context): Promise<Response> => {
+  let req = request;
+  if (request.body !== null) {
+    const body = await readCapped(request.body, MAX_BODY_BYTES);
+    if (body === undefined) return tooLarge();
+    req = new Request(request.url, { method: request.method, headers: request.headers, body });
+  }
+  return fetchRequestHandler({
     endpoint: "/api/trpc",
-    req: request,
+    req,
     router: api,
     createContext: () => context,
     allowBatching: false,
@@ -114,3 +135,4 @@ export const handleApiRequest = (request: Request, context: Context): Promise<Re
       headers: new Headers({ "cache-control": "no-store", "x-content-type-options": "nosniff" }),
     }),
   });
+};
