@@ -2,11 +2,12 @@ import { rcompare, valid } from "semver";
 import { z } from "zod";
 import { PackagePageOperation, type PackagePageQuery } from "../generated/operations.ts";
 import type { PackageAnswer } from "../packages/types.ts";
+import { advisoriesSchema, repositorySchema } from "./answer-schemas.ts";
 import type { RouterClient } from "./router-client.ts";
 
 const RECENT_VERSIONS = 20;
 
-// Exactly what the operation asks for (GR-16). The `satisfies` fails the build if they drift.
+// Exactly what the operation asks for. The `satisfies` fails the build if they drift.
 const pageData = z.strictObject({
   package: z
     .strictObject({
@@ -17,19 +18,8 @@ const pageData = z.strictObject({
       weeklyDownloads: z.number().nullable(),
       repositoryUrl: z.string().nullable(),
       dependencies: z.array(z.strictObject({ name: z.string(), range: z.string() })),
-      repository: z
-        .strictObject({
-          url: z.string(),
-          stars: z.number(),
-          owner: z.string(),
-          latestRelease: z.string().nullable(),
-        })
-        .nullable(),
-      advisories: z
-        .array(
-          z.strictObject({ id: z.string(), summary: z.string(), severity: z.string().nullable() }),
-        )
-        .nullable(),
+      repository: repositorySchema,
+      advisories: advisoriesSchema,
     })
     .nullable(),
 }) satisfies z.ZodType<PackagePageQuery>;
