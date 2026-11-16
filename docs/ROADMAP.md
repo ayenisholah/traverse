@@ -9,7 +9,7 @@ Each branch is one pull request and lists the requirements it delivers. Plans fo
 | M0 | Foundation: tooling, specification, quality gates | [Plan](plans/m0-foundation.md) | Done |
 | M1 | Public demo and CLI: graph map, impact check and a PR check, on real schemas | [Plan](plans/m1-workbench.md) | Waiting on user feedback |
 | M2 | Real graph: npm, GitHub and OSV subgraphs behind the pinned Cosmo Router | [Plan](plans/m2-real-graph.md) | Done |
-| M3 | Live routes: web server, sandbox router, query plans, Package explorer | [Plan](plans/m3-live-routes.md) | In progress: `feat/package-explorer` is next |
+| M3 | Live routes: web server, sandbox router, query plans, Package explorer | [Plan](plans/m3-live-routes.md) | Done |
 | M4 | Accounts and saved workspaces | [Plan](plans/m4-accounts.md) | Planned |
 | M5 | AI assistant on Amazon Bedrock | [Plan](plans/m5-ai-assistant.md) | Planned |
 | M6 | Network, data and edge in CDK | [Plan](plans/m6-network-data-edge.md) | Planned |
@@ -56,7 +56,7 @@ Each branch is one pull request and lists the requirements it delivers. Plans fo
 | M3 | `feat/web-server` | FR-WB-12, GR-9 | Merged |
 | M3 | `feat/sandbox-router` | FR-GW-9, GR-11 | Merged |
 | M3 | `feat/route-view` | FR-WB-7 | Merged |
-| M3 | `feat/package-explorer` | FR-WB-8, FR-WB-9 | Planned |
+| M3 | `feat/package-explorer` | FR-WB-8, FR-WB-9, NFR-9 | Merged |
 | M4 | `feat/web-auth` | FR-WB-10, GR-3 | Planned |
 | M4 | `feat/workspace-subgraph` | FR-SG-1, FR-SG-9, FR-WB-11 | Planned |
 | M5 | `feat/bedrock-client` | FR-AI-4, GR-13, GR-14, GR-15 | Planned |

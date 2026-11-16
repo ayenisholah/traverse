@@ -34,6 +34,7 @@ The versions below are the only ones whose docs count. Upgrades change this tabl
 | `@trpc/client` | `11.28.3` | `apps/web/package.json` |
 | CodeMirror | `@codemirror/state` `6.7.6`, `view` `6.43.15`, `commands` `6.11.1`, `language` `6.13.1`, `lint` `6.9.8`, `autocomplete` `6.20.4`, `@lezer/highlight` `1.2.5` | `apps/web/package.json` |
 | `cm6-graphql` | `1.0.0` | `apps/web/package.json` |
+| `semver` | `7.8.6` | `package-lock.json` |
 | `@graphql-codegen/core` | `7.0.0` | `packages/typed-operations/package.json` |
 | `@graphql-codegen/typescript-operations` | `7.0.1` | `packages/typed-operations/package.json` |
 
@@ -98,6 +99,7 @@ The versions below are the only ones whose docs count. Upgrades change this tabl
 | C-55 | The router serves a read sent as a GET, and its access log records the query string except the parameters named in `access_logs.router.ignore_query_params_list`, which defaults to `variables`. So by default the operation's text is logged and its variables aren't. With `query`, `variables`, `extensions` and `operationName` listed, none of them is logged. A POST body isn't logged. | `tested` | `router/test/e2e/sandbox.test.ts` with and without the setting, 2026-11-16, and `AccessLogsRouterConfig` in `config.go` at the tag |
 | C-56 | A query plan is a tree. A node is `{kind: "Single", fetch}` or `{kind: "Sequence" \| "Parallel", children}`. A fetch has `kind` (`Single` for a root fetch, `Entity` for an entity fetch), `subgraphName`, `fetchId`, `query`, and for an entity fetch `path`, `dependsOnFetchIds` and `representations`. `Package` plans as a sequence: `packages`, then `repositories` and `advisories` in parallel. A plan of one fetch has no group around it. An operation the router refuses before running it (a syntax error, an unknown field, a mutation) comes back with `errors` and no `extensions`. | `tested` | Recorded from the pinned image on 2026-11-16, in `apps/web/test/fixtures/sandbox-package.json` and `sandbox-name-only.json` |
 | C-57 | An operation the router ran comes back with a `data` key and its plan, even when a subgraph failed, and with `subgraph_error_propagation` left at its default (`wrapped`) a failing subgraph's own message is in `errors`. An operation it refused before running has `errors` and no `data` key. A limit breach is answered with HTTP 400 and a body like that. | `tested` | `router/test/e2e/sandbox.test.ts` and `router/test/e2e/web.test.ts` on the pinned image, 2026-11-16, and `SubgraphErrorPropagationConfiguration` in `config.go` at the tag |
+| C-58 | `PackagePage` (22 fields, depth 3 at `dependencies { name }` and `repository { url }`) and `Dependency` (8 fields, depth 3) run on the public router within its limits: depth 3, 60 fields, 3 root fields, no aliases. An unknown package answers `{"data":{"package":null}}` with no error. | `tested` | `router/test/e2e/web.test.ts` and recordings from the pinned image, 2026-11-16 |
 
 ## Data sources
 
@@ -153,6 +155,7 @@ The versions below are the only ones whose docs count. Upgrades change this tabl
 | W-31 | CodeMirror 6 mounts and takes edits under jsdom, and its content element is a `textbox` with `aria-multiline`. `defaultKeymap` doesn't bind Tab, so Tab moves focus out of the editor, in jsdom and in Chromium. | `tested` | `apps/web/test/operation-editor.test.tsx` and `apps/web/test/live/operations.spec.ts`, 2026-11-16 |
 | W-32 | `graphql(schema)` from `cm6-graphql` adds the language, a linter that checks against the schema, and a completion source, but no completion list: that needs `autocompletion()` from `@codemirror/autocomplete`. The list is a scrollable `listbox` that never takes focus, which axe reports as `scrollable-region-focusable` unless it's shown whole. | `tested` | The package source, and the Playwright axe run on 2026-11-16 |
 | W-33 | The editor's linter loads graphql's CommonJS build, so under Vite a schema built by the ESM build fails with "from another module or realm", as in W-5. Aliasing `graphql` to `graphql/index.js` in the test project fixes it. In the Next.js server build the page and the linter share one copy: the linter marks an unknown field in Chromium with no page error. | `tested` | `apps/web/test/operation-editor.test.tsx` and `apps/web/test/live/operations.spec.ts`, 2026-11-16 |
+| W-34 | `semver` 7.8.6: `validRange` returns null for a git URL, `file:`, `workspace:` and other non-registry specifiers, and `minVersion` returns the lowest version a range allows, or null when none can (`>2.0.0 <1.0.0`). | `tested` | `apps/web/test/server/manifest.test.ts`, 2026-11-16 |
 
 ## AWS
 
