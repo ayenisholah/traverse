@@ -5,6 +5,7 @@ import express from "../fixtures/router-package-express.json" with { type: "json
 import { PackageOperation } from "../../src/generated/operations.ts";
 import {
   freePort,
+  shippedHashes,
   startStubRouter,
   startStubSandbox,
   startWebServer,
@@ -23,7 +24,7 @@ describe("the server build", () => {
   let server: WebServer;
 
   beforeAll(async () => {
-    router = await startStubRouter(PackageOperation.sha256);
+    router = await startStubRouter(await shippedHashes());
     sandbox = await startStubSandbox();
     server = startWebServer(await freePort(), {
       PUBLIC_ROUTER_URL: router.url,
@@ -76,6 +77,54 @@ describe("the server build", () => {
     expect(JSON.stringify(body)).not.toMatch(/GHSA|expressjs/);
   });
 
+  it("[FR-WB-8] answers with a real package's page, its versions cut to the newest few", async () => {
+    const response = await fetch(
+      `${server.url}/api/trpc/packagePage?input=${input({ name: "express" })}`,
+    );
+    const { result } = (await response.json()) as {
+      result: {
+        data: { kind: string; package: { recentVersions: string[]; versionCount: number } };
+      };
+    };
+
+    expect(result.data.kind).toBe("found");
+    expect(result.data.package.recentVersions).toHaveLength(20);
+    expect(result.data.package.versionCount).toBe(290);
+  });
+
+  it("[FR-WB-9] checks a pasted package.json, posting each dependency's own operation", async () => {
+    const before = router.requests.length;
+    const response = await fetch(`${server.url}/api/trpc/checkManifest`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        manifest: JSON.stringify({ dependencies: { lodash: "4.17.20", ms: "^2.1.3" } }),
+      }),
+    });
+    const { result } = (await response.json()) as {
+      result: { data: { dependencies: { name: string; status: string; advisories: unknown[] }[] } };
+    };
+
+    expect(result.data.dependencies.map(({ name, status }) => [name, status])).toEqual([
+      ["lodash", "checked"],
+      ["ms", "checked"],
+    ]);
+    expect(result.data.dependencies[0]?.advisories).toHaveLength(4);
+    expect(router.requests.slice(before).map(({ variables }) => variables)).toEqual([
+      { name: "lodash", version: "4.17.20" },
+      { name: "ms", version: "2.1.3" },
+    ]);
+  });
+
+  it("[FR-WB-8] serves the packages pages, and a scoped package's page", async () => {
+    const list = await (await fetch(`${server.url}/packages`)).text();
+    const scoped = await fetch(`${server.url}/packages/%40types/ms`);
+
+    expect(list).toContain("<title>Packages · Traverse</title>");
+    expect(scoped.status).toBe(200);
+    expect(await scoped.text()).toContain("<title>@types/ms · Traverse</title>");
+  });
+
   it("[FR-WB-7] serves the operations page, with the editor's starting operation", async () => {
     const page = await (await fetch(`${server.url}/operations`)).text();
 
@@ -102,7 +151,15 @@ describe("the server build", () => {
   it("[GR-9] sends the router's address to no page", async () => {
     const addresses = [router.url, sandbox.url].map((url) => new URL(url).host);
     const pages = await Promise.all(
-      ["/", "/impact", "/operations", "/?_rsc=1", "/operations?_rsc=1"].map(async (path) =>
+      [
+        "/",
+        "/impact",
+        "/operations",
+        "/packages",
+        "/packages/express",
+        "/?_rsc=1",
+        "/operations?_rsc=1",
+      ].map(async (path) =>
         (await fetch(`${server.url}${path}`, { headers: { rsc: "1" } })).text(),
       ),
     );

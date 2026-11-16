@@ -10,7 +10,7 @@ const app = join(import.meta.dirname, "../..");
 const next = createRequire(import.meta.url).resolve("next/dist/bin/next");
 
 interface PersistedRequest {
-  variables?: { name?: string };
+  variables?: { name?: string; version?: string };
   extensions?: { persistedQuery?: { sha256Hash?: string } };
 }
 
@@ -21,21 +21,33 @@ export interface StubRouter {
   stop: () => void;
 }
 
+const fixture = (name: string) => readFileSync(join(app, "test/fixtures", `${name}.json`), "utf8");
+
 /**
- * Stands in for the public router, so these tests need no Docker. It answers one hash, with the
- * pinned router's own answer for express, recorded from router/test/support/stack.ts. Like the
- * real router, it refuses a hash it doesn't hold. router/test/e2e covers the real path.
+ * Stands in for the public router, so these tests need no Docker. It answers the shipped
+ * operations with the pinned router's own answers, recorded from router/test/support/stack.ts, for
+ * the packages those recordings hold, and any other package as missing. Like the real router, it
+ * refuses a hash it doesn't hold. router/test/e2e covers the real path.
  */
-export const startStubRouter = async (hash: string, port = 0): Promise<StubRouter> => {
-  const express = readFileSync(join(app, "test/fixtures/router-package-express.json"), "utf8");
+export const startStubRouter = async (
+  hashes: { package: string; packagePage: string; dependency: string },
+  port = 0,
+): Promise<StubRouter> => {
+  const answers = new Map([
+    [`${hashes.package}:express`, fixture("router-package-express")],
+    [`${hashes.packagePage}:express`, fixture("router-page-express")],
+    [`${hashes.dependency}:lodash@4.17.20`, fixture("router-dep-lodash")],
+    [`${hashes.dependency}:zod@4.0.0`, fixture("router-dep-zod")],
+    [`${hashes.dependency}:ms@2.1.3`, fixture("router-dep-ms")],
+  ]);
   const requests: PersistedRequest[] = [];
-  const answer = (body: PersistedRequest): string => {
-    if (body.extensions?.persistedQuery?.sha256Hash !== hash) {
+  const answer = ({ extensions, variables = {} }: PersistedRequest): string => {
+    const hash = extensions?.persistedQuery?.sha256Hash ?? "";
+    if (!Object.values(hashes).includes(hash)) {
       return JSON.stringify({ errors: [{ message: "PersistedQueryNotFound" }] });
     }
-    return body.variables?.name === "express"
-      ? express
-      : JSON.stringify({ data: { package: null } });
+    const key = `${hash}:${String(variables.name)}${variables.version ? `@${variables.version}` : ""}`;
+    return answers.get(key) ?? JSON.stringify({ data: { package: null } });
   };
   const server = createServer((request, response) => {
     let text = "";
@@ -54,6 +66,17 @@ export const startStubRouter = async (hash: string, port = 0): Promise<StubRoute
   };
 };
 
+/** The shipped operations' hashes, as the stub router needs them. */
+export const shippedHashes = async () => {
+  const { DependencyOperation, PackageOperation, PackagePageOperation } =
+    await import("../../src/generated/operations.ts");
+  return {
+    package: PackageOperation.sha256,
+    packagePage: PackagePageOperation.sha256,
+    dependency: DependencyOperation.sha256,
+  };
+};
+
 export interface StubSandbox {
   url: string;
   /** Every operation the web server sent, in order. */
@@ -67,7 +90,7 @@ export interface StubSandbox {
  * operation holding "nope" or a mutation gets the router's own refusals, word for word.
  */
 export const startStubSandbox = async (port = 0): Promise<StubSandbox> => {
-  const planned = readFileSync(join(app, "test/fixtures/sandbox-package.json"), "utf8");
+  const planned = fixture("sandbox-package");
   const operations: string[] = [];
   const refuse = (message: string) => JSON.stringify({ errors: [{ message }] });
   const answer = (query: string): string => {
