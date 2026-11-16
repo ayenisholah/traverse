@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   freePort,
@@ -7,20 +8,26 @@ import {
 } from "../../../apps/web/test/support/live-server.ts";
 import { fixture } from "../../../subgraphs/packages/test/helpers.ts";
 import { recordings as repositories } from "../../../subgraphs/repositories/test/helpers.ts";
-import { startStack, type Stack } from "../support/stack.ts";
+import { startStack, type Router, type Stack } from "../support/stack.ts";
 
 let stack: Stack;
+let sandbox: Router;
 let web: WebServer;
 
 // Needs `npm run build:server` first: this runs the built app, as a deployment would.
 beforeAll(async () => {
   stack = await startStack();
-  web = startWebServer(await freePort(), { PUBLIC_ROUTER_URL: stack.url });
+  sandbox = await stack.startSandbox();
+  web = startWebServer(await freePort(), {
+    PUBLIC_ROUTER_URL: stack.url,
+    SANDBOX_ROUTER_URL: sandbox.url,
+  });
   await waitUntilReady(web);
 }, 240_000);
 
 afterAll(async () => {
   await web.stop();
+  await sandbox.stop();
   await stack.stop();
 });
 
@@ -69,5 +76,83 @@ describe("the web server on the public router", { timeout: 60_000 }, () => {
     } finally {
       stack.blockGithub(false);
     }
+  });
+});
+
+interface PlanNode {
+  kind: string;
+  fetch?: { subgraphName: string; fetchId: number };
+  children?: PlanNode[];
+}
+
+interface RouteBody {
+  result: {
+    data: {
+      kind: string;
+      messages?: string[];
+      route?: { steps: { id: number; subgraph: string; stage: number; after: number[] }[] };
+    };
+  };
+}
+
+const askRoute = async (operation: string, variables: Record<string, unknown> = {}) => {
+  const response = await fetch(`${web.url}/api/trpc/route`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ operation, variables }),
+  });
+  return { text: await response.clone().text(), body: (await response.json()) as RouteBody };
+};
+
+describe("the route view's server on the sandbox router", { timeout: 60_000 }, () => {
+  const operation = readFileSync("router/operations/package.graphql", "utf8");
+
+  it("[FR-WB-7] returns the subgraphs and fetch order of the plan the router gives for Package", async () => {
+    const direct = await fetch(`${sandbox.url}/graphql`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ query: operation, variables: { name: "express" } }),
+    });
+    const { extensions } = (await direct.json()) as { extensions: { queryPlan: PlanNode } };
+    const plan = extensions.queryPlan;
+    // Read straight off the router's plan: a sequence of packages, then the other two together.
+    const [first, second] = plan.children ?? [];
+    const together = (second?.children ?? []).map((child) => child.fetch?.subgraphName);
+
+    const { body } = await askRoute(operation, { name: "express" });
+    const steps = body.result.data.route?.steps ?? [];
+
+    expect(plan.kind).toBe("Sequence");
+    expect(second?.kind).toBe("Parallel");
+    expect(steps.filter(({ stage }) => stage === 0).map(({ subgraph }) => subgraph)).toEqual([
+      first?.fetch?.subgraphName,
+    ]);
+    expect(steps.filter(({ stage }) => stage === 1).map(({ subgraph }) => subgraph)).toEqual(
+      together,
+    );
+    expect(steps.map(({ subgraph }) => subgraph)).toEqual([
+      "packages",
+      "repositories",
+      "advisories",
+    ]);
+    expect(steps.slice(1).map(({ after }) => after)).toEqual([[0], [0]]);
+  });
+
+  it("[GR-16] returns the route and none of the package's data", async () => {
+    const { text } = await askRoute(operation, { name: "express" });
+
+    expect(text).toContain('"subgraph":"packages"');
+    expect(text).not.toMatch(/GHSA|expressjs\/express|"MIT"/);
+  });
+
+  it("[FR-WB-7] passes on the router's reason for refusing an operation", async () => {
+    const unknown = await askRoute(`query Bad { package(name: "express") { nope } }`);
+    const write = await askRoute(`mutation Write { __typename }`);
+
+    expect(unknown.body.result.data).toEqual({
+      kind: "refused",
+      messages: ['Cannot query field "nope" on type "Package".'],
+    });
+    expect(write.body.result.data.kind).toBe("refused");
   });
 });

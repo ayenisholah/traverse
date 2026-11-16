@@ -54,6 +54,44 @@ export const startStubRouter = async (hash: string, port = 0): Promise<StubRoute
   };
 };
 
+export interface StubSandbox {
+  url: string;
+  /** Every operation the web server sent, in order. */
+  operations: string[];
+  stop: () => void;
+}
+
+/**
+ * Stands in for the sandbox router. It answers any operation with the pinned router's own answer
+ * for the Package operation, plan included, recorded from router/test/support/stack.ts. An
+ * operation holding "nope" or a mutation gets the router's own refusals, word for word.
+ */
+export const startStubSandbox = async (port = 0): Promise<StubSandbox> => {
+  const planned = readFileSync(join(app, "test/fixtures/sandbox-package.json"), "utf8");
+  const operations: string[] = [];
+  const refuse = (message: string) => JSON.stringify({ errors: [{ message }] });
+  const answer = (query: string): string => {
+    if (query.includes("nope")) return refuse('Cannot query field "nope" on type "Package".');
+    if (/^\s*mutation\b/.test(query)) return refuse("operation type 'mutation' is blocked");
+    return planned;
+  };
+  const server = createServer((request, response) => {
+    let text = "";
+    request.on("data", (chunk: Buffer) => (text += chunk.toString()));
+    request.on("end", () => {
+      const { query } = JSON.parse(text) as { query: string };
+      operations.push(query);
+      response.writeHead(200, { "content-type": "application/json" }).end(answer(query));
+    });
+  }).listen(port, "127.0.0.1");
+  await once(server, "listening");
+  return {
+    url: `http://127.0.0.1:${String((server.address() as AddressInfo).port)}`,
+    operations,
+    stop: () => server.close(),
+  };
+};
+
 export interface WebServer {
   url: string;
   output: () => string;

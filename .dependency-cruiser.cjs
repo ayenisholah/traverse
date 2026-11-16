@@ -32,13 +32,14 @@ module.exports = {
     {
       name: "web-server-code-stays-on-the-server",
       comment:
-        "Only the server's own modules, live route handlers and the start-up check may import apps/web/src/server, so none of it can be bundled for the browser (GR-9).",
+        "Only the server's own modules, live route handlers and the start-up check may import code from apps/web/src/server, so none of it can be bundled for the browser (GR-9).",
       severity: "error",
       from: {
         path: "^apps/web/src/",
         pathNot: ["^apps/web/src/server/", "/route\\.live\\.ts$", "/instrumentation\\.live\\.ts$"],
       },
-      to: { path: "^apps/web/src/server/" },
+      // A type is erased when the page is built, so importing one carries no code along.
+      to: { path: "^apps/web/src/server/", dependencyTypesNot: ["type-only"] },
     },
     {
       name: "no-deep-package-imports",
