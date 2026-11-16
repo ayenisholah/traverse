@@ -52,12 +52,22 @@ try {
     ...["-e", "npm_config_cache=/opt/wgc/.npm", "-v", `${install}:/opt/wgc`, NODE_IMAGE],
     ...["npm", "install", "--silent", "--ignore-scripts", "--prefix", "/opt/wgc", WGC],
   ]);
-  docker([
-    ...["--network", "none", "-e", "DISABLE_UPDATE_CHECK=true"],
-    ...["-v", `${install}:/opt/wgc:ro`, "-v", `${resolve(".")}:/w`, "-w", "/w", NODE_IMAGE],
-    ...["node", "/opt/wgc/node_modules/wgc/dist/src/index.js", "router", "compose"],
-    ...["-i", "router/graph.yaml", "-o", "router/config.json"],
-  ]);
+  // The real graph, and a test-only graph with a mutation and a subscription for the sandbox
+  // router's tests (GR-11).
+  for (const [input, output] of [
+    ["router/graph.yaml", "router/config.json"],
+    [
+      "router/test/fixtures/sandbox-graph/graph.yaml",
+      "router/test/fixtures/sandbox-graph/config.json",
+    ],
+  ]) {
+    docker([
+      ...["--network", "none", "-e", "DISABLE_UPDATE_CHECK=true"],
+      ...["-v", `${install}:/opt/wgc:ro`, "-v", `${resolve(".")}:/w`, "-w", "/w", NODE_IMAGE],
+      ...["node", "/opt/wgc/node_modules/wgc/dist/src/index.js", "router", "compose"],
+      ...["-i", input as string, "-o", output as string],
+    ]);
+  }
 } finally {
   rmSync(install, { recursive: true, force: true });
 }

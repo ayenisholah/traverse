@@ -1,7 +1,12 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { composeGraph } from "@traverse/graph-core";
-import { findBannedRouterSettings, findUnknownRouterVariables } from "@traverse/repo-checks";
+import {
+  findBannedRouterSettings,
+  findBannedSandboxSettings,
+  findUnknownRouterVariables,
+  findUnknownSandboxVariables,
+} from "@traverse/repo-checks";
 import { generateTypedOperations, persistedOperation } from "@traverse/typed-operations";
 import { describe, expect, it } from "vitest";
 import { parse } from "yaml";
@@ -32,6 +37,40 @@ describe("the public router's config", () => {
   });
 });
 
+const sandboxConfig = () => parse(read("router/sandbox.yaml")) as Record<string, unknown>;
+
+describe("the sandbox router's config", () => {
+  it("[GR-11] blocks mutations and subscriptions, and enables nothing a browser could use", () => {
+    expect(findBannedSandboxSettings(sandboxConfig())).toEqual([]);
+  });
+
+  it("[GR-11] uses only variables the sandbox environment check holds to a format", () => {
+    expect(findUnknownSandboxVariables(read("router/sandbox.yaml"))).toEqual([]);
+  });
+
+  it("[FR-GW-9] returns the query plan with every answer, and takes free-form operations", () => {
+    expect(sandboxConfig()).toMatchObject({
+      query_plans_enabled: true,
+      engine: { debug: { always_include_query_plan: true } },
+      security: { block_non_persisted_operations: { enabled: false } },
+    });
+  });
+
+  it("[GR-11] would fail if mutations were let through", () => {
+    const planted = structuredClone(sandboxConfig()) as {
+      security: { block_mutations: { enabled: boolean } };
+    };
+    planted.security.block_mutations.enabled = false;
+
+    expect(findBannedSandboxSettings(planted)).toEqual(["security.block_mutations.enabled"]);
+  });
+
+  it("[GR-1] is not the public router's config, which fails the sandbox rules and the other way round", () => {
+    expect(findBannedRouterSettings(sandboxConfig())).toContain("query_plans_enabled");
+    expect(findBannedSandboxSettings(publicConfig())).toContain("security.block_mutations.enabled");
+  });
+});
+
 interface ExecutionConfig {
   subgraphs: { name: string; routingUrl: string }[];
   engineConfig: {
@@ -58,6 +97,18 @@ describe("generated router files", () => {
       expect(sdl).toBe(read(join("router", subgraph.schema.file)));
     },
   );
+
+  it("[GR-11] compose the sandbox tests' graph from its current schema; run npm run generate:router if this fails", () => {
+    const fixture = "router/test/fixtures/sandbox-graph";
+    const composed = JSON.parse(read(join(fixture, "config.json"))) as ExecutionConfig;
+
+    expect(composed.subgraphs).toEqual([
+      expect.objectContaining({ name: "notes", routingUrl: "http://127.0.0.1:4104/graphql" }),
+    ]);
+    expect(
+      composed.engineConfig.datasourceConfigurations[0]?.customGraphql.federation.serviceSdl,
+    ).toBe(read(join(fixture, "notes.graphqls")));
+  });
 
   const documents = readdirSync("router/operations")
     .filter((file) => file.endsWith(".graphql"))

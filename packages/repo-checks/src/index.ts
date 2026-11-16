@@ -6,6 +6,9 @@ export type { RepoFile } from "./types.ts";
 export { findPersonalData, scrubPersonalData } from "./personal-data.ts";
 export {
   findBannedRouterSettings,
+  findBannedSandboxSettings,
   findUnknownRouterVariables,
+  findUnknownSandboxVariables,
   findUnsafeRouterEnvironment,
+  findUnsafeSandboxEnvironment,
 } from "./router-config.ts";
