@@ -22,7 +22,7 @@ Every requirement has an ID, a testable acceptance check, how it's verified, the
 | FR-WB-9 | Vet a project's dependencies. | Pasting a real `package.json` shows licences and advisories that match npm and OSV. | integration | M3 | planned |
 | FR-WB-10 | Sign in through Cognito. | Sign-in uses authorization code with PKCE, sessions expire and refresh, and signing out ends the session. | e2e | M4 | planned |
 | FR-WB-11 | Save a workspace. | A signed-in user saves schema drafts and a screen map and reopens them in a new session. | e2e | M4 | planned |
-| FR-WB-12 | Use generated, typed operations. | Every operation the app sends is generated from its documents, and a schema mismatch fails the build. | contract | M3 | planned |
+| FR-WB-12 | Use generated, typed operations. | Every operation the app sends is generated from its documents, and a schema mismatch fails the build. | contract | M3 | done |
 | FR-WB-13 | Build the UI from one design system. | Components use semantic tokens only, generated from one source, and each has state tests and an accessibility check. | unit | M1 | done |
 | FR-WB-14 | Serve the web app from AWS. | The app runs on Fargate behind the load balancer and deploys without failed requests. | staging | M7 | planned |
 | FR-WB-16 | Install the CLI from npm. | `npx @ayenis/traverse` runs from the registry with provenance, with no runtime dependencies. | CI | M1 | done |
