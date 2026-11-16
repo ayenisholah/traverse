@@ -53,18 +53,65 @@ const RULES: Rule[] = [
   ["authentication.jwt.on_error", (value) => value === "reject"],
 ];
 
+const isTrue = (value: unknown) => value === true;
+const isAlways = (value: unknown) => value === "true";
+const isEmptyList = (value: unknown) => Array.isArray(value) && value.length === 0;
+
+/**
+ * GR-11 for the sandbox router, which only the web server calls. It may return query plans and
+ * run free-form reads, so those two rules are gone. Everything else stays banned, and it must
+ * block mutations and subscriptions, with their conditions set so the environment can't supply
+ * one (C-53). No browser calls it, so it allows no origin at all.
+ */
+const SANDBOX_RULES: Rule[] = [
+  ["dev_mode", isFalse],
+  ["demo_mode", isFalse],
+  ["introspection.enabled", isFalse],
+  ["introspection_enabled", isFalse],
+  ["playground.enabled", isFalse],
+  ["playground_enabled", isFalse],
+  ["mcp.enabled", isFalse],
+  ["connect_rpc.enabled", isFalse],
+  ["automatic_persisted_queries.enabled", isFalse],
+  ["security.block_mutations.enabled", isTrue],
+  ["security.block_mutations.condition", isAlways],
+  ["security.block_subscriptions.enabled", isTrue],
+  ["security.block_subscriptions.condition", isAlways],
+  // A free-form operation must cost no more than the limits allow.
+  ["security.complexity_limits.mode", (value) => value === "enforce"],
+  ["security.complexity_limits.depth.enabled", isTrue],
+  ["security.complexity_limits.total_fields.enabled", isTrue],
+  ["security.complexity_limits.root_fields.enabled", isTrue],
+  ["security.complexity_limits.root_field_aliases.enabled", isTrue],
+  // Subscriptions arrive over WebSockets, a batch is many operations in one request, and an
+  // upload only ever belongs to a mutation.
+  ["websocket.enabled", isFalse],
+  ["batching.enabled", isFalse],
+  ["file_upload.enabled", isFalse],
+  ["cors.enabled", isFalse],
+  ["cors.allow_origins", isEmptyList],
+  ["cors.match_origins", isEmptyList],
+];
+
+const findBanned =
+  (rules: Rule[]) =>
+  (config: unknown): string[] => {
+    if (!isRecord(config)) return ["(the config itself)"];
+    return rules
+      .filter(([setting, isSafe]) => !isSafe(read(config, setting)))
+      .map(([setting]) => setting);
+  };
+
 /** Lists each setting that breaks GR-1 or GR-2, or the whole config if it isn't one. */
-export const findBannedRouterSettings = (config: unknown): string[] => {
-  if (!isRecord(config)) return ["(the config itself)"];
-  return RULES.filter(([setting, isSafe]) => !isSafe(read(config, setting))).map(
-    ([setting]) => setting,
-  );
-};
+export const findBannedRouterSettings = findBanned(RULES);
+
+/** Lists each setting that breaks GR-11, or the whole config if it isn't one. */
+export const findBannedSandboxSettings = findBanned(SANDBOX_RULES);
 
 const ABSOLUTE_PATH = /^\/[A-Za-z0-9._-]+(?:\/[A-Za-z0-9._-]+)*$/;
 const LOCAL_URL = String.raw`http:\/\/127\.0\.0\.1:\d{1,5}`;
 
-/** Every variable the config may use, and the only shape each value may take. */
+/** Every variable the public config may use, and the only shape each value may take. */
 const VARIABLES: Record<string, RegExp> = {
   CONFIG_PATH: /^\/[A-Za-z0-9._/-]+\.yaml$/,
   ROUTER_LISTEN_ADDR: /^[a-z0-9.-]+:\d{1,5}$/,
@@ -77,23 +124,40 @@ const VARIABLES: Record<string, RegExp> = {
   ROUTER_JWT_AUDIENCE: /^[A-Za-z0-9._:-]{1,128}$/,
 };
 
+/** The sandbox config uses three of them: it has no origin, no persisted operations and no tokens. */
+const SANDBOX_VARIABLES: Record<string, RegExp> = {
+  CONFIG_PATH: VARIABLES.CONFIG_PATH as RegExp,
+  ROUTER_LISTEN_ADDR: VARIABLES.ROUTER_LISTEN_ADDR as RegExp,
+  ROUTER_EXECUTION_CONFIG: ABSOLUTE_PATH,
+};
+
+const findUnknownVariables =
+  (variables: Record<string, RegExp>) =>
+  (text: string): string[] =>
+    [...text.matchAll(/\$\{?([A-Za-z_][A-Za-z0-9_]*)\}?/g)]
+      .map(([, name]) => name as string)
+      .filter((name) => !(name in variables));
+
+const findUnsafeEnvironment =
+  (variables: Record<string, RegExp>) =>
+  (env: Record<string, string>): string[] => {
+    const unknown = Object.keys(env).filter((name) => !(name in variables));
+    const unsafe = Object.entries(variables)
+      .filter(([name, shape]) => {
+        const value = env[name];
+        return value === undefined || !shape.test(value);
+      })
+      .map(([name]) => name);
+    return [...unknown, ...unsafe];
+  };
+
 /** Names each variable in the config's raw text that the environment check doesn't hold. */
-export const findUnknownRouterVariables = (text: string): string[] =>
-  [...text.matchAll(/\$\{?([A-Za-z_][A-Za-z0-9_]*)\}?/g)]
-    .map(([, name]) => name as string)
-    .filter((name) => !(name in VARIABLES));
+export const findUnknownRouterVariables = findUnknownVariables(VARIABLES);
+export const findUnknownSandboxVariables = findUnknownVariables(SANDBOX_VARIABLES);
 
 /**
- * Checks the router's whole environment, as a deployment sets it. Anything else would reach a
+ * Checks a router's whole environment, as a deployment sets it. Anything else would reach a
  * setting the file leaves out, and a value out of shape could rewrite the file as it's expanded.
  */
-export const findUnsafeRouterEnvironment = (env: Record<string, string>): string[] => {
-  const unknown = Object.keys(env).filter((name) => !(name in VARIABLES));
-  const unsafe = Object.entries(VARIABLES)
-    .filter(([name, shape]) => {
-      const value = env[name];
-      return value === undefined || !shape.test(value);
-    })
-    .map(([name]) => name);
-  return [...unknown, ...unsafe];
-};
+export const findUnsafeRouterEnvironment = findUnsafeEnvironment(VARIABLES);
+export const findUnsafeSandboxEnvironment = findUnsafeEnvironment(SANDBOX_VARIABLES);

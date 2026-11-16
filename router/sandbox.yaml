@@ -1,0 +1,87 @@
+# The sandbox router (ADR 0011, GR-11). Only the web server calls it, for query plans and
+# free-form read operations, which GR-1 and GR-2 keep off the public router. It must never be
+# reachable from the internet, and it runs no mutation and no subscription.
+# router/test/config.test.ts holds this file to its own rule set, and every key is checked against
+# config.schema.json at router@0.366.1.
+#
+# The router reads its environment first and lays this file on top (C-50), so every setting that
+# matters is written out, even where it matches the default. Variables are expanded into the raw
+# text before parsing (C-43), so only known ones appear.
+version: "1"
+
+listen_addr: ${ROUTER_LISTEN_ADDR}
+json_log: true
+log_level: info
+
+# What this router is for: the plan comes back with every answer (C-37), with no dev mode.
+query_plans_enabled: true
+engine:
+  debug:
+    always_include_query_plan: true
+
+# Reads only (C-53). The conditions are set, so the environment can't supply one that lets an
+# operation through.
+security:
+  block_mutations:
+    enabled: true
+    condition: "true"
+  block_subscriptions:
+    enabled: true
+    condition: "true"
+  # Free-form operations are the point, so nothing is persisted here.
+  block_non_persisted_operations:
+    enabled: false
+  complexity_limits:
+    mode: enforce
+    # The same limits as the public router, so a free-form operation can't cost the sources more
+    # than a shipped one.
+    depth:
+      enabled: true
+      limit: 3
+    total_fields:
+      enabled: true
+      limit: 60
+    root_fields:
+      enabled: true
+      limit: 3
+    root_field_aliases:
+      enabled: true
+      limit: 0
+websocket:
+  enabled: false
+batching:
+  enabled: false
+file_upload:
+  enabled: false
+traffic_shaping:
+  router:
+    # The smallest size the router allows.
+    max_request_body_size: 1MB
+
+dev_mode: false
+demo_mode: false
+# The web server knows the schema already, so nothing needs to ask this router for it.
+introspection:
+  enabled: false
+playground:
+  enabled: false
+# The deprecated forms read the same environment variables, so they're set too (C-42).
+introspection_enabled: false
+playground_enabled: false
+mcp:
+  enabled: false
+connect_rpc:
+  enabled: false
+automatic_persisted_queries:
+  enabled: false
+
+# No browser calls this router, so no origin is allowed.
+cors:
+  enabled: false
+  allow_origins: []
+  match_origins: []
+  allow_credentials: false
+
+execution_config:
+  file:
+    path: ${ROUTER_EXECUTION_CONFIG}

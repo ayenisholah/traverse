@@ -1,0 +1,13 @@
+# A test-only subgraph. The real graph has no mutation or subscription yet, and GR-11 has to be
+# proven on a graph that does: the sandbox router must refuse both before they reach a subgraph.
+type Query {
+  note: String
+}
+
+type Mutation {
+  addNote(text: String!): Boolean
+}
+
+type Subscription {
+  noteAdded: String
+}

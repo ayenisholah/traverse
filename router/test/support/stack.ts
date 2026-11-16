@@ -6,7 +6,7 @@ import { once } from "node:events";
 import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { findUnsafeRouterEnvironment } from "@traverse/repo-checks";
+import { findUnsafeRouterEnvironment, findUnsafeSandboxEnvironment } from "@traverse/repo-checks";
 import { exportJWK, generateKeyPair, SignJWT, type CryptoKey, type JWK } from "jose";
 import {
   runSubgraph,
@@ -23,6 +23,7 @@ const ROUTER_IMAGE =
 const AUDIENCE = "traverse-router";
 const ROUTER_PORT = 3902;
 const OVERRIDE_PORT = 3903;
+const SANDBOX_PORT = 3904;
 
 export interface Stack {
   url: string;
@@ -34,10 +35,12 @@ export interface Stack {
   subgraphRequests: () => Promise<number>;
   /** A second router on the same graph, with the public config and a test-only override merged. */
   startRouter: (override: string) => Promise<Router>;
+  /** The sandbox router on the same graph, with its own config, unchanged. */
+  startSandbox: () => Promise<Router>;
   stop: () => Promise<void>;
 }
 
-interface Router {
+export interface Router {
   url: string;
   stop: () => Promise<void>;
 }
@@ -71,6 +74,39 @@ const waitForReady = async (url: string, router: ChildProcess, logs: () => strin
   throw new Error(`The router never became ready:\n${logs()}`);
 };
 
+interface ContainerOptions {
+  port: number;
+  env: Record<string, string>;
+  /** A host folder mounted read-only at /files, for files a test writes. */
+  files?: string;
+}
+
+const runContainer = async ({ port, env, files }: ContainerOptions): Promise<Router> => {
+  const url = `http://127.0.0.1:${String(port)}`;
+  const name = `traverse-router-test-${String(process.pid)}-${String(port)}`;
+  const router = spawn("docker", [
+    ...["run", "--rm", "--name", name, "--network", "host"],
+    ...["-v", `${resolve("router")}:/config:ro`],
+    ...(files === undefined ? [] : ["-v", `${files}:/files:ro`]),
+    ...Object.entries(env).flatMap(([key, value]) => ["-e", `${key}=${value}`]),
+    ROUTER_IMAGE,
+  ]);
+  let logs = "";
+  router.stdout.on("data", (chunk: Buffer) => (logs += chunk.toString()));
+  router.stderr.on("data", (chunk: Buffer) => (logs += chunk.toString()));
+  const stop = async () => {
+    execFileSync("docker", ["rm", "-f", name], { stdio: "ignore" });
+    await once(router, "exit").catch(() => undefined);
+  };
+  try {
+    await waitForReady(url, router, () => logs);
+  } catch (error) {
+    await stop();
+    throw error;
+  }
+  return { url, stop };
+};
+
 interface RouterOptions {
   port: number;
   files: string;
@@ -78,7 +114,7 @@ interface RouterOptions {
   override?: string;
 }
 
-const runRouter = async ({ port, files, issuer, override }: RouterOptions): Promise<Router> => {
+const runRouter = ({ port, files, issuer, override }: RouterOptions): Promise<Router> => {
   const configs = ["/config/config.yaml"];
   if (override !== undefined) {
     writeFileSync(join(files, `override-${String(port)}.yaml`), override);
@@ -99,28 +135,34 @@ const runRouter = async ({ port, files, issuer, override }: RouterOptions): Prom
     (name) => override === undefined || name !== "CONFIG_PATH",
   );
   if (unsafe.length > 0) throw new Error(`Unsafe router environment: ${unsafe.join(", ")}`);
-  const url = `http://127.0.0.1:${String(port)}`;
-  const name = `traverse-router-test-${String(process.pid)}-${String(port)}`;
-  const router = spawn("docker", [
-    ...["run", "--rm", "--name", name, "--network", "host"],
-    ...["-v", `${resolve("router")}:/config:ro`, "-v", `${files}:/files:ro`],
-    ...Object.entries(env).flatMap(([key, value]) => ["-e", `${key}=${value}`]),
-    ROUTER_IMAGE,
-  ]);
-  let logs = "";
-  router.stdout.on("data", (chunk: Buffer) => (logs += chunk.toString()));
-  router.stderr.on("data", (chunk: Buffer) => (logs += chunk.toString()));
-  const stop = async () => {
-    execFileSync("docker", ["rm", "-f", name], { stdio: "ignore" });
-    await once(router, "exit").catch(() => undefined);
+  return runContainer({ port, env, files });
+};
+
+interface SandboxOptions {
+  /** The execution config to serve, as a path under router/. */
+  executionConfig: string;
+  port?: number;
+  /** Variables a deployment must never set, for tests that prove the file wins over them. */
+  hostileEnv?: Record<string, string>;
+}
+
+/**
+ * Runs the pinned router with router/sandbox.yaml, unchanged, bound to loopback. Its environment
+ * passes the rule a deployment must meet, unless a test adds hostile variables on purpose.
+ */
+export const startSandboxRouter = ({
+  executionConfig,
+  port = SANDBOX_PORT,
+  hostileEnv = {},
+}: SandboxOptions): Promise<Router> => {
+  const env = {
+    CONFIG_PATH: "/config/sandbox.yaml",
+    ROUTER_LISTEN_ADDR: `127.0.0.1:${String(port)}`,
+    ROUTER_EXECUTION_CONFIG: `/config/${executionConfig}`,
   };
-  try {
-    await waitForReady(url, router, () => logs);
-  } catch (error) {
-    await stop();
-    throw error;
-  }
-  return { url, stop };
+  const unsafe = findUnsafeSandboxEnvironment(env);
+  if (unsafe.length > 0) throw new Error(`Unsafe sandbox environment: ${unsafe.join(", ")}`);
+  return runContainer({ port, env: { ...env, ...hostileEnv } });
 };
 
 /**
@@ -208,6 +250,7 @@ export const startStack = async (): Promise<Stack> => {
       }
     },
     startRouter: (override) => runRouter({ port: OVERRIDE_PORT, files, issuer, override }),
+    startSandbox: () => startSandboxRouter({ executionConfig: "config.json" }),
     stop,
   };
 };

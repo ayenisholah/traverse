@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
   findBannedRouterSettings,
+  findBannedSandboxSettings,
   findUnknownRouterVariables,
+  findUnknownSandboxVariables,
   findUnsafeRouterEnvironment,
+  findUnsafeSandboxEnvironment,
 } from "../src/index.ts";
 
 /** The smallest config that passes: every setting the environment could change, set safely. */
@@ -45,8 +48,8 @@ const SETTINGS = [
 ];
 
 /** Sets one dotted setting in a copy of the safe config, or removes it when value is undefined. */
-const withSetting = (setting: string, value: unknown) => {
-  const config = structuredClone(safe());
+const withSetting = (setting: string, value: unknown, base = safe()) => {
+  const config = structuredClone(base);
   const keys = setting.split(".");
   const last = keys.pop() as string;
   const parent = keys.reduce((node, key) => node[key] as Record<string, unknown>, config);
@@ -186,5 +189,138 @@ describe("findUnsafeRouterEnvironment", () => {
     );
 
     expect(findUnsafeRouterEnvironment(missing)).toEqual(["ROUTER_JWKS_URL"]);
+  });
+});
+
+/** The smallest sandbox config that passes. Query plans and free-form reads aren't its concern. */
+const safeSandbox = (): Record<string, unknown> => ({
+  dev_mode: false,
+  demo_mode: false,
+  introspection: { enabled: false },
+  introspection_enabled: false,
+  playground: { enabled: false },
+  playground_enabled: false,
+  mcp: { enabled: false },
+  connect_rpc: { enabled: false },
+  automatic_persisted_queries: { enabled: false },
+  security: {
+    block_mutations: { enabled: true, condition: "true" },
+    block_subscriptions: { enabled: true, condition: "true" },
+    complexity_limits: {
+      mode: "enforce",
+      depth: { enabled: true },
+      total_fields: { enabled: true },
+      root_fields: { enabled: true },
+      root_field_aliases: { enabled: true },
+    },
+  },
+  websocket: { enabled: false },
+  batching: { enabled: false },
+  file_upload: { enabled: false },
+  cors: { enabled: false, allow_origins: [], match_origins: [] },
+});
+
+const UNSAFE_SANDBOX: [string, string, unknown][] = [
+  ["dev mode", "dev_mode", true],
+  ["demo mode", "demo_mode", true],
+  ["introspection", "introspection.enabled", true],
+  ["the deprecated introspection key", "introspection_enabled", true],
+  ["the playground", "playground.enabled", true],
+  ["the deprecated playground key", "playground_enabled", true],
+  ["the MCP server", "mcp.enabled", true],
+  ["the ConnectRPC server", "connect_rpc.enabled", true],
+  ["operations registered by clients", "automatic_persisted_queries.enabled", true],
+  ["mutations", "security.block_mutations.enabled", false],
+  ["a condition that could let a mutation through", "security.block_mutations.condition", "false"],
+  ["subscriptions", "security.block_subscriptions.enabled", false],
+  [
+    "a condition that could let a subscription through",
+    "security.block_subscriptions.condition",
+    "request.header.Get('x') == 'y'",
+  ],
+  ["limits that only measure", "security.complexity_limits.mode", "measure"],
+  ["no depth limit", "security.complexity_limits.depth.enabled", false],
+  ["no field limit", "security.complexity_limits.total_fields.enabled", false],
+  ["no root field limit", "security.complexity_limits.root_fields.enabled", false],
+  ["no alias limit", "security.complexity_limits.root_field_aliases.enabled", false],
+  ["WebSockets", "websocket.enabled", true],
+  ["batches", "batching.enabled", true],
+  ["uploads", "file_upload.enabled", true],
+  ["CORS", "cors.enabled", true],
+  ["an origin", "cors.allow_origins", ["https://traverse.example"]],
+  ["an origin pattern", "cors.match_origins", [".*"]],
+];
+
+describe("findBannedSandboxSettings", () => {
+  it("[GR-11] accepts a config that sets every setting safely, with query plans on", () => {
+    const config = {
+      ...safeSandbox(),
+      query_plans_enabled: true,
+      engine: { debug: { always_include_query_plan: true } },
+    };
+
+    expect(findBannedSandboxSettings(config)).toEqual([]);
+  });
+
+  it.each(UNSAFE_SANDBOX)("[GR-11] refuses %s", (_, setting, value) => {
+    expect(findBannedSandboxSettings(withSetting(setting, value, safeSandbox()))).toEqual([
+      setting,
+    ]);
+  });
+
+  it.each(UNSAFE_SANDBOX.map(([, setting]) => setting))(
+    "[GR-11] refuses a config that leaves %s to the environment",
+    (setting) => {
+      const config = withSetting(setting, undefined, safeSandbox());
+
+      expect(findBannedSandboxSettings(config)).toEqual([setting]);
+    },
+  );
+
+  it("[GR-11] refuses the public router's config, which blocks no mutation", () => {
+    expect(findBannedSandboxSettings(safe())).toContain("security.block_mutations.enabled");
+  });
+
+  it("[GR-11] refuses something that isn't a config", () => {
+    expect(findBannedSandboxSettings("dev_mode: false")).toEqual(["(the config itself)"]);
+  });
+});
+
+describe("the sandbox router's variables and environment", () => {
+  const sandboxEnvironment = {
+    CONFIG_PATH: "/config/sandbox.yaml",
+    ROUTER_LISTEN_ADDR: "127.0.0.1:3004",
+    ROUTER_EXECUTION_CONFIG: "/config/config.json",
+  };
+
+  it("[GR-11] knows three variables, and names any other", () => {
+    const text =
+      "a: ${ROUTER_LISTEN_ADDR}\nb: ${ROUTER_EXECUTION_CONFIG}\nc: ${ROUTER_CORS_ORIGIN}";
+
+    expect(findUnknownSandboxVariables(text)).toEqual(["ROUTER_CORS_ORIGIN"]);
+  });
+
+  it("[GR-11] accepts an environment of exactly those three, well formed", () => {
+    expect(findUnsafeSandboxEnvironment(sandboxEnvironment)).toEqual([]);
+  });
+
+  it.each([
+    ["SECURITY_BLOCK_MUTATIONS_ENABLED", "false"],
+    ["SECURITY_BLOCK_MUTATIONS_CONDITION", "false"],
+    ["SECURITY_BLOCK_SUBSCRIPTIONS_ENABLED", "false"],
+    ["DEV_MODE", "true"],
+    ["WEBSOCKETS_ENABLED", "true"],
+    ["CORS_ALLOW_ORIGINS", "*"],
+    ["ROUTER_CORS_ORIGIN", "https://traverse.example"],
+  ])("[GR-11] refuses %s in the environment, which the router would read", (name, value) => {
+    expect(findUnsafeSandboxEnvironment({ ...sandboxEnvironment, [name]: value })).toEqual([name]);
+  });
+
+  it.each([
+    ["CONFIG_PATH", "/config/sandbox.yaml,/tmp/override.yaml"],
+    ["ROUTER_LISTEN_ADDR", "127.0.0.1:3004\ndev_mode: true"],
+    ["ROUTER_EXECUTION_CONFIG", "config.json"],
+  ])("[GR-11] refuses %s set to %j", (name, value) => {
+    expect(findUnsafeSandboxEnvironment({ ...sandboxEnvironment, [name]: value })).toEqual([name]);
   });
 });

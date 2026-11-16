@@ -1,0 +1,8 @@
+# Input for `wgc router compose`, for the sandbox router's tests only. Run `npm run generate:router`
+# after changing notes.graphqls.
+version: 1
+subgraphs:
+  - name: notes
+    routing_url: http://127.0.0.1:4104/graphql
+    schema:
+      file: notes.graphqls
