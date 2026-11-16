@@ -1,7 +1,13 @@
 import type { NextConfig } from "next";
 
-// Static until M3, when the app moves to a server. See SPEC.md. GitHub Pages serves the public
-// demo from a subpath, so its build sets BASE_PATH.
-const config: NextConfig = { output: "export", basePath: process.env.BASE_PATH ?? "" };
+// One app, two builds. The static export is the public demo on GitHub Pages, which serves it from
+// a subpath, so that build sets BASE_PATH. TRAVERSE_BUILD=server builds the app that runs on a
+// server, and only that build sees files ending in `.live.ts` or `.live.tsx`: the live routes, the
+// API handler and the start-up check. The export can't hold them, and a test fails if it does.
+const exported: NextConfig = { output: "export", basePath: process.env.BASE_PATH ?? "" };
+const served: NextConfig = {
+  distDir: ".next-server",
+  pageExtensions: ["live.tsx", "live.ts", "tsx", "ts"],
+};
 
-export default config;
+export default process.env.TRAVERSE_BUILD === "server" ? served : exported;

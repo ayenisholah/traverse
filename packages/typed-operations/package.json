@@ -1,0 +1,14 @@
+{
+  "name": "@traverse/typed-operations",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Typed operations and their persisted hashes, generated from GraphQL documents.",
+  "license": "MIT",
+  "type": "module",
+  "exports": "./src/index.ts",
+  "dependencies": {
+    "@graphql-codegen/core": "7.0.0",
+    "@graphql-codegen/typescript-operations": "7.0.1",
+    "graphql": "^16.15.0"
+  }
+}

@@ -17,6 +17,8 @@ export default defineConfig({
             "packages/*/test/**/*.test.ts",
             "subgraphs/*/test/**/*.test.ts",
             "router/test/*.test.ts",
+            // The web app's server code, which runs in Node and never in a browser.
+            "apps/*/test/server/**/*.test.ts",
           ],
           exclude: ["{packages,subgraphs}/*/test/integration/**"],
           environment: "node",
