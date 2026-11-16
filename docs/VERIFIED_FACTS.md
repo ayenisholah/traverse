@@ -31,6 +31,9 @@ The versions below are the only ones whose docs count. Upgrades change this tabl
 | `graphql-yoga` | `6.0.1` | `package-lock.json` |
 | `@apollo/subgraph` | `2.15.1` | `package-lock.json` |
 | `@trpc/server` | `11.28.3` | `apps/web/package.json` |
+| `@trpc/client` | `11.28.3` | `apps/web/package.json` |
+| CodeMirror | `@codemirror/state` `6.7.6`, `view` `6.43.15`, `commands` `6.11.1`, `language` `6.13.1`, `lint` `6.9.8`, `autocomplete` `6.20.4`, `@lezer/highlight` `1.2.5` | `apps/web/package.json` |
+| `cm6-graphql` | `1.0.0` | `apps/web/package.json` |
 | `@graphql-codegen/core` | `7.0.0` | `packages/typed-operations/package.json` |
 | `@graphql-codegen/typescript-operations` | `7.0.1` | `packages/typed-operations/package.json` |
 
@@ -93,6 +96,7 @@ The versions below are the only ones whose docs count. Upgrades change this tabl
 | C-53 | The environment variables for these settings are `SECURITY_BLOCK_MUTATIONS_ENABLED` and `_CONDITION`, and the same under `SECURITY_BLOCK_SUBSCRIPTIONS_`. With `enabled` and `condition` set in the file, those variables, `DEV_MODE`, `INTROSPECTION_ENABLED`, `WEBSOCKETS_ENABLED`, `BATCHING_ENABLED`, `CORS_ENABLED` and `MCP_ENABLED` had no effect. `override_routing_url` and `overrides` have no environment variable. | `tested` | `router/pkg/config/config.go` at the tag, and the hostile-environment test in `router/test/e2e/sandbox.test.ts` |
 | C-54 | With `cors.enabled: false` and empty origin lists, the router starts, and a preflight gets no `Access-Control-Allow-Origin`. | `tested` | `router/test/e2e/sandbox.test.ts`, 2026-11-16 |
 | C-55 | The router serves a read sent as a GET, and its access log records the query string except the parameters named in `access_logs.router.ignore_query_params_list`, which defaults to `variables`. So by default the operation's text is logged and its variables aren't. With `query`, `variables`, `extensions` and `operationName` listed, none of them is logged. A POST body isn't logged. | `tested` | `router/test/e2e/sandbox.test.ts` with and without the setting, 2026-11-16, and `AccessLogsRouterConfig` in `config.go` at the tag |
+| C-56 | A query plan is a tree. A node is `{kind: "Single", fetch}` or `{kind: "Sequence" \| "Parallel", children}`. A fetch has `kind` (`Single` for a root fetch, `Entity` for an entity fetch), `subgraphName`, `fetchId`, `query`, and for an entity fetch `path`, `dependsOnFetchIds` and `representations`. `Package` plans as a sequence: `packages`, then `repositories` and `advisories` in parallel. A plan of one fetch has no group around it. An operation the router refuses before running it (a syntax error, an unknown field, a mutation) comes back with `errors` and no `extensions`. | `tested` | Recorded from the pinned image on 2026-11-16, in `apps/web/test/fixtures/sandbox-package.json` and `sandbox-name-only.json` |
 
 ## Data sources
 
@@ -145,6 +149,9 @@ The versions below are the only ones whose docs count. Upgrades change this tabl
 | W-28 | `fetchRequestHandler` from `@trpc/server/adapters/fetch` takes `{ endpoint, req, router, createContext, allowBatching }` and returns a `Response`, so it serves a Next.js route handler. With `allowBatching: false`, a batched call is refused. An error that isn't a `TRPCError` reaches the client with its own message, and a 404 repeats the path asked for, unless an `errorFormatter` replaces them. `responseMeta` sets response headers. | `tested` | The package's type declarations, and `apps/web/test/server/api.test.ts` |
 | W-29 | `codegen` from `@graphql-codegen/core` validates each document against the schema and rejects with "GraphQL Document Validation failed". The `typescript-operations` plugin alone emits each operation's variable and result types with no reference to schema types. | `tested` | `packages/typed-operations/test/generate.test.ts` |
 | W-30 | Next.js leaves a non-`NEXT_PUBLIC_` `process.env.NAME` in a client chunk as that text, with no value. A client chunk therefore names any server setting that browser code reads. `poweredByHeader: false` removes the `X-Powered-By` header. | `tested` | Planted read in a client component on 2026-11-16, and `apps/web/test/integration/server.test.ts` |
+| W-31 | CodeMirror 6 mounts and takes edits under jsdom, and its content element is a `textbox` with `aria-multiline`. `defaultKeymap` doesn't bind Tab, so Tab moves focus out of the editor, in jsdom and in Chromium. | `tested` | `apps/web/test/operation-editor.test.tsx` and `apps/web/test/live/operations.spec.ts`, 2026-11-16 |
+| W-32 | `graphql(schema)` from `cm6-graphql` adds the language, a linter that checks against the schema, and a completion source, but no completion list: that needs `autocompletion()` from `@codemirror/autocomplete`. The list is a scrollable `listbox` that never takes focus, which axe reports as `scrollable-region-focusable` unless it's shown whole. | `tested` | The package source, and the Playwright axe run on 2026-11-16 |
+| W-33 | The editor's linter loads graphql's CommonJS build, so under Vite a schema built by the ESM build fails with "from another module or realm", as in W-5. Aliasing `graphql` to `graphql/index.js` in the test project fixes it. In the Next.js server build the page and the linter share one copy: the linter marks an unknown field in Chromium with no page error. | `tested` | `apps/web/test/operation-editor.test.tsx` and `apps/web/test/live/operations.spec.ts`, 2026-11-16 |
 
 ## AWS
 

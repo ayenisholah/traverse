@@ -2,7 +2,7 @@
 
 **Outcome:** the workbench runs real operations and shows each one's real route, and the Package explorer serves live data. No AWS access is needed.
 
-**Status:** In progress. `feat/web-server` and `feat/sandbox-router` are built. The other two branches are planned.
+**Status:** In progress. `feat/web-server`, `feat/sandbox-router` and `feat/route-view` are built. `feat/package-explorer` is planned.
 
 ## Owner decisions
 
@@ -56,7 +56,9 @@ Built on 2026-11-16, as `router/sandbox.yaml`. The real graph has no mutation or
 - **Tests:** e2e on the pinned image. A mutation is rejected, a subscription is rejected, a read returns `extensions.queryPlan`, and nothing outside the private network can connect (GR-11).
 - **Run `guardrail-reviewer`.** The review of `feat/local-router` found environment-variable bypasses, so expect the same questions.
 
-### 3. `feat/route-view` (FR-WB-7)
+### 3. `feat/route-view` (FR-WB-7): built
+
+Built on 2026-11-16. The route model lives in the web server, because it validates the router's plan as it reads it. The server returns the route and none of the operation's data. The typed browser client arrived here.
 
 - **What:** `/operations` takes a typed operation, sends it through the server to the sandbox router, and shows the plan as a route: the subgraphs and the fetch order.
 - **Decided:** CodeMirror 6 for the editor (ADR 0018), and an ordered list with an SVG outline for the route (ADR 0019). Pin the CodeMirror packages and record them in verified facts first.

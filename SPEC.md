@@ -112,7 +112,7 @@ Production starts with 3 tasks of 2 vCPU and 4 GB, and scales to 9 on CPU and re
 
 ## Web app
 
-A Next.js app in `apps/web`, built two ways from one config. The static export holds `/` and `/impact` and is the public demo on GitHub Pages. The server build adds the tRPC API at `/api/trpc`, which runs generated operations on the public router by their hash, and it's where the live routes go. Files ending `.live.ts` or `.live.tsx` exist only in the server build. `/operations` and `/packages/[name]` are planned, and the server build isn't hosted yet.
+A Next.js app in `apps/web`, built two ways from one config. The static export holds `/` and `/impact` and is the public demo on GitHub Pages. The server build adds the tRPC API at `/api/trpc`, which runs generated operations on the public router by their hash, and it's where the live routes go. Files ending `.live.ts` or `.live.tsx` exist only in the server build. `/operations` is built: the server sends the operation to the sandbox router and returns only its route. `/packages/[name]` is planned, and the server build isn't hosted yet.
 
 | Route                   | Purpose                                                             |
 | ----------------------- | ------------------------------------------------------------------- |
