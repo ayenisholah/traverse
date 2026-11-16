@@ -56,6 +56,9 @@ const RULES: Rule[] = [
 const isTrue = (value: unknown) => value === true;
 const isAlways = (value: unknown) => value === "true";
 const isEmptyList = (value: unknown) => Array.isArray(value) && value.length === 0;
+// A limit that's on but set to nothing, or to a number nobody would reach, limits nothing.
+const isWithin = (min: number, max: number) => (value: unknown) =>
+  typeof value === "number" && Number.isInteger(value) && value >= min && value <= max;
 
 /**
  * GR-11 for the sandbox router, which only the web server calls. It may return query plans and
@@ -80,9 +83,14 @@ const SANDBOX_RULES: Rule[] = [
   // A free-form operation must cost no more than the limits allow.
   ["security.complexity_limits.mode", (value) => value === "enforce"],
   ["security.complexity_limits.depth.enabled", isTrue],
+  ["security.complexity_limits.depth.limit", isWithin(1, 10)],
   ["security.complexity_limits.total_fields.enabled", isTrue],
+  ["security.complexity_limits.total_fields.limit", isWithin(1, 200)],
   ["security.complexity_limits.root_fields.enabled", isTrue],
+  ["security.complexity_limits.root_fields.limit", isWithin(1, 10)],
   ["security.complexity_limits.root_field_aliases.enabled", isTrue],
+  // Zero aliases is a real limit: the router refuses any (C-45).
+  ["security.complexity_limits.root_field_aliases.limit", isWithin(0, 10)],
   // Subscriptions arrive over WebSockets, a batch is many operations in one request, and an
   // upload only ever belongs to a mutation.
   ["websocket.enabled", isFalse],
