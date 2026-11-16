@@ -6,7 +6,8 @@
       "project": ["scripts/**", "router/**/*.ts"]
     },
     "apps/*": {
-      "project": ["src/**", "test/**"]
+      "project": ["src/**", "test/**"],
+      "ignore": ["src/generated/**"]
     },
     "packages/*": {
       "project": ["src/**", "test/**"]

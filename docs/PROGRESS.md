@@ -62,7 +62,25 @@ Traverse is built on WunderGraph Cosmo and helps frontend developers explore a f
 
 ## In progress
 
-Nothing. `0.9.1` is the latest release. Start the next item below.
+`feat/web-server` (FR-WB-12, GR-9), pushed but not ready for a pull request.
+
+Done on the branch:
+
+- Tested on Next.js 16.4.5: one app builds as a static export and, with `TRAVERSE_BUILD=server`, as a server. Files ending `.live.ts` or `.live.tsx` exist only in the server build, through `pageExtensions`. Not yet recorded in verified facts.
+- `packages/typed-operations` (`@graphql-codegen/core` 7.0.0, `typescript-operations` 7.0.1), with unit tests. `npm run generate:router` now also writes `apps/web/src/generated/operations.ts`, with each operation's types and SHA-256. `router/test/config.test.ts` fails on stale output and on a planted schema change.
+- `apps/web/src/server`: settings, a router client that sends the hash only, and a tRPC 11.28.3 `package` procedure, served by `src/app/api/trpc/[trpc]/route.live.ts`. `src/instrumentation.live.ts` checks settings at start. 32 unit tests pass in `apps/web/test/server`.
+
+Left on the branch:
+
+- Record the facts (dual build, tRPC fetch adapter, codegen) and the pinned versions in verified facts.
+- Add `build:server` to the root scripts, `npm run check` and CI. Ignore `.next-server` in git, ESLint and Prettier.
+- An export test that fails if a live route or `/api` appears in `apps/web/out`, proven on a planted page.
+- Server integration tests on `next start` with a stub router: the tRPC call, and that a missing `PUBLIC_ROUTER_URL` stops the server. Whether a throw in `register` stops it is untested.
+- A server Playwright run of the existing suites, a Docker test from the web server to the pinned router, and the GR-9 scan of client chunks, proven on a planted value.
+- `guardrail-reviewer`, then `SPEC.md`, the threat model, requirements and the M3 plan.
+- The web server has no logging yet. `apps/web` imports `isPackageName` and `isVersion` from `@traverse/subgraph-kit`; check the server bundle doesn't pull in the kit's server dependencies.
+
+The approved plan for the whole of M3 is in [the M3 plan](plans/m3-live-routes.md): four branches in order, release pull requests left open until the owner is asked at the end, one persisted call per dependency for the `package.json` check, and the sandbox router bound to loopback locally.
 
 ## Next
 

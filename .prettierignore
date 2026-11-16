@@ -8,6 +8,7 @@ docs
 CHANGELOG.md
 .release-please-manifest.json
 .next
+.next-server
 out
 next-env.d.ts
 *.tsbuildinfo

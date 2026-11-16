@@ -20,6 +20,7 @@ export default tseslint.config(
       "**/cdk.out/**",
       "reports/**",
       "**/.next/**",
+      "**/.next-server/**",
       "**/out/**",
       "**/next-env.d.ts",
       "**/test-results/**",

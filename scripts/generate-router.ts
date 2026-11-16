@@ -1,26 +1,46 @@
 import { execFileSync } from "node:child_process";
-import { createHash } from "node:crypto";
 import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
+import { composeGraph } from "@traverse/graph-core";
+import { generateTypedOperations, persistedOperation } from "@traverse/typed-operations";
+import { parse } from "yaml";
 
 /**
- * Writes the router's persisted operations and execution config. Run it after changing an
- * operation in router/operations or a subgraph's schema. It needs Docker.
+ * Writes the router's persisted operations, the app's typed operations and the execution config.
+ * Run it after changing an operation in router/operations or a subgraph's schema. It needs Docker.
  */
 const WGC = "wgc@0.133.6";
 const NODE_IMAGE = "node:24";
 const sources = "router/operations";
 const persisted = "router/persisted/operations";
+const typed = "apps/web/src/generated/operations.ts";
 
-// The router looks an operation up by the SHA-256 of its body (C-34).
+const documents = readdirSync(sources)
+  .filter((name) => name.endsWith(".graphql"))
+  .map((file) => ({ file, body: readFileSync(join(sources, file), "utf8") }));
+
 rmSync(persisted, { recursive: true, force: true });
 mkdirSync(persisted, { recursive: true });
-for (const file of readdirSync(sources).filter((name) => name.endsWith(".graphql"))) {
-  const body = readFileSync(join(sources, file), "utf8");
-  const hash = createHash("sha256").update(body).digest("hex");
-  writeFileSync(join(persisted, `${hash}.json`), `${JSON.stringify({ version: 1, body })}\n`);
+for (const { body } of documents) {
+  const { file, content } = persistedOperation(body);
+  writeFileSync(join(persisted, file), content);
 }
+
+// The app's types come from the same documents and the same schemas, so it can't send an operation
+// the router doesn't hold. A document that doesn't fit the schema stops here (FR-WB-12).
+interface GraphInput {
+  subgraphs: { name: string; schema: { file: string } }[];
+}
+const input = parse(readFileSync("router/graph.yaml", "utf8")) as GraphInput;
+const graph = composeGraph(
+  input.subgraphs.map(({ name, schema }) => ({
+    name,
+    sdl: readFileSync(join(dirname("router/graph.yaml"), schema.file), "utf8"),
+  })),
+);
+if (!graph.success) throw new Error(graph.errors.join("\n"));
+writeFileSync(typed, await generateTypedOperations(graph.sdl, documents));
 
 // wgc only runs here, in a container with no network, so its telemetry and update check can't
 // reach anything, and it never becomes a dependency of the project (C-31).

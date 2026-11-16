@@ -1,7 +1,8 @@
-import { createHash } from "node:crypto";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { composeGraph } from "@traverse/graph-core";
 import { findBannedRouterSettings, findUnknownRouterVariables } from "@traverse/repo-checks";
+import { generateTypedOperations, persistedOperation } from "@traverse/typed-operations";
 import { describe, expect, it } from "vitest";
 import { parse } from "yaml";
 
@@ -58,19 +59,40 @@ describe("generated router files", () => {
     },
   );
 
+  const documents = readdirSync("router/operations")
+    .filter((file) => file.endsWith(".graphql"))
+    .map((file) => ({ file, body: read(join("router/operations", file)) }));
+
   it("[GR-2] hold exactly the operations in router/operations; run npm run generate:router if this fails", () => {
-    const expected = readdirSync("router/operations")
-      .filter((file) => file.endsWith(".graphql"))
-      .map((file) => {
-        const body = read(join("router/operations", file));
-        return { file: `${createHash("sha256").update(body).digest("hex")}.json`, body };
-      });
+    const expected = documents.map(({ body }) => persistedOperation(body));
     const persisted = readdirSync("router/persisted/operations").map((file) => ({
       file,
-      body: (JSON.parse(read(join("router/persisted/operations", file))) as { body: string }).body,
+      content: read(join("router/persisted/operations", file)),
     }));
 
     expect(persisted).toEqual(expect.arrayContaining(expected));
     expect(persisted).toHaveLength(expected.length);
+  });
+
+  const composed = () => {
+    const graph = composeGraph(
+      input.subgraphs.map(({ name, schema }) => ({ name, sdl: read(join("router", schema.file)) })),
+    );
+    if (!graph.success) throw new Error(graph.errors.join("\n"));
+    return graph.sdl;
+  };
+
+  it("[FR-WB-12] type the app's operations from the same documents and schemas; run npm run generate:router if this fails", async () => {
+    expect(read("apps/web/src/generated/operations.ts")).toBe(
+      await generateTypedOperations(composed(), documents),
+    );
+  });
+
+  it("[FR-WB-12] would fail on a schema that no longer has a field an operation asks for", async () => {
+    const changed = composed().replace("weeklyDownloads: Int", "downloads: Int");
+
+    await expect(generateTypedOperations(changed, documents)).rejects.toThrow(
+      'Cannot query field "weeklyDownloads" on type "Package"',
+    );
   });
 });
