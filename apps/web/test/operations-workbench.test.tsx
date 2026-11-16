@@ -92,7 +92,7 @@ describe("OperationsWorkbench", () => {
     await run(user);
 
     const alert = await screen.findByRole("alert");
-    expect(alert.textContent).toContain("The router refused this operation:");
+    expect(alert.textContent).toContain("This operation can't run:");
     expect(alert.textContent).toContain('Cannot query field "nope" on type "Package".');
     expect(alert.textContent).toContain("<b>second</b>");
     expect(container.querySelector("b")).toBeNull();

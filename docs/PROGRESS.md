@@ -107,7 +107,7 @@ In order:
   - Then watch the workflows on `main`.
 - **Release pull requests publish to npm, so ask the owner before merging one.** On a yes, approve its runs (see below), wait for checks, merge, then confirm with `npm view @ayenis/traverse@<version> version`.
 - `/tmp` is a 12 GB tmpfs. On 2026-11-09, leftover clean clones filled it, and every shell command then failed with EDQUOT. If commands start failing, check `df -h /tmp`.
-- `[NFR-12]`'s 200 ms long-task check failed once (289 ms) while the machine was short on memory, and passed on the re-run. Re-run it once before investigating.
+- `[NFR-12]`'s 200 ms long-task check depends on how busy the machine is. On 2026-11-16, with a load average near 5, it failed with tasks of 230 to 280 ms on `main`'s own build as well as on a branch, and `main` had passed it minutes earlier. If it fails locally, run it on `main`'s build before investigating, and let CI decide.
 - Generate `package-lock.json` in a `node:24` container. Older npm drops optional `@emnapi` entries, and `npm ci` then fails in CI.
 - Before pushing, run `npm ci` and `npm run check` on a clean clone in `node:24`, and stop if either fails.
 - Release pull requests get no CI until closed and reopened, and again after each update.

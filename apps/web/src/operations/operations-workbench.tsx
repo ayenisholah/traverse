@@ -57,7 +57,7 @@ function Answer({ state }: { state: State }) {
   }
   return (
     <div role="alert" className={alert}>
-      <p>The router refused this operation:</p>
+      <p>This operation can't run:</p>
       <ul className="list-disc pl-5">
         {answer.messages.map((message, index) => (
           <li key={index}>{message}</li>

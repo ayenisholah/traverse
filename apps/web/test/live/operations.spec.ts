@@ -77,13 +77,14 @@ test("[FR-WB-7] marks a field the graph doesn't have as it's typed, and shows th
   expect(errors).toEqual([]);
 });
 
-test("[GR-11] says the router refused a mutation", async ({ page }) => {
+test("[GR-11] refuses a mutation, and says only queries can run", async ({ page }) => {
   await open(page);
 
   await editor(page).fill(`mutation Write { __typename }`);
   await page.getByRole("button", { name: "Show route" }).click();
 
-  await expect(failure(page)).toContainText("operation type 'mutation' is blocked");
+  await expect(failure(page)).toContainText("This operation can't run:");
+  await expect(failure(page)).toContainText("Only queries can run here");
 });
 
 test("asks for a JSON object when the variables aren't one", async ({ page }) => {
