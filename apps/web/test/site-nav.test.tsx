@@ -17,6 +17,12 @@ describe("SiteNav", () => {
     expect(screen.getAllByRole("link")).toHaveLength(2);
   });
 
+  it("[FR-WB-8] links to the packages page from the server build", () => {
+    render(<SiteNav live />);
+
+    expect(screen.getByRole("link", { name: "Packages" }).getAttribute("href")).toBe("/packages");
+  });
+
   it("[FR-WB-7] links to the operations page from the server build", () => {
     render(<SiteNav live />);
 

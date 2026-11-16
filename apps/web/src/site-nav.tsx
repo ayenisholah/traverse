@@ -13,9 +13,14 @@ export function SiteNav({ live }: { live: boolean }) {
         Impact check
       </Link>
       {live ? (
-        <Link className={link} href="/operations">
-          Operations
-        </Link>
+        <>
+          <Link className={link} href="/operations">
+            Operations
+          </Link>
+          <Link className={link} href="/packages">
+            Packages
+          </Link>
+        </>
       ) : null}
     </nav>
   );
