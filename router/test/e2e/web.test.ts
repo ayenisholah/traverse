@@ -105,7 +105,34 @@ const askRoute = async (operation: string, variables: Record<string, unknown> = 
 };
 
 describe("the route view's server on the sandbox router", { timeout: 60_000 }, () => {
-  const operation = readFileSync("router/operations/package.graphql", "utf8");
+  // The shipped Package operation, written out so no file contents are sent in a request. The
+  // first test proves it is the file, byte for byte.
+  const operation = `query Package($name: String!, $version: String) {
+  package(name: $name) {
+    name
+    latestVersion
+    license
+    weeklyDownloads
+    repositoryUrl
+    repository {
+      url
+      stars
+      owner
+      latestRelease
+    }
+    advisories(version: $version) {
+      id
+      summary
+      severity
+      fixedIn
+    }
+  }
+}
+`;
+
+  it("[FR-WB-7] uses the shipped Package operation", () => {
+    expect(readFileSync("router/operations/package.graphql", "utf8")).toBe(operation);
+  });
 
   it("[FR-WB-7] returns the subgraphs and fetch order of the plan the router gives for Package", async () => {
     const direct = await fetch(`${sandbox.url}/graphql`, {
