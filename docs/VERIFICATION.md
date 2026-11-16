@@ -156,3 +156,14 @@ Run on 2026-11-16 in `node:24`. Each passed on a clean tree and failed on the pl
 | Browser code holds no server setting | `npm run build:web && npm run build:server && npm run test:integration` | `process.env.PUBLIC_ROUTER_URL` read in a client component | Failed for both builds, chunk and name reported |
 | Server needs its settings | `npm run test:integration` | `next start` with no `PUBLIC_ROUTER_URL` | The process exits 1 and names the setting |
 | Server code stays on the server | `npm run check:deps` | A browser component importing `apps/web/src/server/settings.ts` | Exit 1, `web-server-code-stays-on-the-server` |
+
+## Sandbox router gates (FR-GW-9, GR-11)
+
+Run on 2026-11-16 against the pinned router image.
+
+| Gate | Command | Planted violation | Result |
+|---|---|---|---|
+| Sandbox config rules | `npx vitest run router/test/config.test.ts` | `security.block_mutations.enabled: false` in `router/sandbox.yaml` | Failed, setting named |
+| Mutations refused | `npm run test:router` | The same | Failed: the mutation reached the subgraph |
+| Loopback only | `npm run test:router` | The sandbox bound to `0.0.0.0` | Failed: the connection from another address was accepted |
+| Secret scan beside the allowed fixture | gitleaks 8.24.3 with `.gitleaks.toml` | A key in a new file in `router/test/fixtures/sandbox-graph`, and a key inside its `config.json` | One leak found each time |

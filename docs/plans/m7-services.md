@@ -8,6 +8,8 @@
 4. `feat/migration-task`: one-off migration task.
 5. `feat/web-service`: the web app on Fargate, using the same construct. Its API has no rate limit of its own (see the [threat model](../THREAT_MODEL.md)), so it goes behind the WAF and the router's rate limits, or gets a limit, before it takes public traffic.
 
+The sandbox router is a service of its own, with `router/sandbox.yaml`. A CDK test passes its task definition's environment through `findUnsafeSandboxEnvironment`, its security group admits only the web service, it has no load balancer target, and it gets the Redis rate limit ADR 0011 asks for. GR-11's "no public route" is proven again there, on the real network.
+
 U-1 and the rest of U-13 are answered here.
 
 ## Exit
