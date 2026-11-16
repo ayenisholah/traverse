@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { minVersion } from "semver";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   freePort,
@@ -6,6 +7,7 @@ import {
   waitUntilReady,
   type WebServer,
 } from "../../../apps/web/test/support/live-server.ts";
+import { recordings as osv } from "../../../subgraphs/advisories/test/helpers.ts";
 import { fixture } from "../../../subgraphs/packages/test/helpers.ts";
 import { recordings as repositories } from "../../../subgraphs/repositories/test/helpers.ts";
 import { startStack, type Router, type Stack } from "../support/stack.ts";
@@ -204,5 +206,108 @@ describe("the route view's server on the sandbox router", { timeout: 60_000 }, (
     });
     expect(write.body.result.data.kind).toBe("refused");
     expect(subscription.body.result.data.kind).toBe("refused");
+  });
+});
+
+interface CheckedDependency {
+  name: string;
+  range: string;
+  status: string;
+  version?: string;
+  license?: string | null;
+  advisories?: { id: string }[] | null;
+}
+
+// The two manifests, written out so no file contents are sent in a request. The first test
+// proves each is its fixture, byte for byte.
+const REAL = {
+  name: "@traverse/subgraph-kit",
+  version: "0.0.0",
+  private: true,
+  dependencies: {
+    "@apollo/subgraph": "2.15.1",
+    graphql: "^16.15.0",
+    "graphql-yoga": "6.0.1",
+    ioredis: "6.0.0",
+    jose: "6.2.15",
+    pino: "10.4.0",
+    zod: "^4.0.0",
+  },
+};
+const WITH_ADVISORIES = {
+  name: "advisory-example",
+  dependencies: {
+    lodash: "4.17.20",
+    ms: "^2.1.3",
+  },
+};
+
+const check = async (manifest: object) => {
+  const response = await fetch(`${web.url}/api/trpc/checkManifest`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ manifest: JSON.stringify(manifest) }),
+  });
+  const { result } = (await response.json()) as {
+    result: { data: { kind: string; dependencies: CheckedDependency[] } };
+  };
+  return result.data;
+};
+
+describe("the package.json check on the real graph", { timeout: 60_000 }, () => {
+  it("[FR-WB-9] checks the fixtures, unchanged", () => {
+    const read = (name: string) =>
+      JSON.parse(readFileSync(`apps/web/test/fixtures/${name}`, "utf8")) as unknown;
+
+    expect(read("manifest-subgraph-kit.json")).toEqual(REAL);
+    expect(read("manifest-with-advisories.json")).toEqual(WITH_ADVISORIES);
+  });
+
+  it.each([
+    ["a real project's package.json", REAL],
+    ["a package.json with a vulnerable pin", WITH_ADVISORIES],
+  ])(
+    "[FR-WB-9] shows licences and advisories that match npm and OSV, for %s",
+    async (_, manifest) => {
+      const answer = await check(manifest);
+
+      expect(answer.kind).toBe("checked");
+      expect(answer.dependencies.map(({ name }) => name)).toEqual(
+        Object.keys(manifest.dependencies),
+      );
+      for (const dependency of answer.dependencies) {
+        const version = String(minVersion(dependency.range));
+        const npm = fixture(`${dependency.name.replaceAll("/", "__")}.latest`);
+        const recorded = osv[`${dependency.name}@${version}`];
+        // Each query must be recorded, or the stand-in answers "no advisories" and this proves nothing.
+        expect(recorded, `${dependency.name}@${version} is recorded`).toBeDefined();
+
+        expect(dependency).toMatchObject({ status: "checked", version, license: npm.license });
+        expect(dependency.advisories?.map(({ id }) => id).sort()).toEqual(
+          recorded?.vulns.map(({ id }) => id).sort(),
+        );
+      }
+    },
+  );
+
+  it("[FR-WB-9] finds the real advisory a real range allows: zod below 4.6.6", async () => {
+    const answer = await check(REAL);
+    const zod = answer.dependencies.find(({ name }) => name === "zod");
+
+    expect(zod?.version).toBe("4.0.0");
+    expect(zod?.advisories?.map(({ id }) => id)).toEqual(["GHSA-mrhx-c7xc-m3w5"]);
+  });
+
+  it("[FR-WB-8] serves a package's page from the real graph", async () => {
+    const response = await fetch(
+      `${web.url}/api/trpc/packagePage?input=${encodeURIComponent(JSON.stringify({ name: "express" }))}`,
+    );
+    const { result } = (await response.json()) as {
+      result: { data: { kind: string; package: { latestVersion: string; advisories: unknown[] } } };
+    };
+
+    expect(result.data.kind).toBe("found");
+    expect(result.data.package.latestVersion).toBe(fixture("express.latest").version);
+    expect(result.data.package.advisories).toHaveLength(osv.express?.vulns.length ?? -1);
   });
 });
