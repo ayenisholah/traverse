@@ -43,7 +43,7 @@ Built on 2026-11-16. What follows is the plan it was built from. Three things di
 
 ### 2. `feat/sandbox-router` (FR-GW-9, GR-11): built
 
-Built on 2026-11-16, as `router/sandbox.yaml`. The real graph has no mutation or subscription yet, so the tests use a test-only graph that has both, in `router/test/fixtures/sandbox-graph`. The web server doesn't call this router until `feat/route-view`. Rate limiting, which ADR 0011 asks for, needs Redis and comes with M7.
+Built on 2026-11-16, as `router/sandbox.yaml`. The real graph has no mutation or subscription yet, so the tests use a test-only graph that has both, in `router/test/fixtures/sandbox-graph`. The web server doesn't call this router until `feat/route-view`. Rate limiting, which ADR 0011 asks for, needs Redis and comes with M7. GR-11 stays planned: a mutation is refused and the router answers on loopback only, but "no public route" can only be proven on the real network, in M7.
 
 - **What:** a second router config, internal only, that returns query plans and runs free-form read operations.
 - **Config:**
@@ -89,4 +89,4 @@ Built on 2026-11-16, as `router/sandbox.yaml`. The real graph has no mutation or
 - The route view matches the router's plan for real operations.
 - A mutation sent to the sandbox router is rejected.
 - `package.json` results match npm and OSV for a real project.
-- FR-WB-7, FR-WB-8, FR-WB-9, FR-WB-12, FR-GW-9, GR-9 (bundle part), GR-11 and NFR-9 are marked done with evidence.
+- FR-WB-7, FR-WB-8, FR-WB-9, FR-WB-12, FR-GW-9 and NFR-9 are marked done with evidence. GR-9 and GR-11 have their M3 parts tested, and stay planned until M4's sessions and M7's network.

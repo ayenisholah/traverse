@@ -42,6 +42,8 @@ export interface Stack {
 
 export interface Router {
   url: string;
+  /** Everything the container has written so far. */
+  logs: () => string;
   stop: () => Promise<void>;
 }
 
@@ -104,7 +106,7 @@ const runContainer = async ({ port, env, files }: ContainerOptions): Promise<Rou
     await stop();
     throw error;
   }
-  return { url, stop };
+  return { url, logs: () => logs, stop };
 };
 
 interface RouterOptions {

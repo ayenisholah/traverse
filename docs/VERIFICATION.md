@@ -167,3 +167,6 @@ Run on 2026-11-16 against the pinned router image.
 | Mutations refused | `npm run test:router` | The same | Failed: the mutation reached the subgraph |
 | Loopback only | `npm run test:router` | The sandbox bound to `0.0.0.0` | Failed: the connection from another address was accepted |
 | Secret scan beside the allowed fixture | gitleaks 8.24.3 with `.gitleaks.toml` | A key in a new file in `router/test/fixtures/sandbox-graph`, and a key inside its `config.json` | One leak found each time |
+| Sandbox access log | `npm run test:router` | `access_logs` removed from `router/sandbox.yaml` | Failed: the GET's operation text was in the log |
+| Sandbox config is an allow-list | `npx vitest run packages/repo-checks/test/router-config.test.ts` | A routing override, a second listener, exported variables, forwarded headers, plugins | Each one named |
+| One config file per router | The same | The public environment naming `sandbox.yaml`, and the other way round | `CONFIG_PATH` named |
