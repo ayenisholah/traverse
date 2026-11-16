@@ -208,10 +208,10 @@ const safeSandbox = (): Record<string, unknown> => ({
     block_subscriptions: { enabled: true, condition: "true" },
     complexity_limits: {
       mode: "enforce",
-      depth: { enabled: true },
-      total_fields: { enabled: true },
-      root_fields: { enabled: true },
-      root_field_aliases: { enabled: true },
+      depth: { enabled: true, limit: 3 },
+      total_fields: { enabled: true, limit: 60 },
+      root_fields: { enabled: true, limit: 3 },
+      root_field_aliases: { enabled: true, limit: 0 },
     },
   },
   websocket: { enabled: false },
@@ -243,6 +243,13 @@ const UNSAFE_SANDBOX: [string, string, unknown][] = [
   ["no field limit", "security.complexity_limits.total_fields.enabled", false],
   ["no root field limit", "security.complexity_limits.root_fields.enabled", false],
   ["no alias limit", "security.complexity_limits.root_field_aliases.enabled", false],
+  ["a depth limit of nothing", "security.complexity_limits.depth.limit", 0],
+  ["a depth limit nobody would reach", "security.complexity_limits.depth.limit", 1000],
+  ["a field limit that isn't a whole number", "security.complexity_limits.total_fields.limit", 1.5],
+  ["a field limit nobody would reach", "security.complexity_limits.total_fields.limit", 100000],
+  ["a root field limit written as text", "security.complexity_limits.root_fields.limit", "3"],
+  ["an alias limit below zero", "security.complexity_limits.root_field_aliases.limit", -1],
+  ["an alias limit nobody would reach", "security.complexity_limits.root_field_aliases.limit", 500],
   ["WebSockets", "websocket.enabled", true],
   ["batches", "batching.enabled", true],
   ["uploads", "file_upload.enabled", true],
@@ -268,7 +275,7 @@ describe("findBannedSandboxSettings", () => {
     ]);
   });
 
-  it.each(UNSAFE_SANDBOX.map(([, setting]) => setting))(
+  it.each([...new Set(UNSAFE_SANDBOX.map(([, setting]) => setting))])(
     "[GR-11] refuses a config that leaves %s to the environment",
     (setting) => {
       const config = withSetting(setting, undefined, safeSandbox());
