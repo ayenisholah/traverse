@@ -155,3 +155,4 @@ Run on 2026-11-16 in `node:24`. Each passed on a clean tree and failed on the pl
 | Static export holds no live route | `npm run build:web && npm run test:integration` | `src/app/operations/page.tsx` | Failed, `operations.html` named |
 | Browser code holds no server setting | `npm run build:web && npm run build:server && npm run test:integration` | `process.env.PUBLIC_ROUTER_URL` read in a client component | Failed for both builds, chunk and name reported |
 | Server needs its settings | `npm run test:integration` | `next start` with no `PUBLIC_ROUTER_URL` | The process exits 1 and names the setting |
+| Server code stays on the server | `npm run check:deps` | A browser component importing `apps/web/src/server/settings.ts` | Exit 1, `web-server-code-stays-on-the-server` |

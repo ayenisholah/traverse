@@ -40,6 +40,68 @@ describe("createRouterClient", () => {
     expect(JSON.stringify(result)).not.toContain("upstream said");
   });
 
+  it("[GR-2] sends nothing but the hash and the variables: one header, and a fixed address", async () => {
+    const fetch = answer({ data: { package: null } });
+
+    await run(fetch);
+
+    const [url, init] = fetch.mock.calls[0] ?? [];
+    expect(url).toBe("http://router.test/graphql");
+    expect(init?.headers).toEqual({ "content-type": "application/json" });
+    expect(Object.keys(JSON.parse(init?.body as string) as object)).toEqual([
+      "variables",
+      "extensions",
+    ]);
+  });
+
+  it("reports an answer that stops part way as no answer", async () => {
+    const broken = vi.fn<typeof fetch>(
+      async () =>
+        new Response(
+          new ReadableStream({
+            pull: (controller) => {
+              controller.error(new Error("reset"));
+            },
+          }),
+        ),
+    );
+
+    expect(await run(broken)).toEqual({ ok: false });
+  });
+
+  it("gives up on an answer larger than any real one", async () => {
+    const huge = answer({ data: { package: { name: "x".repeat(1_000_001) } } });
+
+    expect(await run(huge)).toEqual({ ok: false });
+  });
+
+  it("reads an answer that arrives in pieces, even when a piece splits a character", async () => {
+    const bytes = new TextEncoder().encode(JSON.stringify({ data: { package: { name: "é" } } }));
+    const split = bytes.indexOf(0xc3) + 1;
+    const pieces = vi.fn<typeof fetch>(
+      async () =>
+        new Response(
+          new ReadableStream({
+            start: (controller) => {
+              controller.enqueue(bytes.slice(0, split));
+              controller.enqueue(bytes.slice(split));
+              controller.close();
+            },
+          }),
+        ),
+    );
+
+    expect(await run(pieces)).toEqual({
+      ok: true,
+      data: { package: { name: "é" } },
+      incomplete: false,
+    });
+  });
+
+  it("reports an answer with no body as no answer", async () => {
+    expect(await run(vi.fn<typeof fetch>(async () => new Response(null)))).toEqual({ ok: false });
+  });
+
   it.each([
     ["errors and no data", answer({ errors: [{ message: "PersistedQueryNotFound" }] })],
     ["null data", answer({ data: null, errors: [{ message: "failed" }] })],

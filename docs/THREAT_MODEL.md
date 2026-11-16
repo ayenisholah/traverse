@@ -42,6 +42,9 @@
 | Manual change weakens production | CDK only, drift detection, pipeline-only access | GR-6, GR-8 |
 | A dependency is compromised | Lockfile, Dependabot, audit in CI, pinned actions | FR-DP-7 |
 | Secrets committed to the public repository | Secret scanning in hooks and CI | FR-DP-7 |
+| The web server's API is used to spend the graph's upstream budget | Each call is one fixed persisted operation with a validated name, and batching is off. The server itself has no rate limit yet, so the server build must not face the internet before the WAF and router rate limits exist | FR-GW-5, FR-GW-6 |
+| Server code or a server setting is bundled for the browser | Only route handlers and the start-up check may import `apps/web/src/server` (dependency-cruiser), no `NEXT_PUBLIC_` variable is read, and built chunks and pages are scanned | GR-9 |
+| The router returns more than an operation asked for | The web server parses each answer against a strict schema tied to the generated type, and sends none of it on a mismatch | GR-16, FR-WB-12 |
 | The sandbox router is reached or abused | No public route, read-only, rate limited, called only by the web server | GR-11 |
 | A pull request's `traverse.json` or symlinks read files outside the repository into a public comment | Config paths and patterns are validated, matches outside the root are dropped, symlinks are resolved, and only GraphQL files can be schemas, because a parse error quotes the file | FR-WB-5 |
 | Operation names or errors forge a comment or log line, hide content or mention people | All pull request text is escaped, including HTML, formatting and `@`, and line breaks and format characters are removed from every report. The marker can't be forged, and only `github-actions[bot]` comments are updated | FR-WB-5, GR-13 |
