@@ -28,7 +28,7 @@
   "devDependencies": {
     "@graphql-tools/graphql-tag-pluck": "9.0.9",
     "@traverse/graph-core": "*",
-    "graphql": "^16.15.0",
+    "graphql": "^17.1.0",
     "rolldown": "^1.2.16",
     "zod": "^4.0.0"
   }
