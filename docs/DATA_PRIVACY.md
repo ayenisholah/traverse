@@ -31,6 +31,7 @@ GraphQL variables and response data must never be exported (GR-4). Exactly which
 
 - Logs and telemetry carry no personal data, tokens or secrets.
 - Pasted or uploaded schemas stay in the browser unless the user saves them or asks the assistant about them.
+- A pasted `package.json` goes to the web server, which reads only its dependency names and ranges and looks each name up on npm, GitHub and OSV through the graph. A private scoped name is sent to them like any other. Nothing from the paste is stored or logged. A package page's address names the package, so a name typed into the search can appear in a proxy's access log.
 - npm maintainer emails are dropped on read, and never stored, shown or sent to a model (GR-16).
 - Test fixtures are recorded public responses, with personal fields removed. They hold no tokens or account IDs.
 - All data is encrypted at rest and in transit (NFR-7).
