@@ -1,4 +1,5 @@
-export { isPackageName, isSafeEndpoint, isVersion } from "./formats.ts";
+export { isPackageName, isVersion } from "@traverse/formats";
+export { isSafeEndpoint } from "./formats.ts";
 export { createSubgraph } from "./subgraph.ts";
 export {
   cachePolicy,
