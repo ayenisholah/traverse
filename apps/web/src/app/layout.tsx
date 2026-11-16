@@ -14,7 +14,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <body>
-        <SiteNav />
+        {/* Read while the page is built, on the server. The browser never sees the variable. */}
+        <SiteNav live={process.env.TRAVERSE_BUILD === "server"} />
         {children}
       </body>
     </html>

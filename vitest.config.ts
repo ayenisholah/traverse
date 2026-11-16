@@ -26,6 +26,9 @@ export default defineConfig({
       },
       {
         plugins: [react()],
+        // The same split as above: the editor's linter loads graphql's CommonJS build, and would
+        // reject a schema built by the ESM one (W-5).
+        resolve: { alias: [{ find: /^graphql$/, replacement: "graphql/index.js" }] },
         test: {
           ...shared,
           name: "web",
