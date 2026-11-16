@@ -1,0 +1,25 @@
+query PackagePage($name: String!) {
+  package(name: $name) {
+    name
+    latestVersion
+    versions
+    license
+    weeklyDownloads
+    repositoryUrl
+    dependencies {
+      name
+      range
+    }
+    repository {
+      url
+      stars
+      owner
+      latestRelease
+    }
+    advisories {
+      id
+      summary
+      severity
+    }
+  }
+}

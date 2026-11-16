@@ -636,5 +636,989 @@
       "4.0.0-nightly.202508271359": {}
     },
     "modified": "2025-09-08T19:56:54.242Z"
+  },
+  "@apollo__subgraph.latest": {
+    "bugs": {
+      "url": "https://github.com/apollographql/subgraph-js/issues"
+    },
+    "dist": {
+      "shasum": "eae7e905540d1adc21f0b6c0128adacfd060a1fb",
+      "tarball": "https://registry.npmjs.org/@apollo/subgraph/-/subgraph-2.16.0.tgz",
+      "fileCount": 39,
+      "integrity": "sha512-hJi7HD7QWQuiMQfzn/o9lrZ2jwOQv5SptF0v4JobLAD5+4tb+Izg0og2lN1Ou38pC44Z/7tZlvdFFtW6tupr2Q==",
+      "signatures": [
+        {
+          "sig": "MEUCIQDZtfWSCt+mzsVMHHIhOfeJK4ZtrFnw0WEAtbEhg1TLqwIgAcQX6LtLVB9OkjS4lQ5we1DdWXvXoSpt6Nd1CoK+mRQ=",
+          "keyid": "SHA256:DhQ8wR5APBvFHLF/+Tc+AYvPOdTpcIDqOhxsBHRwC7U"
+        },
+        {
+          "sig": "MEUCIGpAEcoSY19uBmOoGAr5h5YBce2rxgHKHPZ+AeD3f5owAiEA0dJunwsEMBQTjV/Fn8QH5OLN0KfMbCVel4kBdB2y6Zg=",
+          "keyid": "SHA256:DhQ8wR5APBvFHLF/+Tc+AYvPOdTpcIDqOhxsBHRwC7U"
+        }
+      ],
+      "attestations": {
+        "url": "https://registry.npmjs.org/-/npm/v1/attestations/@apollo%2fsubgraph@2.16.0",
+        "provenance": {
+          "predicateType": "https://slsa.dev/provenance/v1"
+        }
+      },
+      "unpackedSize": 97004
+    },
+    "main": "dist/index.js",
+    "name": "@apollo/subgraph",
+    "types": "dist/index.d.ts",
+    "engines": {
+      "node": ">=22.0.0"
+    },
+    "gitHead": "5f21a7cd0c17d03cae1b3500ed7c28c4e41886a9",
+    "license": "MIT",
+    "scripts": {
+      "test": "jest",
+      "build": "tsc --build tsconfig.json",
+      "clean": "rm -rf dist",
+      "format": "prettier --write \"src/**/*.ts\" \"compatibility/src/**/*.ts\"",
+      "prepack": "npm run clean && npm run build",
+      "release": "npm run build && changeset publish",
+      "changeset": "changeset",
+      "typecheck": "tsc --noEmit -p tsconfig.test.json",
+      "format:check": "prettier --check \"src/**/*.ts\" \"compatibility/src/**/*.ts\"",
+      "changeset-version": "changeset version && npm install --package-lock-only"
+    },
+    "homepage": "https://github.com/apollographql/subgraph-js#readme",
+    "keywords": ["graphql", "federation", "apollo", "subgraph"],
+    "repository": {
+      "url": "git+https://github.com/apollographql/subgraph-js.git",
+      "type": "git"
+    },
+    "workspaces": [".", "compatibility"],
+    "_npmVersion": "11.19.1",
+    "description": "Apollo Federation subgraph utilities built on graphql-js",
+    "directories": {},
+    "_nodeVersion": "24.22.2",
+    "dependencies": {
+      "@graphql-tools/utils": "^12.0.0",
+      "@apollo/cache-control-types": "^1.0.3"
+    },
+    "publishConfig": {
+      "access": "public"
+    },
+    "_hasShrinkwrap": false,
+    "devDependencies": {
+      "jest": "^29.7.0",
+      "graphql": "^16.11.0",
+      "ts-jest": "^29.2.5",
+      "prettier": "^3.9.6",
+      "typescript": "^5.7.2",
+      "@types/jest": "^29.5.14",
+      "@types/node": "^24.13.3",
+      "graphql-tag": "^2.12.7",
+      "@changesets/cli": "^3.0.1",
+      "@changesets/changelog-github": "^1.0.0"
+    },
+    "peerDependencies": {
+      "graphql": "^16.11.0 || ^17.0.0"
+    },
+    "_id": "@apollo/subgraph@2.16.0",
+    "version": "2.16.0"
+  },
+  "graphql.latest": {
+    "bugs": {
+      "url": "https://github.com/graphql/graphql-js/issues"
+    },
+    "dist": {
+      "shasum": "8ae1d3ad214fd99d59cb7a67b9c96419701191c8",
+      "tarball": "https://registry.npmjs.org/graphql/-/graphql-17.1.0.tgz",
+      "fileCount": 1764,
+      "integrity": "sha512-JKCOa7rSQNrket/JFhuua86hljUO+IIpyUHfKxlKD6FEfbrLX8jc1FDrA0KPKI+s8OspBCF/5npYccAICHXPpQ==",
+      "signatures": [
+        {
+          "sig": "MEUCIFb4KoQ3WFT344ey70szISdc2D+HQSawhTZYKJ/W0LuaAiEAgVzcZjHMRLQP9Tk1eZ7N/rjqdWwYGr6fX6vim9EYlrA=",
+          "keyid": "SHA256:DhQ8wR5APBvFHLF/+Tc+AYvPOdTpcIDqOhxsBHRwC7U"
+        },
+        {
+          "sig": "MEYCIQCvxsNawlmSMVWtwYpIBrtN4W5/2FeXsdrmPduAJSPB8AIhAIjINDH/jlIxrGlBo9mav2JptvK8fweUtj32Y0MAzimF",
+          "keyid": "SHA256:DhQ8wR5APBvFHLF/+Tc+AYvPOdTpcIDqOhxsBHRwC7U"
+        }
+      ],
+      "attestations": {
+        "url": "https://registry.npmjs.org/-/npm/v1/attestations/graphql@17.1.0",
+        "provenance": {
+          "predicateType": "https://slsa.dev/provenance/v1"
+        }
+      },
+      "unpackedSize": 6741298
+    },
+    "main": "index.js",
+    "name": "graphql",
+    "types": "index.d.ts",
+    "module": "index.mjs",
+    "engines": {
+      "node": "^22.0.0 || ^24.0.0 || >=26.0.0"
+    },
+    "exports": {
+      ".": {
+        "default": {
+          "bun": "./index.mjs",
+          "node": "./index.js",
+          "module": "./index.mjs",
+          "default": "./index.mjs",
+          "require": "./index.js",
+          "module-sync": "./index.mjs"
+        },
+        "development": {
+          "bun": "./__dev__/index.mjs",
+          "node": "./__dev__/index.js",
+          "module": "./__dev__/index.mjs",
+          "default": "./__dev__/index.mjs",
+          "require": "./__dev__/index.js",
+          "module-sync": "./__dev__/index.mjs"
+        }
+      },
+      "./*": {
+        "default": {
+          "bun": "./*.mjs",
+          "node": "./*.js",
+          "module": "./*.mjs",
+          "default": "./*.mjs",
+          "require": "./*.js",
+          "module-sync": "./*.mjs"
+        },
+        "development": {
+          "bun": "./__dev__/*.mjs",
+          "node": "./__dev__/*.js",
+          "module": "./__dev__/*.mjs",
+          "default": "./__dev__/*.mjs",
+          "require": "./__dev__/*.js",
+          "module-sync": "./__dev__/*.mjs"
+        }
+      },
+      "./*.js": {
+        "default": {
+          "bun": "./*.mjs",
+          "node": "./*.js",
+          "module": "./*.mjs",
+          "default": "./*.mjs",
+          "require": "./*.js",
+          "module-sync": "./*.mjs"
+        },
+        "development": {
+          "bun": "./__dev__/*.mjs",
+          "node": "./__dev__/*.js",
+          "module": "./__dev__/*.mjs",
+          "default": "./__dev__/*.mjs",
+          "require": "./__dev__/*.js",
+          "module-sync": "./__dev__/*.mjs"
+        }
+      },
+      "./type": {
+        "default": {
+          "bun": "./type/index.mjs",
+          "node": "./type/index.js",
+          "module": "./type/index.mjs",
+          "default": "./type/index.mjs",
+          "require": "./type/index.js",
+          "module-sync": "./type/index.mjs"
+        },
+        "development": {
+          "bun": "./__dev__/type/index.mjs",
+          "node": "./__dev__/type/index.js",
+          "module": "./__dev__/type/index.mjs",
+          "default": "./__dev__/type/index.mjs",
+          "require": "./__dev__/type/index.js",
+          "module-sync": "./__dev__/type/index.mjs"
+        }
+      },
+      "./error": {
+        "default": {
+          "bun": "./error/index.mjs",
+          "node": "./error/index.js",
+          "module": "./error/index.mjs",
+          "default": "./error/index.mjs",
+          "require": "./error/index.js",
+          "module-sync": "./error/index.mjs"
+        },
+        "development": {
+          "bun": "./__dev__/error/index.mjs",
+          "node": "./__dev__/error/index.js",
+          "module": "./__dev__/error/index.mjs",
+          "default": "./__dev__/error/index.mjs",
+          "require": "./__dev__/error/index.js",
+          "module-sync": "./__dev__/error/index.mjs"
+        }
+      },
+      "./language": {
+        "default": {
+          "bun": "./language/index.mjs",
+          "node": "./language/index.js",
+          "module": "./language/index.mjs",
+          "default": "./language/index.mjs",
+          "require": "./language/index.js",
+          "module-sync": "./language/index.mjs"
+        },
+        "development": {
+          "bun": "./__dev__/language/index.mjs",
+          "node": "./__dev__/language/index.js",
+          "module": "./__dev__/language/index.mjs",
+          "default": "./__dev__/language/index.mjs",
+          "require": "./__dev__/language/index.js",
+          "module-sync": "./__dev__/language/index.mjs"
+        }
+      },
+      "./execution": {
+        "default": {
+          "bun": "./execution/index.mjs",
+          "node": "./execution/index.js",
+          "module": "./execution/index.mjs",
+          "default": "./execution/index.mjs",
+          "require": "./execution/index.js",
+          "module-sync": "./execution/index.mjs"
+        },
+        "development": {
+          "bun": "./__dev__/execution/index.mjs",
+          "node": "./__dev__/execution/index.js",
+          "module": "./__dev__/execution/index.mjs",
+          "default": "./__dev__/execution/index.mjs",
+          "require": "./__dev__/execution/index.js",
+          "module-sync": "./__dev__/execution/index.mjs"
+        }
+      },
+      "./utilities": {
+        "default": {
+          "bun": "./utilities/index.mjs",
+          "node": "./utilities/index.js",
+          "module": "./utilities/index.mjs",
+          "default": "./utilities/index.mjs",
+          "require": "./utilities/index.js",
+          "module-sync": "./utilities/index.mjs"
+        },
+        "development": {
+          "bun": "./__dev__/utilities/index.mjs",
+          "node": "./__dev__/utilities/index.js",
+          "module": "./__dev__/utilities/index.mjs",
+          "default": "./__dev__/utilities/index.mjs",
+          "require": "./__dev__/utilities/index.js",
+          "module-sync": "./__dev__/utilities/index.mjs"
+        }
+      },
+      "./validation": {
+        "default": {
+          "bun": "./validation/index.mjs",
+          "node": "./validation/index.js",
+          "module": "./validation/index.mjs",
+          "default": "./validation/index.mjs",
+          "require": "./validation/index.js",
+          "module-sync": "./validation/index.mjs"
+        },
+        "development": {
+          "bun": "./__dev__/validation/index.mjs",
+          "node": "./__dev__/validation/index.js",
+          "module": "./__dev__/validation/index.mjs",
+          "default": "./__dev__/validation/index.mjs",
+          "require": "./__dev__/validation/index.js",
+          "module-sync": "./__dev__/validation/index.mjs"
+        }
+      }
+    },
+    "gitHead": "a58e1fb9c38e3483ee7ac9380e11cd1715ebe5e6",
+    "license": "MIT",
+    "homepage": "https://github.com/graphql/graphql-js",
+    "keywords": ["graphql", "graphql-js"],
+    "repository": {
+      "url": "git+https://github.com/graphql/graphql-js.git",
+      "type": "git"
+    },
+    "_npmVersion": "11.20.0",
+    "description": "A Query Language and Runtime which can target any service.",
+    "directories": {},
+    "sideEffects": ["__dev__/*"],
+    "_nodeVersion": "26.13.0",
+    "typesVersions": {
+      "*": {
+        "*": ["NotSupportedTSVersion.d.ts"]
+      },
+      ">=4.4.0": {
+        "*": ["*"]
+      }
+    },
+    "_hasShrinkwrap": false,
+    "_id": "graphql@17.1.0",
+    "version": "17.1.0"
+  },
+  "graphql-yoga.latest": {
+    "dist": {
+      "shasum": "85f352ab431a72ce38e94ab297483ab36b0812a0",
+      "tarball": "https://registry.npmjs.org/graphql-yoga/-/graphql-yoga-6.1.0.tgz",
+      "fileCount": 184,
+      "integrity": "sha512-YID0cgrgx3oyh5fJA98414kU3x9cx88ZXGascBGrBkpibQkKRkkb4okMMCLx9n5HCMLiBdaWaFbi31D/7JvqPw==",
+      "signatures": [
+        {
+          "sig": "MEUCIBEJ0bditksN1jfvBVbkN43Y6RhD539QDHBQq4s3Cdk3AiEApMQ3DpVgxgGwpIX7n8QZXY1pI+zCZl/WzuZL27XKsCs=",
+          "keyid": "SHA256:DhQ8wR5APBvFHLF/+Tc+AYvPOdTpcIDqOhxsBHRwC7U"
+        },
+        {
+          "sig": "MEYCIQDLMbNZE4Mq1WlwDwaNHU2DGP44vmVEs/RErJokfV8QPwIhAI6f7/Q3bigkoiui6Zd6EAZTRDLlOH/bfkHTzFc4F76y",
+          "keyid": "SHA256:DhQ8wR5APBvFHLF/+Tc+AYvPOdTpcIDqOhxsBHRwC7U"
+        }
+      ],
+      "attestations": {
+        "url": "https://registry.npmjs.org/-/npm/v1/attestations/graphql-yoga@6.1.0",
+        "provenance": {
+          "predicateType": "https://slsa.dev/provenance/v1"
+        }
+      },
+      "unpackedSize": 367771
+    },
+    "main": "cjs/index.js",
+    "name": "graphql-yoga",
+    "type": "module",
+    "module": "esm/index.js",
+    "engines": {
+      "node": ">=22.15.0"
+    },
+    "exports": {
+      ".": {
+        "import": {
+          "types": "./typings/index.d.ts",
+          "default": "./esm/index.js"
+        },
+        "default": {
+          "types": "./typings/index.d.ts",
+          "default": "./esm/index.js"
+        },
+        "require": {
+          "types": "./typings/index.d.cts",
+          "default": "./cjs/index.js"
+        }
+      },
+      "./package.json": "./package.json"
+    },
+    "license": "MIT",
+    "typings": "typings/index.d.ts",
+    "homepage": "https://github.com/graphql-hive/graphql-yoga/tree/main/packages/graphql-yoga#readme",
+    "keywords": ["graphql", "server", "api", "graphql-server"],
+    "repository": {
+      "url": "https://github.com/graphql-hive/graphql-yoga.git",
+      "type": "git",
+      "directory": "packages/graphql-yoga"
+    },
+    "typescript": {
+      "definition": "typings/index.d.ts"
+    },
+    "description": "",
+    "directories": {},
+    "sideEffects": false,
+    "_nodeVersion": "26.13.1",
+    "dependencies": {
+      "tslib": "^2.8.1",
+      "lru-cache": "^10.0.0",
+      "@envelop/core": "^6.0.1",
+      "@whatwg-node/fetch": "^0.12.0",
+      "@whatwg-node/server": "^0.13.3",
+      "@graphql-hive/logger": "^1.1.1",
+      "@graphql-tools/utils": "^13.1.1",
+      "@graphql-tools/schema": "^11.0.0",
+      "@graphql-tools/executor": "^4.1.2",
+      "@envelop/instrumentation": "^2.0.1",
+      "@graphql-yoga/subscription": "^6.0.0",
+      "@whatwg-node/promise-helpers": "^2.0.2"
+    },
+    "_hasShrinkwrap": false,
+    "peerDependencies": {
+      "graphql": "^16.0.0 || ^17.0.0"
+    },
+    "_id": "graphql-yoga@6.1.0",
+    "version": "6.1.0"
+  },
+  "ioredis.latest": {
+    "nyc": {
+      "reporter": ["lcov"]
+    },
+    "tsd": {
+      "directory": "test/typing"
+    },
+    "bugs": {
+      "url": "https://github.com/redis/ioredis/issues"
+    },
+    "dist": {
+      "shasum": "b757c590547c43a5e18ea9c312d05c5c46c7e6fa",
+      "tarball": "https://registry.npmjs.org/ioredis/-/ioredis-6.0.0.tgz",
+      "fileCount": 105,
+      "integrity": "sha512-f+Dtubxfpf6KYFq7WVXJoOLn0bk4TJrMrN9SzeE+jrWrCWj7XX3fA6vkryafhADX+GMymRxgDJDOI33COkJc0w==",
+      "signatures": [
+        {
+          "sig": "MEQCIBHyvjKf8Kpmfyw8QUg8XM6oqoyEZX8BNvs59ButYlDCAiAWu+2XPRNmnz/kwExx2+Wb69/Jf1C7rQ46uslKgQxjPA==",
+          "keyid": "SHA256:DhQ8wR5APBvFHLF/+Tc+AYvPOdTpcIDqOhxsBHRwC7U"
+        },
+        {
+          "sig": "MEUCIQCO6+4A11lr0f0J0QDpFRTGkX+zySv5sMZ8Zk8FmZiWjwIgDA4i6z6aqHTFSQ0zXaP0mhT6ma9T//fnkLmJ3sMs2GE=",
+          "keyid": "SHA256:DhQ8wR5APBvFHLF/+Tc+AYvPOdTpcIDqOhxsBHRwC7U"
+        }
+      ],
+      "unpackedSize": 1290811
+    },
+    "main": "./built/index.js",
+    "name": "ioredis",
+    "mocha": {
+      "exit": true,
+      "require": "ts-node/register",
+      "timeout": 8000,
+      "recursive": true
+    },
+    "types": "./built/index.d.ts",
+    "engines": {
+      "node": ">=20.0.0"
+    },
+    "funding": {
+      "url": "https://opencollective.com/ioredis",
+      "type": "opencollective"
+    },
+    "gitHead": "8ed2946504a36ae9b1e186b9dccc56afcd046d78",
+    "license": "MIT",
+    "scripts": {
+      "docs": "npx typedoc --logLevel Error --excludeExternals --excludeProtected --excludePrivate --readme none lib/index.ts",
+      "lint": "eslint --ext .js,.ts ./lib",
+      "test": "npm run test:js && npm run test:tsd",
+      "build": "rm -rf built && tsc",
+      "format": "prettier --write \"{,!(node_modules)/**/}*.{js,ts}\"",
+      "test:js": "TS_NODE_TRANSPILE_ONLY=true NODE_ENV=test mocha --no-experimental-strip-types \"test/helpers/*.ts\" \"test/unit/**/*.ts\" \"test/functional/**/*.ts\"",
+      "test:cov": "nyc npm run test:js",
+      "test:tsd": "npm run build && tsd",
+      "docker:setup": "docker compose -f test/docker-compose.yml up -d --wait",
+      "format-check": "prettier --check \"{,!(node_modules)/**/}*.{js,ts}\"",
+      "test:cluster": "TS_NODE_TRANSPILE_ONLY=true NODE_ENV=test mocha --no-experimental-strip-types \"test/cluster/**/*.ts\"",
+      "prepublishOnly": "node bin/generate-version.js && npm run build",
+      "docker:teardown": "docker compose -f test/docker-compose.yml down --volumes --remove-orphans",
+      "semantic-release": "semantic-release"
+    },
+    "homepage": "https://github.com/redis/ioredis#readme",
+    "keywords": ["redis", "cluster", "sentinel", "pipelining"],
+    "repository": {
+      "url": "git+https://github.com/redis/ioredis.git",
+      "type": "git"
+    },
+    "_npmVersion": "11.18.0",
+    "description": "A robust, performance-focused and full-featured Redis client for Node.js.",
+    "directories": {},
+    "_nodeVersion": "24.18.0",
+    "dependencies": {
+      "debug": "4.4.3",
+      "denque": "2.1.0",
+      "redis-errors": "1.2.0",
+      "cluster-key-slot": "1.1.1",
+      "@ioredis/commands": "2.0.0",
+      "standard-as-callback": "2.1.0"
+    },
+    "_hasShrinkwrap": false,
+    "devDependencies": {
+      "nyc": "^15.1.0",
+      "tsd": "^0.31.2",
+      "chai": "^4.3.6",
+      "uuid": "^9.0.0",
+      "mocha": "^11.7.6",
+      "sinon": "^13.0.1",
+      "eslint": "^8.31.0",
+      "ts-node": "^10.9.2",
+      "typedoc": "^0.25.7",
+      "prettier": "^2.6.1",
+      "typescript": "^5.3.3",
+      "@types/chai": "^4.3.0",
+      "@types/node": "^20.11.16",
+      "@types/debug": "^4.1.5",
+      "@types/mocha": "^9.1.0",
+      "@types/sinon": "^10.0.11",
+      "server-destroy": "^1.0.1",
+      "chai-as-promised": "^7.1.1",
+      "semantic-release": "25.0.5",
+      "@types/redis-errors": "^1.2.1",
+      "@semantic-release/git": "10.0.1",
+      "@semantic-release/exec": "7.1.0",
+      "eslint-config-prettier": "^8.6.0",
+      "@types/chai-as-promised": "^7.1.5",
+      "@typescript-eslint/parser": "^6.21.0",
+      "@semantic-release/changelog": "6.0.3",
+      "@ioredis/interface-generator": "1.4.0",
+      "@typescript-eslint/eslint-plugin": "^6.21.0",
+      "@semantic-release/commit-analyzer": "13.0.1"
+    },
+    "_id": "ioredis@6.0.0",
+    "version": "6.0.0"
+  },
+  "jose.latest": {
+    "bugs": {
+      "url": "https://github.com/panva/jose/issues"
+    },
+    "dist": {
+      "shasum": "e68d80dbcb900f032e98f9cd4460ffafddf505fc",
+      "tarball": "https://registry.npmjs.org/jose/-/jose-6.2.17.tgz",
+      "fileCount": 80,
+      "integrity": "sha512-wOuK9V1yujQFH5S0ZWmLcDZN7+IKh9bUCC2ZPCf2HDlol3WWHy+PPyNjEI75FXRLMp3vDKQcupP59xhVU95hcg==",
+      "signatures": [
+        {
+          "sig": "MEQCIG5EjL7zKL6c1qGTzJ84sNvpgGafw/4sHruJST1JwW14AiAlzYQz4iy54xDW9j/KQL/4o93cqoa2gQ8JVgMZnHieOg==",
+          "keyid": "SHA256:DhQ8wR5APBvFHLF/+Tc+AYvPOdTpcIDqOhxsBHRwC7U"
+        }
+      ],
+      "attestations": {
+        "url": "https://registry.npmjs.org/-/npm/v1/attestations/jose@6.2.17",
+        "provenance": {
+          "predicateType": "https://slsa.dev/provenance/v1"
+        }
+      },
+      "unpackedSize": 222078
+    },
+    "main": "./dist/webapi/index.js",
+    "name": "jose",
+    "type": "module",
+    "_from": "file:/home/runner/work/_temp/package/jose-6.2.17.tgz",
+    "types": "./dist/types/index.d.ts",
+    "exports": {
+      ".": {
+        "types": "./dist/types/index.d.ts",
+        "default": "./dist/webapi/index.js"
+      },
+      "./jwe/*": {
+        "types": "./dist/types/jwe/*.d.ts",
+        "default": "./dist/webapi/jwe/*.js"
+      },
+      "./jwk/*": {
+        "types": "./dist/types/jwk/*.d.ts",
+        "default": "./dist/webapi/jwk/*.js"
+      },
+      "./jws/*": {
+        "types": "./dist/types/jws/*.d.ts",
+        "default": "./dist/webapi/jws/*.js"
+      },
+      "./jwt/*": {
+        "types": "./dist/types/jwt/*.d.ts",
+        "default": "./dist/webapi/jwt/*.js"
+      },
+      "./errors": {
+        "types": "./dist/types/util/errors.d.ts",
+        "default": "./dist/webapi/util/errors.js"
+      },
+      "./jwks/*": {
+        "types": "./dist/types/jwks/*.d.ts",
+        "default": "./dist/webapi/jwks/*.js"
+      },
+      "./base64url": {
+        "types": "./dist/types/util/base64url.d.ts",
+        "default": "./dist/webapi/util/base64url.js"
+      },
+      "./jwt/decode": {
+        "types": "./dist/types/util/decode_jwt.d.ts",
+        "default": "./dist/webapi/util/decode_jwt.js"
+      },
+      "./key/export": {
+        "types": "./dist/types/key/export.d.ts",
+        "default": "./dist/webapi/key/export.js"
+      },
+      "./key/import": {
+        "types": "./dist/types/key/import.d.ts",
+        "default": "./dist/webapi/key/import.js"
+      },
+      "./package.json": "./package.json",
+      "./key/generate/secret": {
+        "types": "./dist/types/key/generate_secret.d.ts",
+        "default": "./dist/webapi/key/generate_secret.js"
+      },
+      "./key/generate/keypair": {
+        "types": "./dist/types/key/generate_key_pair.d.ts",
+        "default": "./dist/webapi/key/generate_key_pair.js"
+      },
+      "./decode/protected_header": {
+        "types": "./dist/types/util/decode_protected_header.d.ts",
+        "default": "./dist/webapi/util/decode_protected_header.js"
+      }
+    },
+    "funding": {
+      "url": "https://github.com/sponsors/panva"
+    },
+    "license": "MIT",
+    "homepage": "https://github.com/panva/jose",
+    "keywords": [
+      "akp",
+      "browser",
+      "bun",
+      "cloudflare",
+      "compact",
+      "decode",
+      "decrypt",
+      "deno",
+      "detached",
+      "ec",
+      "ecdsa",
+      "ed25519",
+      "eddsa",
+      "edge",
+      "electron",
+      "embedded",
+      "encrypt",
+      "flattened",
+      "general",
+      "jose",
+      "json web token",
+      "jsonwebtoken",
+      "jwa",
+      "jwe",
+      "jwk",
+      "jwks",
+      "jws",
+      "jwt-decode",
+      "jwt",
+      "ml-dsa",
+      "netlify",
+      "next",
+      "nextjs",
+      "oct",
+      "okp",
+      "payload",
+      "pem",
+      "pkcs8",
+      "rsa",
+      "sign",
+      "signature",
+      "spki",
+      "validate",
+      "vercel",
+      "verify",
+      "webcrypto",
+      "workerd",
+      "workers",
+      "x509"
+    ],
+    "_resolved": "/home/runner/work/_temp/package/jose-6.2.17.tgz",
+    "_integrity": "sha512-wOuK9V1yujQFH5S0ZWmLcDZN7+IKh9bUCC2ZPCf2HDlol3WWHy+PPyNjEI75FXRLMp3vDKQcupP59xhVU95hcg==",
+    "repository": {
+      "url": "git+https://github.com/panva/jose.git",
+      "type": "git"
+    },
+    "_npmVersion": "11.20.0",
+    "description": "JWA, JWS, JWE, JWT, JWK, JWKS for Node.js, Browser, Cloudflare Workers, Deno, Bun, and other Web-interoperable runtimes",
+    "directories": {},
+    "sideEffects": false,
+    "_nodeVersion": "26.13.0",
+    "_hasShrinkwrap": false,
+    "_id": "jose@6.2.17",
+    "version": "6.2.17"
+  },
+  "pino.latest": {
+    "bin": {
+      "pino": "bin.js"
+    },
+    "bugs": {
+      "url": "https://github.com/pinojs/pino/issues"
+    },
+    "dist": {
+      "shasum": "8371a2633094100be30b6bf73fd69e29749588d5",
+      "tarball": "https://registry.npmjs.org/pino/-/pino-10.4.0.tgz",
+      "fileCount": 203,
+      "integrity": "sha512-bk1ZMTwG/Vymx+zPoa28MhNzucFvXJWp3csrSuxuHPSMeUettaCoQ5Jvg07mtC4JGNpcfTwz41oVCnNgBK9+vA==",
+      "signatures": [
+        {
+          "sig": "MEUCIQC9NVSvInGw/n96QELA8Ki8dXh7qkD+bOtza5i43gNjuQIgTzKQDV/HUvXses0fuKbzeN+V/Mdy/fEAHFabTt61IuI=",
+          "keyid": "SHA256:DhQ8wR5APBvFHLF/+Tc+AYvPOdTpcIDqOhxsBHRwC7U"
+        },
+        {
+          "sig": "MEUCIQCS7aEN+HyyyozeHEmUz3CPpd7UbQLs7ZHlDKHQCQmexgIgYUvW1sbHmukPmTxPonUrxxNY39y8YVDXbhPRATzCFKo=",
+          "keyid": "SHA256:DhQ8wR5APBvFHLF/+Tc+AYvPOdTpcIDqOhxsBHRwC7U"
+        }
+      ],
+      "attestations": {
+        "url": "https://registry.npmjs.org/-/npm/v1/attestations/pino@10.4.0",
+        "provenance": {
+          "predicateType": "https://slsa.dev/provenance/v1"
+        }
+      },
+      "unpackedSize": 705711
+    },
+    "main": "pino.js",
+    "name": "pino",
+    "type": "commonjs",
+    "types": "pino.d.ts",
+    "browser": "./browser.js",
+    "gitHead": "b29dbe97820630e7128e464c50263b427965ec99",
+    "license": "MIT",
+    "scripts": {
+      "borp": "borp --timeout 60000 --coverage --check-coverage --lines 95 --functions 95 --branches 95 --statements 95",
+      "docs": "docsify serve",
+      "lint": "eslint .",
+      "test": "npm run lint && npm run transpile && npm run borp && jest test/jest && npm run test-types",
+      "bench": "node benchmarks/utils/runbench all",
+      "cov-ui": "tap --ts --coverage-report=html",
+      "test-ci": "npm run lint && npm run transpile && npm run borp && npm run test-types",
+      "transpile": "node ./test/fixtures/ts/transpile.cjs",
+      "test-types": "tsc && tstyche && ts-node test/types/pino.ts && attw --pack .",
+      "test:smoke": "node ./test/smoke.js",
+      "bench-basic": "node benchmarks/utils/runbench basic",
+      "bench-child": "node benchmarks/utils/runbench child",
+      "bench-object": "node benchmarks/utils/runbench object",
+      "browser-test": "airtap --local 8080 test/browser*test.js",
+      "test-ci-pnpm": "pnpm run lint && npm run transpile && borp --timeout 60000 && pnpm run test-types",
+      "prepublishOnly": "node test/internals/version.test.js",
+      "bench-multi-arg": "node benchmarks/utils/runbench multi-arg",
+      "bench-formatters": "node benchmarks/utils/runbench formatters",
+      "test-ci-yarn-pnp": "yarn run lint && npm run transpile && borp --timeout 60000",
+      "update-bench-doc": "node benchmarks/utils/generate-benchmark-doc > docs/benchmarks.md",
+      "bench-child-child": "node benchmarks/utils/runbench child-child",
+      "bench-deep-object": "node benchmarks/utils/runbench deep-object",
+      "bench-long-string": "node benchmarks/utils/runbench long-string",
+      "bench-child-creation": "node benchmarks/utils/runbench child-creation"
+    },
+    "homepage": "https://getpino.io",
+    "keywords": ["fast", "logger", "stream", "json"],
+    "repository": {
+      "url": "git+https://github.com/pinojs/pino.git",
+      "type": "git"
+    },
+    "_npmVersion": "12.2.0",
+    "description": "super fast, all natural json logger",
+    "directories": {},
+    "_nodeVersion": "22.23.3",
+    "dependencies": {
+      "sonic-boom": "^4.0.1",
+      "atomic-sleep": "^1.0.0",
+      "real-require": "^1.0.0",
+      "thread-stream": "^4.0.0",
+      "@pinojs/redact": "^0.4.0",
+      "process-warning": "^5.0.0",
+      "on-exit-leak-free": "^2.1.0",
+      "pino-std-serializers": "^7.0.0",
+      "safe-stable-stringify": "^2.3.1",
+      "quick-format-unescaped": "^4.0.3",
+      "pino-abstract-transport": "^3.0.0"
+    },
+    "_hasShrinkwrap": false,
+    "devDependencies": {
+      "log": "^6.0.0",
+      "bole": "^6.0.7",
+      "borp": "^0.21.0",
+      "jest": "^30.0.3",
+      "pump": "^3.0.0",
+      "tape": "^5.5.3",
+      "debug": "^4.3.4",
+      "execa": "^5.0.0",
+      "steed": "^1.1.3",
+      "airtap": "5.0.0",
+      "bunyan": "^1.8.14",
+      "eslint": "^9.37.0",
+      "rimraf": "^6.0.1",
+      "semver": "^7.3.7",
+      "split2": "^4.0.0",
+      "ts-node": "^10.9.1",
+      "tstyche": "^7.1.0",
+      "winston": "^3.7.2",
+      "loglevel": "^1.6.7",
+      "through2": "^5.0.10",
+      "fastbench": "^1.0.1",
+      "proxyquire": "^2.1.3",
+      "strip-ansi": "^6.0.0",
+      "typescript": "~6.0.2",
+      "@types/node": "^25.0.3",
+      "docsify-cli": "^5.0.0",
+      "neostandard": "^0.13.0",
+      "pino-pretty": "^13.0.0",
+      "import-fresh": "^3.2.1",
+      "eslint-plugin-n": "18.3.0",
+      "fastify-tsconfig": "^3.0.0",
+      "eslint-plugin-node": "^11.1.0",
+      "flush-write-stream": "^2.0.0",
+      "@matteo.collina/tspl": "^0.2.0",
+      "eslint-plugin-import": "^2.26.0",
+      "@arethetypeswrong/cli": "^0.18.1",
+      "eslint-plugin-promise": "^7.3.0",
+      "@types/flush-write-stream": "^1.0.0"
+    },
+    "_id": "pino@10.4.0",
+    "version": "10.4.0"
+  },
+  "zod.latest": {
+    "bugs": {
+      "url": "https://github.com/colinhacks/zod/issues"
+    },
+    "dist": {
+      "shasum": "e806cf64a7f4e37635ce9f2f52c04c3766f75e5b",
+      "tarball": "https://registry.npmjs.org/zod/-/zod-4.6.7.tgz",
+      "fileCount": 840,
+      "integrity": "sha512-g8W2D2kU6a8untc053fX1uVBKzM7yqAxW/3zwk83+6RyF2+SKOuV+c0wBDhUwzV1PaGapmZH+rmcUzPf+3CGwg==",
+      "signatures": [
+        {
+          "sig": "MEUCIQCwQ7Os025hoW1C24cDvgD4t5gynQpYlWHx1ok/Bke33AIgPP2J7w4z9B/fqA62pHpEBvjlB5ScCMm3c0adt03XQlY=",
+          "keyid": "SHA256:DhQ8wR5APBvFHLF/+Tc+AYvPOdTpcIDqOhxsBHRwC7U"
+        }
+      ],
+      "attestations": {
+        "url": "https://registry.npmjs.org/-/npm/v1/attestations/zod@4.6.7",
+        "provenance": {
+          "predicateType": "https://slsa.dev/provenance/v1"
+        }
+      },
+      "unpackedSize": 6148944
+    },
+    "llms": "https://zod.dev/llms.txt",
+    "main": "./index.cjs",
+    "name": "zod",
+    "type": "module",
+    "zshy": {
+      "exports": {
+        ".": "./src/index.ts",
+        "./v3": "./src/v3/index.ts",
+        "./v4": "./src/v4/index.ts",
+        "./mini": "./src/mini/index.ts",
+        "./compile": "./src/compile.ts",
+        "./locales": "./src/locales/index.ts",
+        "./v4-mini": "./src/v4-mini/index.ts",
+        "./v4/core": "./src/v4/core/index.ts",
+        "./v4/mini": "./src/v4/mini/index.ts",
+        "./v4/locales": "./src/v4/locales/index.ts",
+        "./package.json": "./package.json",
+        "./v4/locales/*": "./src/v4/locales/*"
+      },
+      "conditions": {
+        "@zod/source": "src"
+      },
+      "sealCjsExports": true
+    },
+    "types": "./index.d.cts",
+    "module": "./index.js",
+    "exports": {
+      ".": {
+        "types": "./index.d.cts",
+        "import": "./index.js",
+        "require": "./index.cjs",
+        "@zod/source": "./src/index.ts"
+      },
+      "./v3": {
+        "types": "./v3/index.d.cts",
+        "import": "./v3/index.js",
+        "require": "./v3/index.cjs",
+        "@zod/source": "./src/v3/index.ts"
+      },
+      "./v4": {
+        "types": "./v4/index.d.cts",
+        "import": "./v4/index.js",
+        "require": "./v4/index.cjs",
+        "@zod/source": "./src/v4/index.ts"
+      },
+      "./mini": {
+        "types": "./mini/index.d.cts",
+        "import": "./mini/index.js",
+        "require": "./mini/index.cjs",
+        "@zod/source": "./src/mini/index.ts"
+      },
+      "./compile": {
+        "types": "./compile.d.cts",
+        "import": "./compile.js",
+        "require": "./compile.cjs",
+        "@zod/source": "./src/compile.ts"
+      },
+      "./locales": {
+        "types": "./locales/index.d.cts",
+        "import": "./locales/index.js",
+        "require": "./locales/index.cjs",
+        "@zod/source": "./src/locales/index.ts"
+      },
+      "./v4-mini": {
+        "types": "./v4-mini/index.d.cts",
+        "import": "./v4-mini/index.js",
+        "require": "./v4-mini/index.cjs",
+        "@zod/source": "./src/v4-mini/index.ts"
+      },
+      "./v4/core": {
+        "types": "./v4/core/index.d.cts",
+        "import": "./v4/core/index.js",
+        "require": "./v4/core/index.cjs",
+        "@zod/source": "./src/v4/core/index.ts"
+      },
+      "./v4/mini": {
+        "types": "./v4/mini/index.d.cts",
+        "import": "./v4/mini/index.js",
+        "require": "./v4/mini/index.cjs",
+        "@zod/source": "./src/v4/mini/index.ts"
+      },
+      "./v4/locales": {
+        "types": "./v4/locales/index.d.cts",
+        "import": "./v4/locales/index.js",
+        "require": "./v4/locales/index.cjs",
+        "@zod/source": "./src/v4/locales/index.ts"
+      },
+      "./package.json": "./package.json",
+      "./v4/locales/*": {
+        "types": "./v4/locales/*",
+        "import": "./v4/locales/*",
+        "require": "./v4/locales/*",
+        "@zod/source": "./src/v4/locales/*"
+      }
+    },
+    "funding": "https://github.com/sponsors/colinhacks",
+    "gitHead": "b500a2ee95134f81d74da7911d7378dd2853d042",
+    "license": "MIT",
+    "scripts": {
+      "test": "nub exec --node vitest run",
+      "build": "nub exec --node zshy --project tsconfig.build.json",
+      "clean": "git clean -xdf . -e node_modules",
+      "postbuild": "nub ../../scripts/write-stub-package-jsons.ts && nub exec --node biome check --write .",
+      "test:watch": "nub exec --node vitest",
+      "prepublishOnly": "nub ../../scripts/check-versions.ts"
+    },
+    "support": {
+      "backing": {
+        "npm-funding": true
+      }
+    },
+    "homepage": "https://zod.dev",
+    "keywords": ["typescript", "schema", "validation", "type", "inference"],
+    "llmsFull": "https://zod.dev/llms-full.txt",
+    "mcpServer": "https://mcp.inkeep.com/zod/mcp",
+    "repository": {
+      "url": "git+https://github.com/colinhacks/zod.git",
+      "type": "git"
+    },
+    "_npmVersion": "11.21.0",
+    "description": "TypeScript-first schema declaration and validation library with static type inference",
+    "directories": {},
+    "sideEffects": ["./compile.js", "./compile.cjs", "./src/compile.ts"],
+    "_nodeVersion": "24.21.0",
+    "_hasShrinkwrap": false,
+    "_id": "zod@4.6.7",
+    "version": "4.6.7"
+  },
+  "lodash.latest": {
+    "bugs": {
+      "url": "https://github.com/lodash/lodash/issues"
+    },
+    "dist": {
+      "shasum": "ff2b66c1f6326d59513de2407bf881439812771c",
+      "tarball": "https://registry.npmjs.org/lodash/-/lodash-4.18.1.tgz",
+      "fileCount": 1051,
+      "integrity": "sha512-dMInicTPVE8d1e5otfwmmjlxkZoUpiVLwyeTdUsi/Caj/gfzzblBcCE5sRHV/AsjuCmxWrte2TNGSYuCeCq+0Q==",
+      "signatures": [
+        {
+          "sig": "MEUCIQDZo+W4JJ5T/9RkS8Wz1uN7Gw+CBvP16yGeT8H9lnb+sAIgKM5Nqj636zyRL2YOUuhbSK2e1DhK2VBaMXiVNIYMq1M=",
+          "keyid": "SHA256:DhQ8wR5APBvFHLF/+Tc+AYvPOdTpcIDqOhxsBHRwC7U"
+        }
+      ],
+      "unpackedSize": 1413741
+    },
+    "icon": "https://lodash.com/icon.svg",
+    "main": "lodash.js",
+    "name": "lodash",
+    "gitHead": "4f0b76e2eca13de1c1fe8b4305abc1f7d63f4b86",
+    "license": "MIT",
+    "scripts": {
+      "test": "echo \"See https://travis-ci.org/lodash-archive/lodash-cli for testing details.\""
+    },
+    "homepage": "https://lodash.com/",
+    "keywords": ["modules", "stdlib", "util"],
+    "repository": {
+      "url": "git+https://github.com/lodash/lodash.git",
+      "type": "git"
+    },
+    "_npmVersion": "10.9.4",
+    "description": "Lodash modular utilities.",
+    "directories": {},
+    "_nodeVersion": "22.21.1",
+    "_hasShrinkwrap": false,
+    "_id": "lodash@4.18.1",
+    "version": "4.18.1"
   }
 }

@@ -1,0 +1,35 @@
+{
+  "data": {
+    "package": {
+      "name": "lodash",
+      "latestVersion": "4.18.1",
+      "license": "MIT",
+      "advisories": [
+        {
+          "id": "GHSA-29mw-wpgm-hmr9",
+          "summary": "Regular Expression Denial of Service (ReDoS) in lodash",
+          "severity": "MODERATE",
+          "fixedIn": "4.17.21"
+        },
+        {
+          "id": "GHSA-35jh-r3h4-6jhm",
+          "summary": "Command Injection in lodash",
+          "severity": "HIGH",
+          "fixedIn": "4.17.21"
+        },
+        {
+          "id": "GHSA-r5fr-rjxr-66jc",
+          "summary": "lodash vulnerable to Code Injection via `_.template` imports key names",
+          "severity": "HIGH",
+          "fixedIn": "4.18.0"
+        },
+        {
+          "id": "GHSA-xxjr-mmjv-4gpg",
+          "summary": "Lodash has Prototype Pollution Vulnerability in `_.unset`, `_.omit`, and `_.pullAt` functions",
+          "severity": "MODERATE",
+          "fixedIn": "4.17.23"
+        }
+      ]
+    }
+  }
+}
