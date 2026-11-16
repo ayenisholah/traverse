@@ -75,10 +75,10 @@ const api = t.router({
   // A mutation only so the pasted text travels in a POST body, never in an address (GR-4).
   checkManifest: t.procedure
     .input(z.object({ manifest: z.string().min(1).max(MAX_MANIFEST_LENGTH) }))
-    .mutation(({ ctx, input }) => {
+    .mutation(({ ctx, input, signal }) => {
       const parsed = parseManifest(input.manifest);
       if (!parsed.ok) return { kind: "invalid" as const, message: parsed.message };
-      return checkDependencies(ctx.router, parsed.entries, parsed.leftOut);
+      return checkDependencies(ctx.router, parsed.entries, parsed.leftOut, { signal });
     }),
 
   // A mutation only so the operation travels in a POST body. A query would put it in the address,
@@ -123,7 +123,13 @@ export const handleApiRequest = async (request: Request, context: Context): Prom
   if (request.body !== null) {
     const body = await readCapped(request.body, MAX_BODY_BYTES);
     if (body === undefined) return tooLarge();
-    req = new Request(request.url, { method: request.method, headers: request.headers, body });
+    req = new Request(request.url, {
+      method: request.method,
+      headers: request.headers,
+      body,
+      // So a procedure knows when the browser has gone, and can stop asking the sources.
+      signal: request.signal,
+    });
   }
   return fetchRequestHandler({
     endpoint: "/api/trpc",

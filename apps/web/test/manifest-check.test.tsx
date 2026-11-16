@@ -78,7 +78,7 @@ describe("ManifestCheck", () => {
     expect(check).toHaveBeenCalledWith('{"dependencies":{"lodash":"4.17.20"}}');
     expect(
       await screen.findByText(
-        /6 dependencies checked\. 1 has advisories for the version checked\./,
+        "6 dependencies listed. 2 checked: 1 has advisories for the version checked. 2 couldn't be read just now, so they may have advisories. 1 skipped. 1 not found on npm.",
       ),
     ).toBeTruthy();
     expect(within(row("lodash")).getByRole("link", { name: "GHSA-29mw-wpgm-hmr9" })).toBeTruthy();
@@ -96,7 +96,7 @@ describe("ManifestCheck", () => {
     await expectNoAxeViolations(container);
   });
 
-  it("counts in the singular, and says how many it left out", async () => {
+  it("shows the summary of what was found", async () => {
     const one = [RESULTS[1] as DependencyResult];
     const { paste } = setup(
       vi.fn<CheckManifest>(async () => ({ kind: "checked", dependencies: one, leftOut: 7 })),
@@ -106,20 +106,29 @@ describe("ManifestCheck", () => {
 
     expect(
       await screen.findByText(
-        "1 dependency checked. None has an advisory for the version checked. 7 more were left out: the check covers the first 100.",
+        "1 dependency listed. 1 checked: none has an advisory for the version checked. 7 more left out: the check covers the first 100.",
       ),
     ).toBeTruthy();
   });
 
-  it("says 'have' for more than one with advisories", async () => {
-    const both = [RESULTS[0], { ...RESULTS[0], name: "lodash2" }] as DependencyResult[];
+  it("[GR-13] shows two names cut to the same text as two rows", async () => {
+    const same: DependencyResult = {
+      name: "x".repeat(214),
+      range: "1",
+      status: "skipped",
+      reason: "Not an npm package name",
+    };
     const { paste } = setup(
-      vi.fn<CheckManifest>(async () => ({ kind: "checked", dependencies: both, leftOut: 0 })),
+      vi.fn<CheckManifest>(async () => ({
+        kind: "checked",
+        dependencies: [same, same],
+        leftOut: 0,
+      })),
     );
 
     await paste("{}");
 
-    expect(await screen.findByText(/2 have advisories/)).toBeTruthy();
+    expect(await screen.findAllByRole("rowheader", { name: "x".repeat(214) })).toHaveLength(2);
   });
 
   it("says why a paste couldn't be read", async () => {

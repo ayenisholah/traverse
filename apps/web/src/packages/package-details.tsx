@@ -26,8 +26,22 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-function Repository({ repository }: { repository: Details["repository"] }) {
-  if (repository === null) return <p className="text-fg-muted">No GitHub repository found.</p>;
+function Repository({
+  repository,
+  incomplete,
+}: {
+  repository: Details["repository"];
+  incomplete: boolean;
+}) {
+  if (repository === null) {
+    return (
+      <p className="text-fg-muted">
+        {incomplete
+          ? "No repository is shown, and a source didn't answer, so it may be missing."
+          : "No GitHub repository found."}
+      </p>
+    );
+  }
   const { url, stars, owner, latestRelease } = repository;
   return (
     <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -57,8 +71,41 @@ function Advisories({ advisories }: { advisories: Details["advisories"] }) {
   return <AdvisoryList advisories={advisories} />;
 }
 
+function Versions({
+  recentVersions,
+  versionCount,
+}: Pick<Details, "recentVersions" | "versionCount">) {
+  return (
+    <Section title="Versions">
+      {versionCount === null ? (
+        <p className="text-warning">The version list couldn&apos;t be read just now.</p>
+      ) : (
+        <>
+          <p className="mb-2 text-caption text-fg-muted">
+            The newest {recentVersions.length} of {versionCount}.
+          </p>
+          <ul className="flex flex-wrap gap-2">
+            {recentVersions.map((version) => (
+              <li key={version} className="rounded-sm bg-surface-sunken px-2 py-1 text-caption">
+                {version}
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+    </Section>
+  );
+}
+
 /** One package's facts, versions, dependencies, repository and advisories (FR-WB-8). */
-export function PackageDetails({ details }: { details: Details }) {
+export function PackageDetails({
+  details,
+  incomplete = false,
+}: {
+  details: Details;
+  /** Some source didn't answer, so a missing part may only be missing from this answer. */
+  incomplete?: boolean;
+}) {
   const { latestVersion, license, weeklyDownloads, recentVersions, versionCount, dependencies } =
     details;
   return (
@@ -77,7 +124,7 @@ export function PackageDetails({ details }: { details: Details }) {
         <Advisories advisories={details.advisories} />
       </Section>
       <Section title="Repository">
-        <Repository repository={details.repository} />
+        <Repository repository={details.repository} incomplete={incomplete} />
       </Section>
       <Section title={`Dependencies (${String(dependencies.length)})`}>
         {dependencies.length === 0 ? (
@@ -95,24 +142,7 @@ export function PackageDetails({ details }: { details: Details }) {
           </ul>
         )}
       </Section>
-      <Section title="Versions">
-        {versionCount === null ? (
-          <p className="text-warning">The version list couldn&apos;t be read just now.</p>
-        ) : (
-          <>
-            <p className="mb-2 text-caption text-fg-muted">
-              The newest {recentVersions.length} of {versionCount}.
-            </p>
-            <ul className="flex flex-wrap gap-2">
-              {recentVersions.map((version) => (
-                <li key={version} className="rounded-sm bg-surface-sunken px-2 py-1 text-caption">
-                  {version}
-                </li>
-              ))}
-            </ul>
-          </>
-        )}
-      </Section>
+      <Versions recentVersions={recentVersions} versionCount={versionCount} />
     </div>
   );
 }

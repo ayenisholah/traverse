@@ -65,6 +65,15 @@ describe("PackageDetails", () => {
     expect(screen.getByText("The version list couldn't be read just now.")).toBeTruthy();
   });
 
+  it("[FR-SG-6] doesn't say there's no repository when a source didn't answer", () => {
+    render(<PackageDetails details={{ ...details, repository: null }} incomplete />);
+
+    expect(
+      screen.getByText("No repository is shown, and a source didn't answer, so it may be missing."),
+    ).toBeTruthy();
+    expect(screen.queryByText("No GitHub repository found.")).toBeNull();
+  });
+
   it("[FR-SG-6] never shows advisories it couldn't read as none", () => {
     render(<PackageDetails details={{ ...details, advisories: null }} />);
 

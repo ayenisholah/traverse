@@ -47,7 +47,7 @@ export function PackageExplorer({
           Some sources didn&apos;t answer, so parts of this page are missing.
         </p>
       ) : null}
-      <PackageDetails details={loaded.package} />
+      <PackageDetails details={loaded.package} incomplete={loaded.incomplete} />
     </>
   );
 }

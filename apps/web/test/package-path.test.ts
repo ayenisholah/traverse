@@ -1,19 +1,24 @@
 import { describe, expect, it } from "vitest";
 import { nameFromSegments, packagePath } from "../src/packages/package-path.ts";
 
+const resolved = (path: string) => new URL(path, "https://traverse.example").pathname;
+
 describe("packagePath", () => {
   it.each([
     ["express", "/packages/express"],
+    ["lodash.merge", "/packages/lodash.merge"],
     ["@types/node", "/packages/%40types/node"],
   ])("[FR-WB-8] gives %s the address %s", (name, path) => {
     expect(packagePath(name)).toBe(path);
   });
 
-  it("can't be made to leave the packages pages", () => {
-    expect(packagePath("../../admin?x=#y")).toBe(
-      "/packages/..%2F..%2Fadmin%3Fx%3D%23y".replaceAll("%2F", "/"),
-    );
-  });
+  it.each(["..", "../../admin", "@x/..", ".well-known", "a/b/c", "x?y#z"])(
+    "[GR-13] keeps %s, which npm couldn't have, on the packages page",
+    (name) => {
+      expect(packagePath(name)).toBe("/packages");
+      expect(resolved(packagePath(name))).toBe("/packages");
+    },
+  );
 });
 
 describe("nameFromSegments", () => {

@@ -34,7 +34,8 @@ export const loadPackagePage = async (
   const data = pageData.safeParse(result.data);
   if (!data.success) return { kind: "unavailable" };
   const found = data.data.package;
-  if (found === null) return { kind: "not-found" };
+  // A source failing also nulls the package, so an incomplete answer can't say it's missing.
+  if (found === null) return { kind: result.incomplete ? "unavailable" : "not-found" };
   const { versions } = found;
   const sorted = (versions ?? []).filter((version) => valid(version) !== null).sort(rcompare);
   return {

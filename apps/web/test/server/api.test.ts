@@ -333,6 +333,24 @@ describe("the package.json check procedure", () => {
     });
   });
 
+  it("[FR-WB-9] stops the check when the browser's request is already gone", async () => {
+    const controller = new AbortController();
+    controller.abort();
+    const { context, run } = routerFor({ ok: true, data: { package: null }, incomplete: false });
+
+    await handle(
+      new Request("http://web.test/api/trpc/checkManifest", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ manifest: JSON.stringify({ dependencies: { ms: "^2.1.3" } }) }),
+        signal: controller.signal,
+      }),
+      context,
+    ).catch(() => undefined);
+
+    expect(run).not.toHaveBeenCalled();
+  });
+
   it("[GR-13] says why it can't read the paste, and asks the router nothing", async () => {
     const { context, run } = routerFor({ ok: false });
 
