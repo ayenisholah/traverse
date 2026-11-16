@@ -1,0 +1,7 @@
+{
+  "name": "advisory-example",
+  "dependencies": {
+    "lodash": "4.17.20",
+    "ms": "^2.1.3"
+  }
+}

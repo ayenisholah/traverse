@@ -3,6 +3,9 @@ import { initTRPC, TRPCError } from "@trpc/server";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { z } from "zod";
 import { PackageOperation, type PackageQuery } from "../generated/operations.ts";
+import { checkDependencies } from "./dependency-check.ts";
+import { parseManifest } from "./manifest.ts";
+import { loadPackagePage } from "./package-page.ts";
 import { readCapped } from "./read-capped.ts";
 import type { RouterClient } from "./router-client.ts";
 import type { SandboxClient } from "./sandbox-client.ts";
@@ -78,7 +81,21 @@ const routeInput = z.object({
     .default({}),
 });
 
+const MAX_MANIFEST_LENGTH = 30_000;
+
 const api = t.router({
+  packagePage: t.procedure
+    .input(z.object({ name: z.string().refine(isPackageName) }))
+    .query(({ ctx, input }) => loadPackagePage(ctx.router, input.name)),
+  // A mutation only so the pasted text travels in a POST body, never in an address (GR-4).
+  checkManifest: t.procedure
+    .input(z.object({ manifest: z.string().min(1).max(MAX_MANIFEST_LENGTH) }))
+    .mutation(({ ctx, input }) => {
+      const parsed = parseManifest(input.manifest);
+      if (!parsed.ok) return { kind: "invalid" as const, message: parsed.message };
+      return checkDependencies(ctx.router, parsed.entries, parsed.leftOut);
+    }),
+
   // A mutation only so the operation travels in a POST body. A query would put it in the address,
   // where a proxy or a load balancer logs it (GR-4). It changes nothing.
   route: t.procedure

@@ -275,3 +275,97 @@ describe("the route procedure", () => {
     expect(route).not.toHaveBeenCalled();
   });
 });
+
+const routerFor = (result: RouterResult) => {
+  const run = vi.fn(async () => result);
+  return { context: { router: { run }, sandbox: unused } as unknown as Context, run };
+};
+
+describe("the package page procedure", () => {
+  it("[FR-WB-8] answers with the page for a valid name", async () => {
+    const { context } = routerFor({ ok: true, data: { package: null }, incomplete: false });
+
+    const { status, body } = await call({ name: "@types/ms" }, context, "packagePage");
+
+    expect(status).toBe(200);
+    expect(body).toEqual({ result: { data: { kind: "not-found" } } });
+  });
+
+  it("refuses a name that isn't an npm name before the router is called", async () => {
+    const { context, run } = routerFor({ ok: false });
+
+    expect((await call({ name: "../x" }, context, "packagePage")).status).toBe(400);
+    expect(run).not.toHaveBeenCalled();
+  });
+});
+
+const checkManifest = async (input: unknown, context: Context) => {
+  const response = await handle(
+    new Request("http://web.test/api/trpc/checkManifest", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(input),
+    }),
+    context,
+  );
+  return { status: response.status, body: (await response.json()) as unknown };
+};
+
+describe("the package.json check procedure", () => {
+  it("[FR-WB-9] checks each dependency of a pasted package.json", async () => {
+    const { context, run } = routerFor({ ok: true, data: { package: null }, incomplete: false });
+
+    const { status, body } = await checkManifest(
+      { manifest: JSON.stringify({ dependencies: { ms: "^2.1.3" } }) },
+      context,
+    );
+
+    expect(status).toBe(200);
+    expect(run).toHaveBeenCalledTimes(1);
+    expect(body).toEqual({
+      result: {
+        data: {
+          kind: "checked",
+          leftOut: 0,
+          dependencies: [{ name: "ms", range: "^2.1.3", version: "2.1.3", status: "not-found" }],
+        },
+      },
+    });
+  });
+
+  it("[GR-13] says why it can't read the paste, and asks the router nothing", async () => {
+    const { context, run } = routerFor({ ok: false });
+
+    const { body } = await checkManifest({ manifest: "{ nope" }, context);
+
+    expect(body).toEqual({
+      result: {
+        data: { kind: "invalid", message: "This isn't a package.json: it must be a JSON object." },
+      },
+    });
+    expect(run).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["nothing", { manifest: "" }],
+    ["a paste too long to be a package.json", { manifest: "x".repeat(30_001) }],
+  ])("refuses %s", async (_, input) => {
+    const { context, run } = routerFor({ ok: false });
+
+    expect((await checkManifest(input, context)).status).toBe(400);
+    expect(run).not.toHaveBeenCalled();
+  });
+
+  it("[GR-4] takes the paste in a POST body only, never in an address", async () => {
+    const { context, run } = routerFor({ ok: false });
+    const input = encodeURIComponent(JSON.stringify({ manifest: "{}" }));
+
+    const response = await handle(
+      new Request(`http://web.test/api/trpc/checkManifest?input=${input}`),
+      context,
+    );
+
+    expect(response.status).toBe(405);
+    expect(run).not.toHaveBeenCalled();
+  });
+});

@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
-import { readdirSync } from "node:fs";
 import { generateKeyPair } from "jose";
+import { PackageOperation } from "../../../apps/web/src/generated/operations.ts";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { recordings as advisories } from "../../../subgraphs/advisories/test/helpers.ts";
 import { fixture } from "../../../subgraphs/packages/test/helpers.ts";
@@ -17,11 +17,9 @@ afterAll(async () => {
   await stack.stop();
 });
 
-// The shipped operation, by the name of its generated file, which is its hash (C-34).
-// router/test/config.test.ts proves that file matches router/operations/package.graphql.
-const shipped = readdirSync("router/persisted/operations");
-if (shipped.length !== 1) throw new Error("Pick the operation by name now there's more than one");
-const PACKAGE_HASH = String(shipped[0]).replace(/\.json$/, "");
+// The shipped Package operation, by the hash the app sends (C-34). router/test/config.test.ts
+// proves the generated hash and the persisted file both come from router/operations.
+const PACKAGE_HASH = PackageOperation.sha256;
 const sha256 = (body: string) => createHash("sha256").update(body).digest("hex");
 
 interface GraphqlResponse {

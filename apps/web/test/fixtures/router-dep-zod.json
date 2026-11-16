@@ -1,0 +1,17 @@
+{
+  "data": {
+    "package": {
+      "name": "zod",
+      "latestVersion": "4.6.7",
+      "license": "MIT",
+      "advisories": [
+        {
+          "id": "GHSA-mrhx-c7xc-m3w5",
+          "summary": "Zod can exhaust memory while validating oversized constrained collections",
+          "severity": "HIGH",
+          "fixedIn": "4.6.6"
+        }
+      ]
+    }
+  }
+}

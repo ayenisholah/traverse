@@ -1,0 +1,14 @@
+{
+  "name": "@traverse/subgraph-kit",
+  "version": "0.0.0",
+  "private": true,
+  "dependencies": {
+    "@apollo/subgraph": "2.15.1",
+    "graphql": "^16.15.0",
+    "graphql-yoga": "6.0.1",
+    "ioredis": "6.0.0",
+    "jose": "6.2.15",
+    "pino": "10.4.0",
+    "zod": "^4.0.0"
+  }
+}

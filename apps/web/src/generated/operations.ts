@@ -14,6 +14,21 @@ export interface TypedOperation<Data, Variables> {
 type Exact<T extends { [key: string]: unknown }> = { [K in keyof T]: T[K] };
 /** Internal type. DO NOT USE DIRECTLY. */
 export type Incremental<T> = T | { [P in keyof T]?: P extends ' $fragmentName' | '__typename' ? T[P] : never };
+export type DependencyQueryVariables = Exact<{
+  name: string;
+  version: string;
+}>;
+
+
+export type DependencyQuery = { package: { name: string, latestVersion: string, license: string | null, advisories: Array<{ id: string, summary: string, severity: string | null, fixedIn: string | null }> | null } | null };
+
+export type PackagePageQueryVariables = Exact<{
+  name: string;
+}>;
+
+
+export type PackagePageQuery = { package: { name: string, latestVersion: string, versions: Array<string> | null, license: string | null, weeklyDownloads: number | null, repositoryUrl: string | null, dependencies: Array<{ name: string, range: string }>, repository: { url: string, stars: number, owner: string, latestRelease: string | null } | null, advisories: Array<{ id: string, summary: string, severity: string | null }> | null } | null };
+
 export type PackageQueryVariables = Exact<{
   name: string;
   version?: string | null | undefined;
@@ -21,6 +36,16 @@ export type PackageQueryVariables = Exact<{
 
 
 export type PackageQuery = { package: { name: string, latestVersion: string, license: string | null, weeklyDownloads: number | null, repositoryUrl: string | null, repository: { url: string, stars: number, owner: string, latestRelease: string | null } | null, advisories: Array<{ id: string, summary: string, severity: string | null, fixedIn: string | null }> | null } | null };
+
+export const DependencyOperation: TypedOperation<DependencyQuery, DependencyQueryVariables> = {
+  name: "Dependency",
+  sha256: "c717ec2b01fc222d62c457f486272095e5638e89c97e511f9e45993deac28da4",
+};
+
+export const PackagePageOperation: TypedOperation<PackagePageQuery, PackagePageQueryVariables> = {
+  name: "PackagePage",
+  sha256: "10763e7d2f9786aab5dc857d7a32c10eb4e94ec9233d21c5503ee46328346693",
+};
 
 export const PackageOperation: TypedOperation<PackageQuery, PackageQueryVariables> = {
   name: "Package",

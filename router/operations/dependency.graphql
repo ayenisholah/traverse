@@ -1,0 +1,13 @@
+query Dependency($name: String!, $version: String!) {
+  package(name: $name) {
+    name
+    latestVersion
+    license
+    advisories(version: $version) {
+      id
+      summary
+      severity
+      fixedIn
+    }
+  }
+}

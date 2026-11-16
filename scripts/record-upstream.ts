@@ -1,4 +1,6 @@
+import { readFileSync } from "node:fs";
 import { scrubPersonalData } from "@traverse/repo-checks";
+import { minVersion } from "semver";
 
 /**
  * Prints real public responses as JSON, for tests to replay. Personal fields go before anything is
@@ -31,8 +33,39 @@ const recordPackage = async (name: string): Promise<[string, unknown][]> => {
   ];
 };
 
-const recordNpm = async (): Promise<[string, unknown][]> =>
-  (await Promise.all(["ms", "express", "@types/ms"].map(recordPackage))).flat();
+// The package.json check is tested on these manifests, so every dependency in them is recorded,
+// at the version the check asks about: the lowest each range allows. An unrecorded OSV query
+// would replay as no advisories, and the test would pass for the wrong reason.
+const MANIFESTS = [
+  "apps/web/test/fixtures/manifest-subgraph-kit.json",
+  "apps/web/test/fixtures/manifest-with-advisories.json",
+];
+
+const manifestDependencies = (): [string, string][] =>
+  MANIFESTS.flatMap((file) =>
+    Object.entries(
+      (JSON.parse(readFileSync(file, "utf8")) as { dependencies: Record<string, string> })
+        .dependencies,
+    ),
+  );
+
+const FULL = ["ms", "express", "@types/ms"];
+
+// The check reads only each dependency's latest document, and some version lists run to
+// thousands of canary builds, so only that is recorded for them.
+const recordLatest = async (name: string): Promise<[string, unknown]> => [
+  `${name.replaceAll("/", "__")}.latest`,
+  await get(`https://registry.npmjs.org/${name.replaceAll("/", "%2f")}/latest`),
+];
+
+const recordNpm = async (): Promise<[string, unknown][]> => {
+  const others = new Set(manifestDependencies().map(([name]) => name));
+  for (const name of FULL) others.delete(name);
+  return [
+    ...(await Promise.all(FULL.map(recordPackage))).flat(),
+    ...(await Promise.all([...others].map(recordLatest))),
+  ];
+};
 
 const GITHUB_QUERY = `query Repository($owner: String!, $name: String!) {
   repository(owner: $owner, name: $name) {
@@ -97,6 +130,14 @@ const recordOsv = async (): Promise<[string, unknown][]> => [
     version: "4.17.20",
   }),
   await recordQuery("express", { package: { name: "express", ecosystem: "npm" } }),
+  ...(await Promise.all(
+    manifestDependencies()
+      .map(([name, range]) => [name, String(minVersion(range))] as const)
+      .filter(([name, version]) => !(name === "lodash" && version === "4.17.20"))
+      .map(([name, version]) =>
+        recordQuery(`${name}@${version}`, { package: { name, ecosystem: "npm" }, version }),
+      ),
+  )),
   [
     "GHSA-29mw-wpgm-hmr9",
     trimRecord((await get("https://api.osv.dev/v1/vulns/GHSA-29mw-wpgm-hmr9")) as OsvRecord),
