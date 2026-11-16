@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.10.0](https://github.com/ayenisholah/traverse/compare/v0.9.1...v0.10.0) (2026-11-16)
+
+
+### Features
+
+* **repo-checks:** hold the sandbox router's limits to real values ([a1004f7](https://github.com/ayenisholah/traverse/commit/a1004f7a100e9c923151d8fdef1f8e59bb5879ea))
+* **router:** add a read-only sandbox router that returns query plans ([4b61726](https://github.com/ayenisholah/traverse/commit/4b61726d65107644de2bd506129ca973861fe200))
+* **web:** add package pages and a package.json check ([941c946](https://github.com/ayenisholah/traverse/commit/941c946826becaec16df4060cfeb71bc06dd808d))
+* **web:** run generated operations on the public router from a server build ([e90747c](https://github.com/ayenisholah/traverse/commit/e90747ce0151d72987169d7fa644f38034b93f7f))
+* **web:** serve package pages and check a package.json's dependencies ([a79ec0b](https://github.com/ayenisholah/traverse/commit/a79ec0b1856ea6a53c7962a2d74895763b394aaf))
+* **web:** show a query's route on the operations page ([ff9a99e](https://github.com/ayenisholah/traverse/commit/ff9a99e35c46e4e78610ba91e22337310d39b361))
+* **web:** turn a query plan from the sandbox router into a route ([f5b0c55](https://github.com/ayenisholah/traverse/commit/f5b0c552736acdb1d9bd8e46d2e21530a826ce27))
+
+
+### Bug Fixes
+
+* **router:** hold the sandbox config to an allow-list and keep GET operations out of its log ([1b85982](https://github.com/ayenisholah/traverse/commit/1b85982a1339a7ea9cc027fbb2ab04b786d7f120))
+* **web:** cap the API's request body and pass on only the router's own refusals ([f25ff4f](https://github.com/ayenisholah/traverse/commit/f25ff4fc5aa1a93ba4b0bcbdaa7fb3eb423f6a09))
+* **web:** never show a check as clean when a source didn't answer ([38aea6a](https://github.com/ayenisholah/traverse/commit/38aea6a15caf3cd1c9e08e47f8800d157dde7109))
+* **web:** say an operation can't run, since the server refuses writes itself ([5dfb14b](https://github.com/ayenisholah/traverse/commit/5dfb14be9d7e3cc1441648cd662062b9e194c83b))
+* **web:** validate the router's answer and keep server code out of the browser ([3fdf011](https://github.com/ayenisholah/traverse/commit/3fdf01188cda87ac28df4ea6c8d71ed2522129fe))
+
 ## [0.9.1](https://github.com/ayenisholah/traverse/compare/v0.9.0...v0.9.1) (2026-11-09)
 
 
