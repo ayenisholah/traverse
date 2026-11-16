@@ -7,7 +7,10 @@ describe("readSettings", () => {
   it.each(["http://127.0.0.1:3002", "https://router.internal", "http://router:3002"])(
     "accepts the origin %s",
     (url) => {
-      expect(readSettings({ PUBLIC_ROUTER_URL: url })).toEqual({ publicRouterUrl: url });
+      expect(readSettings({ PUBLIC_ROUTER_URL: url, SANDBOX_ROUTER_URL: url })).toEqual({
+        publicRouterUrl: url,
+        sandboxRouterUrl: url,
+      });
     },
   );
 
@@ -22,10 +25,17 @@ describe("readSettings", () => {
     ["a trailing slash", "http://127.0.0.1:3002/"],
     ["a second line", "https://router.internal\nhttps://elsewhere.example"],
   ])("refuses %s, and never repeats the value", (_, url) => {
-    const read = () => readSettings({ PUBLIC_ROUTER_URL: url });
+    const good = "http://127.0.0.1:3002";
 
-    expect(read).toThrow("Set PUBLIC_ROUTER_URL to the public router's origin");
-    expect(read).not.toThrow(/secret|passwd|elsewhere/);
+    for (const env of [
+      { PUBLIC_ROUTER_URL: url, SANDBOX_ROUTER_URL: good },
+      { PUBLIC_ROUTER_URL: good, SANDBOX_ROUTER_URL: url },
+    ]) {
+      const read = () => readSettings(env);
+
+      expect(read).toThrow("Set PUBLIC_ROUTER_URL and SANDBOX_ROUTER_URL to each router's origin");
+      expect(read).not.toThrow(/secret|passwd|elsewhere/);
+    }
   });
 
   it("[GR-9] finds no variable in the app that Next.js would copy into the browser", () => {

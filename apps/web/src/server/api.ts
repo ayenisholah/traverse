@@ -4,9 +4,11 @@ import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { z } from "zod";
 import { PackageOperation, type PackageQuery } from "../generated/operations.ts";
 import type { RouterClient } from "./router-client.ts";
+import type { SandboxClient } from "./sandbox-client.ts";
 
-interface Context {
+export interface Context {
   router: RouterClient;
+  sandbox: SandboxClient;
 }
 
 const UNAVAILABLE = "The graph didn't answer";
@@ -64,7 +66,24 @@ const packageData = z.strictObject({
     .nullable(),
 }) satisfies z.ZodType<PackageQuery>;
 
+const MAX_OPERATION_LENGTH = 10_000;
+const MAX_VARIABLES_LENGTH = 10_000;
+
+const routeInput = z.object({
+  operation: z.string().min(1).max(MAX_OPERATION_LENGTH),
+  variables: z
+    .record(z.string(), z.unknown())
+    .refine((variables) => JSON.stringify(variables).length <= MAX_VARIABLES_LENGTH)
+    .default({}),
+});
+
 const api = t.router({
+  // A mutation only so the operation travels in a POST body. A query would put it in the address,
+  // where a proxy or a load balancer logs it (GR-4). It changes nothing.
+  route: t.procedure
+    .input(routeInput)
+    .mutation(({ ctx, input }) => ctx.sandbox.route(input.operation, input.variables)),
+
   package: t.procedure.input(packageInput).query(async ({ ctx, input }) => {
     const result = await ctx.router.run(PackageOperation, {
       name: input.name,
@@ -78,13 +97,16 @@ const api = t.router({
   }),
 });
 
+/** What the browser's client may call, as a type only: none of this code reaches the browser. */
+export type Api = typeof api;
+
 /** Answers a browser's call. The browser never talks to a router itself. */
-export const handleApiRequest = (request: Request, router: RouterClient): Promise<Response> =>
+export const handleApiRequest = (request: Request, context: Context): Promise<Response> =>
   fetchRequestHandler({
     endpoint: "/api/trpc",
     req: request,
     router: api,
-    createContext: () => ({ router }),
+    createContext: () => context,
     allowBatching: false,
     // Live data, so nothing between the server and the browser keeps a copy, and the body is
     // only ever read as JSON.
