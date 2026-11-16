@@ -1,6 +1,6 @@
 # Verification
 
-**Updated:** 2026-11-08
+**Updated:** 2026-11-16
 
 This file records proof that isn't a named test. Each gate below was run on a clean tree, where it passed, and then on a planted violation, where it failed. Exit codes were checked one at a time.
 
@@ -143,3 +143,15 @@ Run on 2026-11-08 against the pinned router image, with each violation planted i
 | Cost limits | `npm run test:router` | Field limit raised from 60 to 500 | 1 of 19 failed, the field limit test |
 | GR-1 config | `npx vitest run router/test/config.test.ts` | The `automatic_persisted_queries`, `mcp`, `condition` and `on_error` settings each removed, `match_origins: [".*"]`, and an unknown variable in a value and in a comment | Failed each time |
 | Environment | Pinned image with `APQ_ENABLED`, `MCP_ENABLED`, `CORS_MATCH_ORIGINS` and the block condition set | Run against the fixed config | Registration refused, text blocked, no CORS header, no MCP listener |
+
+## Web server gates (FR-WB-12, FR-WB-15, GR-9)
+
+Run on 2026-11-16 in `node:24`. Each passed on a clean tree and failed on the planted violation.
+
+| Gate | Command | Planted violation | Result |
+|---|---|---|---|
+| Typed operations | `npx vitest run router/test/config.test.ts` | `apps/web/src/generated/operations.ts` missing | Failed, "run npm run generate:router" |
+| Typed operations | `npx vitest run router/test/config.test.ts` | A schema without a field `package.graphql` asks for | Generation rejects, `Cannot query field "weeklyDownloads"` |
+| Static export holds no live route | `npm run build:web && npm run test:integration` | `src/app/operations/page.tsx` | Failed, `operations.html` named |
+| Browser code holds no server setting | `npm run build:web && npm run build:server && npm run test:integration` | `process.env.PUBLIC_ROUTER_URL` read in a client component | Failed for both builds, chunk and name reported |
+| Server needs its settings | `npm run test:integration` | `next start` with no `PUBLIC_ROUTER_URL` | The process exits 1 and names the setting |

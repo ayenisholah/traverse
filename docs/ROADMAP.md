@@ -9,7 +9,7 @@ Each branch is one pull request and lists the requirements it delivers. Plans fo
 | M0 | Foundation: tooling, specification, quality gates | [Plan](plans/m0-foundation.md) | Done |
 | M1 | Public demo and CLI: graph map, impact check and a PR check, on real schemas | [Plan](plans/m1-workbench.md) | Waiting on user feedback |
 | M2 | Real graph: npm, GitHub and OSV subgraphs behind the pinned Cosmo Router | [Plan](plans/m2-real-graph.md) | Done |
-| M3 | Live routes: web server, sandbox router, query plans, Package explorer | [Plan](plans/m3-live-routes.md) | Next: `feat/web-server` |
+| M3 | Live routes: web server, sandbox router, query plans, Package explorer | [Plan](plans/m3-live-routes.md) | In progress: `feat/sandbox-router` is next |
 | M4 | Accounts and saved workspaces | [Plan](plans/m4-accounts.md) | Planned |
 | M5 | AI assistant on Amazon Bedrock | [Plan](plans/m5-ai-assistant.md) | Planned |
 | M6 | Network, data and edge in CDK | [Plan](plans/m6-network-data-edge.md) | Planned |
@@ -53,7 +53,7 @@ Each branch is one pull request and lists the requirements it delivers. Plans fo
 | M2 | `feat/upstream-resilience` | FR-SG-6, FR-SG-10 | Merged |
 | M2 | `feat/local-router` | FR-GW-2, FR-GW-4, FR-SG-5, GR-1, GR-2 | Merged |
 | M2 | `fix/upstream-limits` | FR-SG-6 | Merged |
-| M3 | `feat/web-server` | FR-WB-12, GR-9 | Planned |
+| M3 | `feat/web-server` | FR-WB-12, GR-9 | Merged |
 | M3 | `feat/sandbox-router` | FR-GW-9, GR-11 | Planned |
 | M3 | `feat/route-view` | FR-WB-7 | Planned |
 | M3 | `feat/package-explorer` | FR-WB-8, FR-WB-9 | Planned |

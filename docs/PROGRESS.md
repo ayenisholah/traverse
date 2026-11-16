@@ -12,6 +12,7 @@ Traverse is built on WunderGraph Cosmo and helps frontend developers explore a f
 
 | Date | Work | PR |
 |---|---|---|
+| 2026-11-16 | `feat/web-server`: `apps/web` builds two ways from one config, the static export for the demo and a server build that sees files ending `.live.ts` or `.live.tsx`. `npm run generate:router` also writes typed operations with each one's SHA-256, from `packages/typed-operations`, and a contract test fails on stale output or a schema mismatch. The server reads `PUBLIC_ROUTER_URL`, ends at start without it, and serves one tRPC procedure, `package`, that sends only a generated hash to the public router. Tests cover the built server with a stub router, the real path to the pinned router in Docker, a page allow-list on the export, and a scan of browser chunks for server settings. `packages/formats` now holds the name and version formats. FR-WB-12 is done. GR-9 stays planned until M4 adds sessions. | `feat/web-server` |
 | 2026-11-16 | M3's owner decisions answered and recorded. D-1: CodeMirror 6 replaces Monaco for the `/operations` editor (ADR 0018). D-2: the route view is an ordered list with an SVG outline, not a React Flow canvas (ADR 0019). D-3: the GitHub Pages demo stays a static export of `/` and `/impact`. `SPEC.md` and [the M3 plan](plans/m3-live-routes.md) updated, and `feat/web-server` given its steps. | `docs/m3-decisions` |
 | 2026-11-09 | M3 planned in detail in [the M3 plan](plans/m3-live-routes.md): three owner decisions to ask first, each branch's scope, facts to verify, tests and exit. `security.block_mutations` found in the pinned router's config schema (C-52, documented, not yet run). README Action example pinned to `v0.9.1`. | `docs/m3-plan` |
 | 2026-11-09 | Released `v0.9.1` to npm with provenance, after approving the release pull request's workflow runs by API. | #54 |
@@ -62,35 +63,16 @@ Traverse is built on WunderGraph Cosmo and helps frontend developers explore a f
 
 ## In progress
 
-`feat/web-server` (FR-WB-12, GR-9), pushed but not ready for a pull request.
-
-Done on the branch:
-
-- Tested on Next.js 16.4.5: one app builds as a static export and, with `TRAVERSE_BUILD=server`, as a server. Files ending `.live.ts` or `.live.tsx` exist only in the server build, through `pageExtensions`. Not yet recorded in verified facts.
-- `packages/typed-operations` (`@graphql-codegen/core` 7.0.0, `typescript-operations` 7.0.1), with unit tests. `npm run generate:router` now also writes `apps/web/src/generated/operations.ts`, with each operation's types and SHA-256. `router/test/config.test.ts` fails on stale output and on a planted schema change.
-- `apps/web/src/server`: settings, a router client that sends the hash only, and a tRPC 11.28.3 `package` procedure, served by `src/app/api/trpc/[trpc]/route.live.ts`. `src/instrumentation.live.ts` checks settings at start. 32 unit tests pass in `apps/web/test/server`.
-
-Left on the branch:
-
-- Record the facts (dual build, tRPC fetch adapter, codegen) and the pinned versions in verified facts.
-- Add `build:server` to the root scripts, `npm run check` and CI. Ignore `.next-server` in git, ESLint and Prettier.
-- An export test that fails if a live route or `/api` appears in `apps/web/out`, proven on a planted page.
-- Server integration tests on `next start` with a stub router: the tRPC call, and that a missing `PUBLIC_ROUTER_URL` stops the server. Whether a throw in `register` stops it is untested.
-- A server Playwright run of the existing suites, a Docker test from the web server to the pinned router, and the GR-9 scan of client chunks, proven on a planted value.
-- `guardrail-reviewer`, then `SPEC.md`, the threat model, requirements and the M3 plan.
-- The web server has no logging yet. `apps/web` imports `isPackageName` and `isVersion` from `@traverse/subgraph-kit`; check the server bundle doesn't pull in the kit's server dependencies.
-
-The approved plan for the whole of M3 is in [the M3 plan](plans/m3-live-routes.md): four branches in order, release pull requests left open until the owner is asked at the end, one persisted call per dependency for the `package.json` check, and the sandbox router bound to loopback locally.
+Nothing. `0.9.1` is the latest release. Start the next item below.
 
 ## Next
 
 In order:
 
 1. M3, following [the M3 plan](plans/m3-live-routes.md):
-   1. `feat/web-server` (FR-WB-12, GR-9). Verify the Next.js dual build, the tRPC adapter and the codegen tool before writing code. The typed client must send the same SHA-256 that `scripts/generate-router.ts` writes.
-   2. `feat/sandbox-router` (FR-GW-9, GR-11). Test C-52 on the pinned image first, and run `guardrail-reviewer`.
-   3. `feat/route-view` (FR-WB-7), on CodeMirror 6 and a list with an SVG outline (ADRs 0018 and 0019).
-   4. `feat/package-explorer` (FR-WB-8, FR-WB-9). Decide between one call per dependency and a `packages(names:)` field.
+   1. `feat/sandbox-router` (FR-GW-9, GR-11). Test C-52 on the pinned image first, and run `guardrail-reviewer`.
+   2. `feat/route-view` (FR-WB-7), on CodeMirror 6 and a list with an SVG outline (ADRs 0018 and 0019).
+   3. `feat/package-explorer` (FR-WB-8, FR-WB-9), with one persisted call per dependency.
 2. Set aside by the owner on 2026-11-06: three frontend developers trying Traverse on their own repositories, for `docs/USER_FEEDBACK.md`. It's the last M1 exit item, and only the owner can arrange it.
 
 ## Blocked
@@ -101,6 +83,12 @@ In order:
 
 ## Notes for the next session
 
+- **The approved run for M3** (owner, 2026-11-16): the four branches in order, each its own pull request, merged when green. Release pull requests are left open, and the owner is asked once at the end of M3.
+- **Two web builds.** `npm run build:web` writes `apps/web/out`, and `npm run build:server` writes `apps/web/.next-server`. A route for the server only is named `page.live.tsx` or `route.live.ts` (W-26). `test:integration` and `test:router` need both builds. `test:e2e:server` serves the app on port 4174 with a stub router, whose answer is recorded in `apps/web/test/fixtures`.
+- A new server setting goes in `apps/web/src/server/settings.ts`, and its name goes in `SERVER_ONLY` in `apps/web/test/integration/server.test.ts`, or the browser scan can't see it leak.
+- A new operation is a `.graphql` file in `router/operations` holding one named operation, then `npm run generate:router`. The app imports `<Name>Operation` from `apps/web/src/generated/operations.ts`.
+- The web server has no request logging yet. It arrives with the telemetry work in M8, or sooner if a branch needs it.
+- Server tests for `apps/web` live in `apps/web/test/server` and run in the `node` Vitest project, because the `web` project's setup needs a DOM.
 - **How a branch ships here** (the `feature-slice` and `open-pr` skills):
   - Branch from `main` and write the failing test first.
   - Run `npm run check` in a `node:24` clean clone in the scratchpad, plus `npm run test:router` on the host. Delete the clone straight after, because `/tmp` is in memory.

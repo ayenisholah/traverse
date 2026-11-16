@@ -2,7 +2,7 @@
 
 **Outcome:** the workbench runs real operations and shows each one's real route, and the Package explorer serves live data. No AWS access is needed.
 
-**Status:** Planned. Detailed on 2026-11-09, after M2 closed. The owner's decisions were recorded on 2026-11-16. Nothing is built yet.
+**Status:** In progress. `feat/web-server` is built. The other three branches are planned.
 
 ## Owner decisions
 
@@ -16,7 +16,9 @@ Answered by the owner on 2026-11-16.
 
 ## Work, in roadmap order
 
-### 1. `feat/web-server` (FR-WB-12, GR-9)
+### 1. `feat/web-server` (FR-WB-12, GR-9): built
+
+Built on 2026-11-16. What follows is the plan it was built from. Three things differ: the generator emits each operation's hash, so no second hash can drift; the browser test calls the API with `fetch`, because the typed browser client arrives with the first live page in `feat/route-view`; and GR-9 stays planned until M4 adds sessions, with the bundle part tested now.
 
 - **What:** move `apps/web` from `output: "export"` to a Node server runtime, with tRPC from browser to server. The demo stays a static build of `/` and `/impact` (D-3).
 - **Typed operations (FR-WB-12):**
@@ -48,7 +50,7 @@ Answered by the owner on 2026-11-16.
   - Complexity limits stay on.
   - Every risky setting is written out literally, with its own checks, because the router reads its environment first (C-50, ADR 0017).
   - Reuse `packages/repo-checks/src/router-config.ts`, with a sandbox rule set that allows the query plan and free-form reads but still bans dev mode, the playground, introspection and wildcard CORS.
-- **Reachability:** only the web server can reach it. Locally, it publishes no host port and joins a private Docker network with the web server. In AWS (M7) it gets a security group that only the web service can reach.
+- **Reachability:** only the web server can reach it. Locally, the test harness runs the subgraphs as host processes with host networking, so the sandbox router binds to loopback only, and a test proves a connection from outside loopback is refused. In AWS (M7) it gets a security group that only the web service can reach.
 - **Tests:** e2e on the pinned image. A mutation is rejected, a subscription is rejected, a read returns `extensions.queryPlan`, and nothing outside the private network can connect (GR-11).
 - **Run `guardrail-reviewer`.** The review of `feat/local-router` found environment-variable bypasses, so expect the same questions.
 
@@ -67,8 +69,8 @@ Answered by the owner on 2026-11-16.
   - `/packages/[name]` shows versions, repository and advisories from the graph, with loading, empty and error states.
   - A `package.json` check lists licences and advisories for each dependency.
 - **Design point:** the public config allows 3 root fields and no aliases.
-  - Checking a whole `package.json` means one persisted call per dependency, run by the server with a concurrency limit and a cap on dependencies.
-  - The alternative is a `packages(names:)` list field, which needs a `SPEC.md` change. Decide in the branch, and say why.
+  - Decided on 2026-11-16: checking a whole `package.json` means one persisted call per dependency, run by the server with a concurrency limit and a cap on dependencies.
+  - A `packages(names:)` list field was rejected, because it needs a schema change and looser limits on the public router.
 - **Tests:**
   - Integration tests (FR-WB-9) compare against npm and OSV recordings for a real project.
   - Playwright and axe tests cover every state.

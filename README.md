@@ -12,7 +12,7 @@ Explore a federated GraphQL graph from the frontend, built on [WunderGraph Cosmo
 Traverse answers two questions for frontend developers: **which subgraphs does my query touch, and what breaks if this schema changes?**
 
 > [!NOTE]
-> **Status: early development.** Today the repository holds the specification, the quality gates, a searchable graph map and an impact check on the Cosmo demo, a CLI on npm and a GitHub Action that check a repository, the design tokens, and the core that composes a graph, finds who owns a field and works out what a schema change breaks. It also holds three subgraphs that serve live npm, GitHub and OSV data, with caching and retries, joined behind the pinned Cosmo Router with a hardened, persisted-operations-only config. The graph runs locally in Docker, and isn't hosted yet. The rest of this page is planned and not built yet.
+> **Status: early development.** Today the repository holds the specification, the quality gates, a searchable graph map and an impact check on the Cosmo demo, a CLI on npm and a GitHub Action that check a repository, the design tokens, and the core that composes a graph, finds who owns a field and works out what a schema change breaks. It also holds three subgraphs that serve live npm, GitHub and OSV data, with caching and retries, joined behind the pinned Cosmo Router with a hardened, persisted-operations-only config. The graph runs locally in Docker, and isn't hosted yet. The web app also builds as a server, whose API runs generated, typed operations on that router; it has no live pages yet and isn't hosted either. The rest of this page is planned and not built yet.
 
 **[Try the demo](https://ayenisholah.github.io/traverse/)**, on the Cosmo demo schemas, with no sign-in.
 
@@ -154,23 +154,23 @@ npm run check
 
 Every pull request runs all of these in the required `verify` check, and `main` can't merge without it. The coverage badge shows that gate's threshold. It isn't a live measurement, but a merge can't land below it.
 
-| Gate            | What it enforces                                                                                       | Command                                       |
-| --------------- | ------------------------------------------------------------------------------------------------------ | --------------------------------------------- |
-| Unit and UI     | Tests, with 100% coverage of every source file                                                         | `npm run test:coverage`                       |
-| Integration     | The built static export holds the page and its styles                                                  | `npm run test:integration`                    |
-| Router          | GR-1 and GR-2, cost limits and tokens, on the pinned router image                                      | `npm run test:router`                         |
-| End to end      | Playwright and axe in a real browser, against the static export                                        | `npm run test:e2e`                            |
-| Static export   | The web app builds with no server                                                                      | `npm run build:web`                           |
-| Lint and format | ESLint with no warnings, and Prettier                                                                  | `npm run lint`, `npm run format:check`        |
-| Types           | Strict TypeScript                                                                                      | `npm run typecheck`                           |
-| Boundaries      | Module rules, including no Node built-ins in browser code                                              | `npm run check:deps`                          |
-| Dead code       | No duplicated code, unused files, exports or dependencies                                              | `npm run check:dupes`, `npm run check:unused` |
-| Hygiene         | No focused tests, `any`, unexplained disables, coverage ignores, or `px` and raw colours in app styles | `npm run check:hygiene`                       |
-| Traceability    | Work traces to a requirement, and done requirements have evidence                                      | `npm run check:traceability`                  |
-| Progress        | Each branch updates the progress log                                                                   | `npm run check:progress`                      |
-| Dependencies    | No high severity advisories in production dependencies                                                 | `npm audit --omit=dev --audit-level=high`     |
-| Secrets         | No secrets anywhere in Git history                                                                     | gitleaks, in CI                               |
-| Code scanning   | CodeQL on the code and the workflows                                                                   | CodeQL, in CI                                 |
+| Gate            | What it enforces                                                                                                        | Command                                       |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
+| Unit and UI     | Tests, with 100% coverage of every source file                                                                          | `npm run test:coverage`                       |
+| Integration     | The static export holds only the demo pages, the server build answers its API, and browser code holds no server setting | `npm run test:integration`                    |
+| Router          | GR-1 and GR-2, cost limits and tokens, on the pinned router image                                                       | `npm run test:router`                         |
+| End to end      | Playwright and axe in a real browser, against the static export and the server build                                    | `npm run test:e2e`, `npm run test:e2e:server` |
+| Builds          | The web app builds with no server, and as a server                                                                      | `npm run build:web`, `npm run build:server`   |
+| Lint and format | ESLint with no warnings, and Prettier                                                                                   | `npm run lint`, `npm run format:check`        |
+| Types           | Strict TypeScript                                                                                                       | `npm run typecheck`                           |
+| Boundaries      | Module rules, including no Node built-ins in browser code                                                               | `npm run check:deps`                          |
+| Dead code       | No duplicated code, unused files, exports or dependencies                                                               | `npm run check:dupes`, `npm run check:unused` |
+| Hygiene         | No focused tests, `any`, unexplained disables, coverage ignores, or `px` and raw colours in app styles                  | `npm run check:hygiene`                       |
+| Traceability    | Work traces to a requirement, and done requirements have evidence                                                       | `npm run check:traceability`                  |
+| Progress        | Each branch updates the progress log                                                                                    | `npm run check:progress`                      |
+| Dependencies    | No high severity advisories in production dependencies                                                                  | `npm audit --omit=dev --audit-level=high`     |
+| Secrets         | No secrets anywhere in Git history                                                                                      | gitleaks, in CI                               |
+| Code scanning   | CodeQL on the code and the workflows                                                                                    | CodeQL, in CI                                 |
 
 Every gate except CodeQL was proven to fail on a planted violation. See [verification](docs/VERIFICATION.md).
 
@@ -181,7 +181,7 @@ Every gate except CodeQL was proven to fail on a planted violation. See [verific
 | M0        | Tooling, specification, quality gates              | Done                     |
 | M1        | Public demo and CLI, on real schemas               | Waiting on user feedback |
 | M2        | Real graph behind the Cosmo Router                 | Done                     |
-| M3        | Live query routes and the Package explorer         | Planned                  |
+| M3        | Live query routes and the Package explorer         | In progress              |
 | M4        | Accounts and saved workspaces                      | Planned                  |
 | M5        | AI assistant on Amazon Bedrock                     | Planned                  |
 | M6 to M8  | AWS network, services and observability            | Planned                  |
