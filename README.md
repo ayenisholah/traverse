@@ -12,7 +12,7 @@ Explore a federated GraphQL graph from the frontend, built on [WunderGraph Cosmo
 Traverse answers two questions for frontend developers: **which subgraphs does my query touch, and what breaks if this schema changes?**
 
 > [!NOTE]
-> **Status: early development.** Today the repository holds the specification, the quality gates, a searchable graph map and an impact check on the Cosmo demo, a CLI on npm and a GitHub Action that check a repository, the design tokens, and the core that composes a graph, finds who owns a field and works out what a schema change breaks. It also holds three subgraphs that serve live npm, GitHub and OSV data, with caching and retries, joined behind the pinned Cosmo Router with a hardened, persisted-operations-only config. The graph runs locally in Docker, and isn't hosted yet. A second, sandbox router config returns query plans and runs free-form reads only, refusing mutations and subscriptions. The web app also builds as a server, whose API runs generated, typed operations on that router; its `/operations` page shows a query's route, the subgraphs the router calls and their order; it isn't hosted yet. The rest of this page is planned and not built yet.
+> **Status: early development.** Today the repository holds the specification, the quality gates, a searchable graph map and an impact check on the Cosmo demo, a CLI on npm and a GitHub Action that check a repository, the design tokens, and the core that composes a graph, finds who owns a field and works out what a schema change breaks. It also holds three subgraphs that serve live npm, GitHub and OSV data, with caching and retries, joined behind the pinned Cosmo Router with a hardened, persisted-operations-only config. The graph runs locally in Docker, and isn't hosted yet. A second, sandbox router config returns query plans and runs free-form reads only, refusing mutations and subscriptions. The web app also builds as a server, whose API runs generated, typed operations on that router; its `/operations` page shows a query's route, the subgraphs the router calls and their order, and `/packages` shows a package's live data and checks a `package.json`'s dependencies for licences and advisories. It isn't hosted yet. The rest of this page is planned and not built yet.
 
 **[Try the demo](https://ayenisholah.github.io/traverse/)**, on the Cosmo demo schemas, with no sign-in.
 
@@ -181,7 +181,7 @@ Every gate except CodeQL was proven to fail on a planted violation. See [verific
 | M0        | Tooling, specification, quality gates              | Done                     |
 | M1        | Public demo and CLI, on real schemas               | Waiting on user feedback |
 | M2        | Real graph behind the Cosmo Router                 | Done                     |
-| M3        | Live query routes and the Package explorer         | In progress              |
+| M3        | Live query routes and the Package explorer         | Done                     |
 | M4        | Accounts and saved workspaces                      | Planned                  |
 | M5        | AI assistant on Amazon Bedrock                     | Planned                  |
 | M6 to M8  | AWS network, services and observability            | Planned                  |

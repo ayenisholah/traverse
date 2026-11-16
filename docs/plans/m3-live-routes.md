@@ -2,7 +2,7 @@
 
 **Outcome:** the workbench runs real operations and shows each one's real route, and the Package explorer serves live data. No AWS access is needed.
 
-**Status:** In progress. `feat/web-server`, `feat/sandbox-router` and `feat/route-view` are built. `feat/package-explorer` is planned.
+**Status:** Done on 2026-11-16. All four branches are merged. GR-9 and GR-11 have their M3 parts tested, and stay planned until M4's sessions and M7's network.
 
 ## Owner decisions
 
@@ -67,7 +67,9 @@ Built on 2026-11-16. The route model lives in the web server, because it validat
   - An e2e test on the pinned router checks that the view matches the plan for the real `Package` operation.
   - Playwright and axe tests cover the route, in both themes.
 
-### 4. `feat/package-explorer` (FR-WB-8, FR-WB-9)
+### 4. `feat/package-explorer` (FR-WB-8, FR-WB-9): built
+
+Built on 2026-11-16. A scoped name holds a slash, so the page is `/packages/[...name]`, beside `/packages` for search and the check. Each dependency is checked at the lowest version its range allows (W-34), and the page says so. The FR-WB-9 test uses this repository's own `packages/subgraph-kit` dependencies, frozen as a fixture, with every npm and OSV query recorded.
 
 - **What:**
   - `/packages/[name]` shows versions, repository and advisories from the graph, with loading, empty and error states.

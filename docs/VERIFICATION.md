@@ -183,3 +183,13 @@ Run on 2026-11-16.
 | A subgraph's message stays on the server | `npm run test:router` | The sandbox router returned a planted subgraph message with `data` and a plan; through `/api/trpc/route`, a GitHub outage returned the route and no upstream text |
 | The API refuses an oversized body | `npx vitest run apps/web/test/server/api.test.ts` | A 40 KB body got 413 and the sandbox was never called |
 | Only the erasable type import passes | `npm run lint` | `import { type Settings } from "../server/settings.ts"` in browser code failed `no-import-type-side-effects` |
+
+## Package explorer (FR-WB-8, FR-WB-9, NFR-9)
+
+Run on 2026-11-16.
+
+| Check | Command | What it showed |
+|---|---|---|
+| A real package.json matches npm and OSV | `npm run test:router` | For each dependency of `packages/subgraph-kit`, frozen as a fixture, and for a manifest pinning `lodash` 4.17.20, the licence matched the npm recording and the advisory IDs matched the OSV recording for the version checked. Every query was recorded, so none could pass as "no advisories" |
+| A real finding | The same | `zod` `^4.0.0` allows 4.0.0, which has GHSA-mrhx-c7xc-m3w5 (fixed in 4.6.6). The lockfile installs 4.6.7 |
+| Every route meets WCAG 2.2 AA | `npm run test:e2e`, `npm run test:e2e:server` | axe found no violations on `/`, `/impact`, `/operations`, `/packages` and a package page, in both themes, and each flow ran by keyboard |

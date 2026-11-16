@@ -18,8 +18,8 @@ Every requirement has an ID, a testable acceptance check, how it's verified, the
 | FR-WB-5 | Check a repository from the command line and CI. | The CLI exits non-zero on a broken operation, and the GitHub Action comments on a real pull request with broken operations and screens. | CI | M1 | done |
 | FR-WB-6 | Work on any Federation SDL. | The Cosmo demo subgraph schemas compose and map correctly, with no project-specific code. | contract | M1 | done |
 | FR-WB-7 | Show a query's route. | The route view's subgraphs and fetch order match the plan the router returns for that operation. | e2e | M3 | done |
-| FR-WB-8 | Explore real package data. | A package's versions, repository and advisories render from the graph, and loading, empty and error states all render. | e2e | M3 | planned |
-| FR-WB-9 | Vet a project's dependencies. | Pasting a real `package.json` shows licences and advisories that match npm and OSV. | integration | M3 | planned |
+| FR-WB-8 | Explore real package data. | A package's versions, repository and advisories render from the graph, and loading, empty and error states all render. | e2e | M3 | done |
+| FR-WB-9 | Vet a project's dependencies. | Pasting a real `package.json` shows licences and advisories that match npm and OSV. | integration | M3 | done |
 | FR-WB-10 | Sign in through Cognito. | Sign-in uses authorization code with PKCE, sessions expire and refresh, and signing out ends the session. | e2e | M4 | planned |
 | FR-WB-11 | Save a workspace. | A signed-in user saves schema drafts and a screen map and reopens them in a new session. | e2e | M4 | planned |
 | FR-WB-12 | Use generated, typed operations. | Every operation the app sends is generated from its documents, and a schema mismatch fails the build. | contract | M3 | done |
@@ -105,7 +105,7 @@ The assistant only adds to deterministic results, through Amazon Bedrock.
 | NFR-6 | Keep costs visible. | Budget alerts exist before the first deployment, and the launch records a measured cost baseline. | infrastructure | M6 | planned |
 | NFR-7 | Encrypt data at rest and in transit. | Stores use KMS encryption, and connections to data stores require TLS. | infrastructure | M6 | planned |
 | NFR-8 | Operate from runbooks. | Each alarm's runbook has been followed once in staging. | staging | M11 | planned |
-| NFR-9 | Meet WCAG 2.2 AA. | axe finds no violations on any route, every flow works by keyboard, and token contrast pairs pass in both themes. | e2e | M3 | planned |
+| NFR-9 | Meet WCAG 2.2 AA. | axe finds no violations on any route, every flow works by keyboard, and token contrast pairs pass in both themes. | e2e | M3 | done |
 | NFR-10 | Scale with the user's font size. | Styles use rem, em and % only, and a check rejects `px`. | CI | M1 | done |
 | NFR-11 | Load quickly. | Largest Contentful Paint stays under 2.5 seconds at the 75th percentile on staging. | load | M10 | planned |
 | NFR-12 | Stay responsive during composition. | Composing a real graph causes no main-thread task over 200 ms. | e2e | M1 | done |

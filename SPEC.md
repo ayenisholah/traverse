@@ -112,14 +112,15 @@ Production starts with 3 tasks of 2 vCPU and 4 GB, and scales to 9 on CPU and re
 
 ## Web app
 
-A Next.js app in `apps/web`, built two ways from one config. The static export holds `/` and `/impact` and is the public demo on GitHub Pages. The server build adds the tRPC API at `/api/trpc`, which runs generated operations on the public router by their hash, and it's where the live routes go. Files ending `.live.ts` or `.live.tsx` exist only in the server build. `/operations` is built: the server sends the operation to the sandbox router and returns only its route. `/packages/[name]` is planned, and the server build isn't hosted yet.
+A Next.js app in `apps/web`, built two ways from one config. The static export holds `/` and `/impact` and is the public demo on GitHub Pages. The server build adds the tRPC API at `/api/trpc`, which runs generated operations on the public router by their hash, and it's where the live routes go. Files ending `.live.ts` or `.live.tsx` exist only in the server build. `/operations` is built: the server sends the operation to the sandbox router and returns only its route. `/packages` looks a package up and checks a pasted `package.json`, and `/packages/[...name]` shows one package. The server build isn't hosted yet.
 
 | Route                   | Purpose                                                             |
 | ----------------------- | ------------------------------------------------------------------- |
 | `/`                     | Graph map                                                           |
 | `/impact`               | Edit a schema draft and see composition errors, operations, screens |
 | `/operations`           | Write an operation and see its route                                |
-| `/packages/[name]`      | Package explorer, on live data                                      |
+| `/packages`             | Look a package up, or check a `package.json`'s dependencies         |
+| `/packages/[...name]`   | Package explorer, on live data                                      |
 | `/sign-in`, `/sign-out` | Cognito sign-in and sign-out, needed only to save                   |
 
 - Stack: Next.js, React, TypeScript, Tailwind, Radix, tRPC, Zustand and CodeMirror 6 (ADR 0018). The route view is a list with an SVG outline, with no canvas library (ADR 0019).
