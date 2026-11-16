@@ -1,3 +1,4 @@
+import { readdirSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { beforeAll, describe, expect, it } from "vitest";
@@ -16,6 +17,15 @@ describe("static export", () => {
     expect(html).toContain("<title>Traverse</title>");
     expect(html).toMatch(/<h1[^>]*>Traverse<\/h1>/);
     expect(html).toContain('role="separator"');
+  });
+
+  it("[FR-WB-15] holds the map and the impact check only, and no live route or API", () => {
+    const pages = readdirSync(out, { recursive: true, encoding: "utf8" })
+      .filter((file) => file.endsWith(".html"))
+      .sort();
+
+    expect(pages).toEqual(["404.html", "_not-found.html", "impact.html", "index.html"]);
+    expect(readdirSync(out)).not.toContain("api");
   });
 
   it("[FR-WB-1] prerenders the real graph, so the map shows before any script runs", () => {

@@ -49,6 +49,8 @@ jobs:
         run: npm run test:coverage
       - name: Static export of the web app
         run: npm run build:web
+      - name: Server build of the web app
+        run: npm run build:server
       - name: Integration tests
         run: npm run test:integration
       - name: Router end-to-end tests, on the pinned router image
@@ -57,6 +59,8 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: End-to-end tests
         run: npm run test:e2e
+      - name: End-to-end tests, on the server build
+        run: npm run test:e2e:server
       - name: Demo tests, from the path GitHub Pages uses
         run: npm run test:demo
       - run: npm audit --omit=dev --audit-level=high

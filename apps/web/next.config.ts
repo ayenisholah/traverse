@@ -7,6 +7,8 @@ import type { NextConfig } from "next";
 const exported: NextConfig = { output: "export", basePath: process.env.BASE_PATH ?? "" };
 const served: NextConfig = {
   distDir: ".next-server",
+  // Says which framework and nothing a visitor needs.
+  poweredByHeader: false,
   pageExtensions: ["live.tsx", "live.ts", "tsx", "ts"],
 };
 
