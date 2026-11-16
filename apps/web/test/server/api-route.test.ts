@@ -32,10 +32,16 @@ it("[FR-WB-12] sends a browser's call to the configured router, once it has sett
   expect(fetch.mock.calls[0]?.[1]?.body as string).toContain(PackageOperation.sha256);
 });
 
-it("stops the server at start when a setting is missing", () => {
-  vi.stubEnv("PUBLIC_ROUTER_URL", "");
-  expect(register).toThrow("Set PUBLIC_ROUTER_URL");
+it("ends the process at start when a setting is missing, and says which one", () => {
+  const exit = vi.spyOn(process, "exit").mockImplementation(() => undefined as never);
+  const write = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
 
   vi.stubEnv("PUBLIC_ROUTER_URL", "http://router.test");
-  expect(register).not.toThrow();
+  register();
+  expect(exit).not.toHaveBeenCalled();
+
+  vi.stubEnv("PUBLIC_ROUTER_URL", "");
+  register();
+  expect(exit).toHaveBeenCalledWith(1);
+  expect(write).toHaveBeenCalledWith(expect.stringContaining("Set PUBLIC_ROUTER_URL"));
 });
