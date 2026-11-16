@@ -32,6 +32,9 @@ export default tseslint.config(
   {
     languageOptions: { globals: { ...globals.node } },
     rules: {
+      // `import { type X }` keeps the import when compiled, so it would load the module. Only
+      // `import type` is erased, and the web server's boundary rule exempts only that (GR-9).
+      "@typescript-eslint/no-import-type-side-effects": "error",
       "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
       "@typescript-eslint/no-explicit-any": "error",
     },

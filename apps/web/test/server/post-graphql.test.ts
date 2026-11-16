@@ -39,6 +39,12 @@ describe("createPostGraphql", () => {
     expect(await post(fetch)).toBeUndefined();
   });
 
+  it("reads a 400 answer, which is how a router refuses an operation it won't run", async () => {
+    const refusal = { errors: [{ message: "exceeds the depth limit" }] };
+
+    expect(await post(answer(refusal, 400))).toEqual(refusal);
+  });
+
   it("gives up on a router that doesn't answer in time", async () => {
     const hang = vi.fn<typeof fetch>(
       (_, init) =>

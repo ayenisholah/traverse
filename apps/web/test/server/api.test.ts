@@ -208,6 +208,29 @@ const askRoute = async (input: unknown, context: Context, method = "POST") => {
 };
 
 describe("the route procedure", () => {
+  it("[GR-11] refuses a body larger than any real call, before reading it whole or calling the sandbox", async () => {
+    const { context, route } = sandboxThat(ROUTE);
+    const operation = "x".repeat(40_000);
+
+    const { status, body } = await askRoute({ operation }, context);
+
+    expect(status).toBe(413);
+    expect(body).toMatchObject({ error: { message: "Request too large" } });
+    expect(route).not.toHaveBeenCalled();
+  });
+
+  it("reads a body just under the cap", async () => {
+    const { context, route } = sandboxThat(ROUTE);
+
+    const { status } = await askRoute(
+      { operation: "{ a }", variables: { pad: "x".repeat(9_000) } },
+      context,
+    );
+
+    expect(status).toBe(200);
+    expect(route).toHaveBeenCalled();
+  });
+
   it("[FR-WB-7] sends the operation and variables to the sandbox, and returns its answer", async () => {
     const { context, route } = sandboxThat(ROUTE);
 

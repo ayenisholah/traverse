@@ -180,3 +180,6 @@ Run on 2026-11-16.
 | The route matches the router's plan | `npm run test:router` | For the real `Package` operation on the pinned image, the server's route has `packages` in the first stage and `repositories` and `advisories` together in the second, as read off the plan fetched from the sandbox router directly |
 | The editor's checker and the page share one copy of graphql | `npm run test:e2e:server` | An unknown field is marked in Chromium with no page error. Under Vite without the alias, the same check threw "from another module or realm" |
 | The completion list passes axe | `npm run test:e2e:server` | Failed `scrollable-region-focusable` while the list scrolled, and passed once it was shown whole |
+| A subgraph's message stays on the server | `npm run test:router` | The sandbox router returned a planted subgraph message with `data` and a plan; through `/api/trpc/route`, a GitHub outage returned the route and no upstream text |
+| The API refuses an oversized body | `npx vitest run apps/web/test/server/api.test.ts` | A 40 KB body got 413 and the sandbox was never called |
+| Only the erasable type import passes | `npm run lint` | `import { type Settings } from "../server/settings.ts"` in browser code failed `no-import-type-side-effects` |
