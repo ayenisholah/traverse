@@ -1,4 +1,4 @@
-import { isPackageName, isVersion } from "@traverse/subgraph-kit";
+import { isPackageName, isVersion } from "@traverse/formats";
 import { initTRPC, TRPCError } from "@trpc/server";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { z } from "zod";

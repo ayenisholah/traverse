@@ -1,0 +1,9 @@
+{
+  "name": "@traverse/formats",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Strict formats for npm package names and versions, shared by the subgraphs and the web server.",
+  "license": "MIT",
+  "type": "module",
+  "exports": "./src/index.ts"
+}

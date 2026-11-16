@@ -12,7 +12,6 @@
   "dependencies": {
     "@fontsource/poppins": "^5.3.0",
     "@tailwindcss/postcss": "^4.3.4",
-    "@traverse/subgraph-kit": "*",
     "@trpc/server": "11.28.3",
     "next": "^16.4.5",
     "radix-ui": "^1.8.1",
