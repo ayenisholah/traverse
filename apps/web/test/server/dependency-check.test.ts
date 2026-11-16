@@ -110,6 +110,68 @@ describe("checkDependencies", () => {
     });
   });
 
+  it("[FR-SG-6] reports a dependency npm couldn't answer for as not checked, never as missing", async () => {
+    const { router } = routerOf(() => ({ ok: true, data: { package: null }, incomplete: true }));
+
+    const answer = await checkDependencies(
+      router,
+      [{ name: "express", range: "^4.0.0", version: "4.0.0" }],
+      0,
+    );
+
+    expect(answer).toMatchObject({ dependencies: [{ name: "express", status: "unavailable" }] });
+  });
+
+  it("[FR-WB-9] stops asking once the deadline passes, and reports the rest as not checked", async () => {
+    let clock = 0;
+    const run = vi.fn(async () => {
+      clock += 20_000;
+      return { ok: true as const, data: { package: null }, incomplete: false };
+    });
+    const entries = [
+      ...["a", "b", "c", "d", "e", "f"].map((name) => ({ name, range: "1.0.0", version: "1.0.0" })),
+      { name: "g", range: "file:x", skip: "Not npm" },
+    ];
+
+    const answer = await checkDependencies({ run }, entries, 0, {
+      deadlineMs: 30_000,
+      now: () => clock,
+    });
+
+    // Each call moves the clock on 20 s as it starts, so two start before the 30 s deadline.
+    expect(answer.kind === "checked" && answer.dependencies.map(({ status }) => status)).toEqual([
+      "not-found",
+      "not-found",
+      "unavailable",
+      "unavailable",
+      "unavailable",
+      "unavailable",
+      "skipped",
+    ]);
+    expect(run).toHaveBeenCalledTimes(2);
+  });
+
+  it("[FR-WB-9] asks nothing more once the browser has gone", async () => {
+    const controller = new AbortController();
+    const run = vi.fn(async () => {
+      controller.abort();
+      return { ok: true as const, data: { package: null }, incomplete: false };
+    });
+    const entries = Array.from({ length: 8 }, (_, index) => ({
+      name: `p${String(index)}`,
+      range: "1.0.0",
+      version: "1.0.0",
+    }));
+
+    const answer = await checkDependencies({ run }, entries, 0, { signal: controller.signal });
+
+    // The first call ends the request as it starts, so no other is made.
+    expect(run).toHaveBeenCalledTimes(1);
+    expect(
+      answer.kind === "checked" && answer.dependencies.slice(1).map(({ status }) => status),
+    ).toEqual(Array<string>(7).fill("unavailable"));
+  });
+
   it.each([
     [
       "the package doesn't exist",

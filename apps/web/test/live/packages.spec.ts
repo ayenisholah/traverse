@@ -59,7 +59,9 @@ test("[FR-WB-9] checks a pasted package.json: licences, advisories and the versi
 }) => {
   await checkManifest(page, fixture("manifest-with-advisories.json"));
 
-  await expect(page.getByText(/2 dependencies checked\. 1 has advisories/)).toBeVisible();
+  await expect(
+    page.getByText("2 dependencies listed. 2 checked: 1 has advisories for the version checked."),
+  ).toBeVisible();
   const lodash = page.getByRole("row", { name: /^lodash/ });
   await expect(lodash.getByRole("cell").nth(1)).toHaveText("4.17.20");
   await expect(lodash.getByRole("link", { name: /^GHSA-/ })).toHaveCount(4);
@@ -87,7 +89,7 @@ for (const colorScheme of ["light", "dark"] as const) {
       page,
     }) => {
       await checkManifest(page, fixture("manifest-subgraph-kit.json"));
-      await expect(page.getByText(/7 dependencies checked/)).toBeVisible();
+      await expect(page.getByText(/^7 dependencies listed\./)).toBeVisible();
       await page.getByRole("textbox", { name: "Package name" }).fill("../nope");
       await page.getByRole("button", { name: "Open" }).click();
       await expect(page.getByText(/isn't an npm package name/)).toBeVisible();

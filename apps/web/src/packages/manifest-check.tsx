@@ -6,6 +6,7 @@ import { TextField } from "../impact/draft-fields.tsx";
 import { AdvisoryList } from "./advisory-list.tsx";
 import { createCheckManifest, type CheckManifest } from "./package-client.ts";
 import { packagePath } from "./package-path.ts";
+import { summarise } from "./summary.ts";
 import type { DependencyResult, ManifestAnswer } from "./types.ts";
 
 type State =
@@ -56,20 +57,9 @@ function ResultRow({ result }: { result: DependencyResult }) {
 
 function Results({ answer }: { answer: ManifestAnswer & { kind: "checked" } }) {
   const { dependencies, leftOut } = answer;
-  const flagged = dependencies.filter(
-    (result) => result.status === "checked" && (result.advisories?.length ?? 0) > 0,
-  ).length;
   return (
     <div>
-      <p className="mb-2">
-        {dependencies.length} {dependencies.length === 1 ? "dependency" : "dependencies"} checked.{" "}
-        {flagged === 0
-          ? "None has an advisory for the version checked."
-          : `${String(flagged)} ${flagged === 1 ? "has" : "have"} advisories for the version checked.`}
-        {leftOut > 0
-          ? ` ${String(leftOut)} more were left out: the check covers the first 100.`
-          : ""}
-      </p>
+      <p className="mb-2">{summarise(dependencies, leftOut)}</p>
       <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Dependency results">
         <table className="w-full">
           <caption className="sr-only">Licence and advisories for each dependency</caption>
@@ -93,8 +83,9 @@ function Results({ answer }: { answer: ManifestAnswer & { kind: "checked" } }) {
             </tr>
           </thead>
           <tbody>
-            {dependencies.map((result) => (
-              <ResultRow key={result.name} result={result} />
+            {dependencies.map((result, index) => (
+              // Two names npm couldn't have can be cut to the same text, so the row is keyed by place.
+              <ResultRow key={index} result={result} />
             ))}
           </tbody>
         </table>
@@ -148,7 +139,7 @@ export function ManifestCheck({ check = defaultCheck }: { check?: CheckManifest 
           label="package.json"
           rows={12}
           value={manifest}
-          hint="Only dependencies and devDependencies are read. Advisories are for the lowest version each range allows."
+          hint="Only dependencies and devDependencies are read, and their names are looked up on npm and OSV. Advisories are for the lowest version each range allows."
           onChange={setManifest}
         />
         <button

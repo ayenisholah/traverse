@@ -60,6 +60,12 @@ describe("loadPackagePage", () => {
     });
   });
 
+  it("[FR-SG-6] reports a package npm couldn't answer for as unavailable, never as missing", async () => {
+    const { answer } = await load({ ok: true, data: { package: null }, incomplete: true });
+
+    expect(answer).toEqual({ kind: "unavailable" });
+  });
+
   it.each([
     [
       "a package that doesn't exist",
