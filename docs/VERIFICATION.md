@@ -170,3 +170,13 @@ Run on 2026-11-16 against the pinned router image.
 | Sandbox access log | `npm run test:router` | `access_logs` removed from `router/sandbox.yaml` | Failed: the GET's operation text was in the log |
 | Sandbox config is an allow-list | `npx vitest run packages/repo-checks/test/router-config.test.ts` | A routing override, a second listener, exported variables, forwarded headers, plugins | Each one named |
 | One config file per router | The same | The public environment naming `sandbox.yaml`, and the other way round | `CONFIG_PATH` named |
+
+## Route view (FR-WB-7)
+
+Run on 2026-11-16.
+
+| Check | Command | What it showed |
+|---|---|---|
+| The route matches the router's plan | `npm run test:router` | For the real `Package` operation on the pinned image, the server's route has `packages` in the first stage and `repositories` and `advisories` together in the second, as read off the plan fetched from the sandbox router directly |
+| The editor's checker and the page share one copy of graphql | `npm run test:e2e:server` | An unknown field is marked in Chromium with no page error. Under Vite without the alias, the same check threw "from another module or realm" |
+| The completion list passes axe | `npm run test:e2e:server` | Failed `scrollable-region-focusable` while the list scrolled, and passed once it was shown whole |
