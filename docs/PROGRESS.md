@@ -12,6 +12,7 @@ Traverse is built on WunderGraph Cosmo and helps frontend developers explore a f
 
 | Date | Work | PR |
 |---|---|---|
+| 2026-11-16 | `feat/sandbox-router`: `router/sandbox.yaml`, a second config for the pinned router. It returns the query plan with every answer and runs free-form reads, and refuses mutations, subscriptions, WebSockets, batches and uploads, with the public router's limits (C-52 to C-54). `packages/repo-checks` holds the file and its three-variable environment to a sandbox rule set, including the limits' values. The e2e suite proves it on a test-only graph with a mutation and a subscription, on the real graph, on loopback only, and with a hostile environment. The gitleaks allowlist covers the fixture's schema hash, with the owner's approval. FR-GW-9 and GR-11 are done; the network half of GR-11 is proven again in M7. | `feat/sandbox-router` |
 | 2026-11-16 | `feat/web-server`: `apps/web` builds two ways from one config, the static export for the demo and a server build that sees files ending `.live.ts` or `.live.tsx`. `npm run generate:router` also writes typed operations with each one's SHA-256, from `packages/typed-operations`, and a contract test fails on stale output or a schema mismatch. The server reads `PUBLIC_ROUTER_URL`, ends at start without it, and serves one tRPC procedure, `package`, that sends only a generated hash to the public router. Tests cover the built server with a stub router, the real path to the pinned router in Docker, a page allow-list on the export, and a scan of browser chunks for server settings. `packages/formats` now holds the name and version formats. FR-WB-12 is done. GR-9 stays planned until M4 adds sessions. | `feat/web-server` |
 | 2026-11-16 | M3's owner decisions answered and recorded. D-1: CodeMirror 6 replaces Monaco for the `/operations` editor (ADR 0018). D-2: the route view is an ordered list with an SVG outline, not a React Flow canvas (ADR 0019). D-3: the GitHub Pages demo stays a static export of `/` and `/impact`. `SPEC.md` and [the M3 plan](plans/m3-live-routes.md) updated, and `feat/web-server` given its steps. | `docs/m3-decisions` |
 | 2026-11-09 | M3 planned in detail in [the M3 plan](plans/m3-live-routes.md): three owner decisions to ask first, each branch's scope, facts to verify, tests and exit. `security.block_mutations` found in the pinned router's config schema (C-52, documented, not yet run). README Action example pinned to `v0.9.1`. | `docs/m3-plan` |
@@ -70,9 +71,8 @@ Nothing. `0.9.1` is the latest release. Start the next item below.
 In order:
 
 1. M3, following [the M3 plan](plans/m3-live-routes.md):
-   1. `feat/sandbox-router` (FR-GW-9, GR-11). Test C-52 on the pinned image first, and run `guardrail-reviewer`.
-   2. `feat/route-view` (FR-WB-7), on CodeMirror 6 and a list with an SVG outline (ADRs 0018 and 0019).
-   3. `feat/package-explorer` (FR-WB-8, FR-WB-9), with one persisted call per dependency.
+   1. `feat/route-view` (FR-WB-7), on CodeMirror 6 and a list with an SVG outline (ADRs 0018 and 0019).
+   2. `feat/package-explorer` (FR-WB-8, FR-WB-9), with one persisted call per dependency.
 2. Set aside by the owner on 2026-11-06: three frontend developers trying Traverse on their own repositories, for `docs/USER_FEEDBACK.md`. It's the last M1 exit item, and only the owner can arrange it.
 
 ## Blocked
@@ -87,6 +87,9 @@ In order:
 - **Two web builds.** `npm run build:web` writes `apps/web/out`, and `npm run build:server` writes `apps/web/.next-server`. A route for the server only is named `page.live.tsx` or `route.live.ts` (W-26). `test:integration` and `test:router` need both builds. `test:e2e:server` serves the app on port 4174 with a stub router, whose answer is recorded in `apps/web/test/fixtures`.
 - The guardrail review of `feat/web-server` found no blockers. Fixed from it: the router's answer is parsed against a strict schema before any of it reaches the browser, error messages are fixed strings, a broken or oversized router answer is "no answer", plain HTTP is refused for a public router host, and a dependency-cruiser rule keeps `apps/web/src/server` out of browser code. Left open, and in the threat model: the API has no rate limit, so the server build must not face the internet before M6 and M7's limits.
 - Each new operation the web server runs needs a strict zod schema beside its procedure, with `satisfies z.ZodType<…Query>`, as `packageData` has in `apps/web/src/server/api.ts`.
+- **The sandbox router.** `startSandboxRouter` in `router/test/support/stack.ts` runs it on port 3904, and `stack.startSandbox()` runs it on the real graph. Its test-only graph uses port 4104. The web server must call it with POST only, because the router logs a GET's query string (C-55).
+- A new risky sandbox setting needs a rule in `SANDBOX_RULES` and a literal value in `router/sandbox.yaml`. The public rules and the sandbox rules reject each other's config on purpose.
+- `npm run generate:router` also composes `router/test/fixtures/sandbox-graph`. `.gitleaks.toml` allows a 40-character hex value in that `config.json` and in `router/config.json`, and nowhere else.
 - A new server setting goes in `apps/web/src/server/settings.ts`, and its name goes in `SERVER_ONLY` in `apps/web/test/integration/server.test.ts`, or the browser scan can't see it leak.
 - A new operation is a `.graphql` file in `router/operations` holding one named operation, then `npm run generate:router`. The app imports `<Name>Operation` from `apps/web/src/generated/operations.ts`.
 - The web server has no request logging yet. It arrives with the telemetry work in M8, or sooner if a branch needs it.

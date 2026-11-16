@@ -58,7 +58,7 @@ npm run check:progress       # the branch updates docs/PROGRESS.md
 | `subgraphs/advisories`      | OSV advisories for a package and version               |
 | `subgraphs/`                | Planned: workspace                                     |
 | `graph/cosmo-demo`          | Cosmo demo schemas behind the public demo              |
-| `router/`                   | Public router config, persisted operations, e2e tests  |
+| `router/`                   | Public and sandbox router configs, operations, e2e     |
 | `infra/`                    | Planned: CDK app and reusable constructs               |
 
 ## Order of truth

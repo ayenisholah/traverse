@@ -2,7 +2,7 @@
 
 **Outcome:** the workbench runs real operations and shows each one's real route, and the Package explorer serves live data. No AWS access is needed.
 
-**Status:** In progress. `feat/web-server` is built. The other three branches are planned.
+**Status:** In progress. `feat/web-server` and `feat/sandbox-router` are built. The other two branches are planned.
 
 ## Owner decisions
 
@@ -41,7 +41,9 @@ Built on 2026-11-16. What follows is the plan it was built from. Three things di
 - **GR-9 in M3:** sessions come in M4, so the M3 test is that the client bundle holds no secrets and no server-only env. Scan the built client chunks.
 - **Exit:** both builds pass every existing test; one real operation goes from browser to tRPC to the router; a planted schema mismatch fails the build.
 
-### 2. `feat/sandbox-router` (FR-GW-9, GR-11)
+### 2. `feat/sandbox-router` (FR-GW-9, GR-11): built
+
+Built on 2026-11-16, as `router/sandbox.yaml`. The real graph has no mutation or subscription yet, so the tests use a test-only graph that has both, in `router/test/fixtures/sandbox-graph`. The web server doesn't call this router until `feat/route-view`. Rate limiting, which ADR 0011 asks for, needs Redis and comes with M7.
 
 - **What:** a second router config, internal only, that returns query plans and runs free-form read operations.
 - **Config:**

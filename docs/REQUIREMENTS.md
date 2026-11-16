@@ -51,7 +51,7 @@ The assistant only adds to deterministic results, through Amazon Bedrock.
 | FR-GW-6 | Filter hostile traffic at the edge. | A request matching a managed WAF rule or the rate rule is blocked before it reaches the router. | staging | M6 | planned |
 | FR-GW-7 | Report health accurately. | `/health/ready` fails while the router can't serve or is draining, and load balancer targets follow it. | staging | M7 | planned |
 | FR-GW-8 | Drain before stopping. | On SIGTERM the task finishes in-flight requests before it exits, inside `stopTimeout`. | staging | M7 | planned |
-| FR-GW-9 | Run a sandbox router for the workbench. | Reachable only from the web server, it returns query plans and runs free-form read operations. | e2e | M3 | planned |
+| FR-GW-9 | Run a sandbox router for the workbench. | Reachable only from the web server, it returns query plans and runs free-form read operations. | e2e | M3 | done |
 
 ## Subgraphs
 
@@ -126,7 +126,7 @@ Guardrails are enforced by tests or policy, never by convention alone.
 | GR-8 | Production changes only through the approved pipeline. | Only the pipeline role can change production services. | infrastructure | M9 | planned |
 | GR-9 | Browser code can't read auth tokens or secrets. | Tokens live in `HttpOnly`, `Secure` cookies, and the client bundle contains no secrets. | e2e | M3 | planned |
 | GR-10 | Licensed design assets enter the repository only after their licence is confirmed. | A written record of the licence check exists before any Frox-derived file is merged. | review | M1 | done |
-| GR-11 | The sandbox router is never reachable from the internet and can't run mutations. | A test finds no public route to it, and a mutation sent to it is rejected. | e2e | M3 | planned |
+| GR-11 | The sandbox router is never reachable from the internet and can't run mutations. | A test finds no public route to it, and a mutation sent to it is rejected. | e2e | M3 | done |
 | GR-12 | Model output is shown only after validation. | An invalid suggestion or operation from the model never reaches the user. | integration | M5 | planned |
 | GR-13 | User schemas and upstream text are data, never instructions. | An instruction planted in a schema comment or README doesn't change the assistant's behaviour. | integration | M5 | planned |
 | GR-14 | Prompts carry no tokens or personal data, and aren't logged. | A test inspects each prompt and the logs for planted secrets. | integration | M5 | planned |
