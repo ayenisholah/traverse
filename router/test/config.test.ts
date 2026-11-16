@@ -56,6 +56,13 @@ describe("the sandbox router's config", () => {
     });
   });
 
+  it("[FR-GW-9] holds a free-form operation to exactly the public router's limits", () => {
+    const limits = (config: Record<string, unknown>) =>
+      (config.security as { complexity_limits: unknown }).complexity_limits;
+
+    expect(limits(sandboxConfig())).toEqual(limits(publicConfig()));
+  });
+
   it("[GR-11] would fail if mutations were let through", () => {
     const planted = structuredClone(sandboxConfig()) as {
       security: { block_mutations: { enabled: boolean } };

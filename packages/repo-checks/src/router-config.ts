@@ -56,6 +56,10 @@ const RULES: Rule[] = [
 const isTrue = (value: unknown) => value === true;
 const isAlways = (value: unknown) => value === "true";
 const isEmptyList = (value: unknown) => Array.isArray(value) && value.length === 0;
+const isBoolean = (value: unknown) => typeof value === "boolean";
+const QUERY_PARAMS = ["query", "variables", "extensions", "operationName"];
+const hidesOperations = (value: unknown) =>
+  Array.isArray(value) && QUERY_PARAMS.every((name) => value.includes(name));
 // A limit that's on but set to nothing, or to a number nobody would reach, limits nothing.
 const isWithin = (min: number, max: number) => (value: unknown) =>
   typeof value === "number" && Number.isInteger(value) && value >= min && value <= max;
@@ -67,6 +71,20 @@ const isWithin = (min: number, max: number) => (value: unknown) =>
  * one (C-53). No browser calls it, so it allows no origin at all.
  */
 const SANDBOX_RULES: Rule[] = [
+  ["version", (value) => value === "1"],
+  ["listen_addr", (value) => value === "${ROUTER_LISTEN_ADDR}"],
+  ["execution_config.file.path", (value) => value === "${ROUTER_EXECUTION_CONFIG}"],
+  ["json_log", isTrue],
+  ["log_level", (value) => value === "info" || value === "warn" || value === "error"],
+  // What the sandbox is for. Either value is safe here, and only here.
+  ["query_plans_enabled", isBoolean],
+  ["engine.debug.always_include_query_plan", isBoolean],
+  ["security.block_non_persisted_operations.enabled", isBoolean],
+  // A GET carries the operation and its variables in the address, which the access log would
+  // otherwise keep (C-55, GR-4).
+  ["access_logs.router.ignore_query_params_list", hidesOperations],
+  ["traffic_shaping.router.max_request_body_size", (value) => value === "1MB"],
+  ["cors.allow_credentials", isFalse],
   ["dev_mode", isFalse],
   ["demo_mode", isFalse],
   ["introspection.enabled", isFalse],
@@ -101,27 +119,44 @@ const SANDBOX_RULES: Rule[] = [
   ["cors.match_origins", isEmptyList],
 ];
 
+/** Every setting a config holds, as dotted paths. A list or an empty section counts as one. */
+const settingsIn = (node: Record<string, unknown>, prefix = ""): string[] =>
+  Object.entries(node).flatMap(([key, value]) =>
+    isRecord(value) && Object.keys(value).length > 0
+      ? settingsIn(value, `${prefix}${key}.`)
+      : [`${prefix}${key}`],
+  );
+
+/**
+ * `closed` also refuses any setting with no rule. A list of banned settings can't name every key
+ * the router has, such as a second listener, a routing override or a telemetry export.
+ */
 const findBanned =
-  (rules: Rule[]) =>
+  (rules: Rule[], closed = false) =>
   (config: unknown): string[] => {
     if (!isRecord(config)) return ["(the config itself)"];
-    return rules
+    const known = new Set(rules.map(([setting]) => setting));
+    const banned = rules
       .filter(([setting, isSafe]) => !isSafe(read(config, setting)))
       .map(([setting]) => setting);
+    const unknown = closed ? settingsIn(config).filter((setting) => !known.has(setting)) : [];
+    return [...banned, ...unknown];
   };
 
 /** Lists each setting that breaks GR-1 or GR-2, or the whole config if it isn't one. */
 export const findBannedRouterSettings = findBanned(RULES);
 
-/** Lists each setting that breaks GR-11, or the whole config if it isn't one. */
-export const findBannedSandboxSettings = findBanned(SANDBOX_RULES);
+/** Lists each setting that breaks GR-11 or that the sandbox has no rule for, or the whole config if it isn't one. */
+export const findBannedSandboxSettings = findBanned(SANDBOX_RULES, true);
 
 const ABSOLUTE_PATH = /^\/[A-Za-z0-9._-]+(?:\/[A-Za-z0-9._-]+)*$/;
 const LOCAL_URL = String.raw`http:\/\/127\.0\.0\.1:\d{1,5}`;
 
 /** Every variable the public config may use, and the only shape each value may take. */
 const VARIABLES: Record<string, RegExp> = {
-  CONFIG_PATH: /^\/[A-Za-z0-9._/-]+\.yaml$/,
+  // Each router may load its own file and no other: the two sit in one folder, and the public
+  // router started on the sandbox's file would serve plans and free-form operations.
+  CONFIG_PATH: /^\/(?:[A-Za-z0-9._-]+\/)*config\.yaml$/,
   ROUTER_LISTEN_ADDR: /^[a-z0-9.-]+:\d{1,5}$/,
   ROUTER_CORS_ORIGIN: ORIGIN,
   ROUTER_EXECUTION_CONFIG: ABSOLUTE_PATH,
@@ -134,7 +169,7 @@ const VARIABLES: Record<string, RegExp> = {
 
 /** The sandbox config uses three of them: it has no origin, no persisted operations and no tokens. */
 const SANDBOX_VARIABLES: Record<string, RegExp> = {
-  CONFIG_PATH: VARIABLES.CONFIG_PATH as RegExp,
+  CONFIG_PATH: /^\/(?:[A-Za-z0-9._-]+\/)*sandbox\.yaml$/,
   ROUTER_LISTEN_ADDR: VARIABLES.ROUTER_LISTEN_ADDR as RegExp,
   ROUTER_EXECUTION_CONFIG: ABSOLUTE_PATH,
 };
@@ -144,12 +179,12 @@ const findUnknownVariables =
   (text: string): string[] =>
     [...text.matchAll(/\$\{?([A-Za-z_][A-Za-z0-9_]*)\}?/g)]
       .map(([, name]) => name as string)
-      .filter((name) => !(name in variables));
+      .filter((name) => !Object.hasOwn(variables, name));
 
 const findUnsafeEnvironment =
   (variables: Record<string, RegExp>) =>
   (env: Record<string, string>): string[] => {
-    const unknown = Object.keys(env).filter((name) => !(name in variables));
+    const unknown = Object.keys(env).filter((name) => !Object.hasOwn(variables, name));
     const unsafe = Object.entries(variables)
       .filter(([name, shape]) => {
         const value = env[name];

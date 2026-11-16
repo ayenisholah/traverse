@@ -194,6 +194,17 @@ describe("findUnsafeRouterEnvironment", () => {
 
 /** The smallest sandbox config that passes. Query plans and free-form reads aren't its concern. */
 const safeSandbox = (): Record<string, unknown> => ({
+  version: "1",
+  listen_addr: "${ROUTER_LISTEN_ADDR}",
+  execution_config: { file: { path: "${ROUTER_EXECUTION_CONFIG}" } },
+  json_log: true,
+  log_level: "info",
+  query_plans_enabled: true,
+  engine: { debug: { always_include_query_plan: true } },
+  access_logs: {
+    router: { ignore_query_params_list: ["query", "variables", "extensions", "operationName"] },
+  },
+  traffic_shaping: { router: { max_request_body_size: "1MB" } },
   dev_mode: false,
   demo_mode: false,
   introspection: { enabled: false },
@@ -206,6 +217,7 @@ const safeSandbox = (): Record<string, unknown> => ({
   security: {
     block_mutations: { enabled: true, condition: "true" },
     block_subscriptions: { enabled: true, condition: "true" },
+    block_non_persisted_operations: { enabled: false },
     complexity_limits: {
       mode: "enforce",
       depth: { enabled: true, limit: 3 },
@@ -217,7 +229,7 @@ const safeSandbox = (): Record<string, unknown> => ({
   websocket: { enabled: false },
   batching: { enabled: false },
   file_upload: { enabled: false },
-  cors: { enabled: false, allow_origins: [], match_origins: [] },
+  cors: { enabled: false, allow_origins: [], match_origins: [], allow_credentials: false },
 });
 
 const UNSAFE_SANDBOX: [string, string, unknown][] = [
@@ -256,17 +268,57 @@ const UNSAFE_SANDBOX: [string, string, unknown][] = [
   ["CORS", "cors.enabled", true],
   ["an origin", "cors.allow_origins", ["https://traverse.example"]],
   ["an origin pattern", "cors.match_origins", [".*"]],
+  ["credentials", "cors.allow_credentials", true],
+  ["another config version", "version", "2"],
+  ["a literal address, which could be every interface", "listen_addr", "0.0.0.0:3002"],
+  ["a literal execution config", "execution_config.file.path", "/tmp/other.json"],
+  ["plain-text logs", "json_log", false],
+  ["debug logs", "log_level", "debug"],
+  ["a query plan setting that isn't a boolean", "query_plans_enabled", "${PLANS}"],
+  ["a plan setting that isn't a boolean", "engine.debug.always_include_query_plan", "yes"],
+  [
+    "a persisted-only setting that isn't a boolean",
+    "security.block_non_persisted_operations.enabled",
+    "${BLOCK}",
+  ],
+  [
+    "an access log that keeps a GET's operation",
+    "access_logs.router.ignore_query_params_list",
+    ["variables"],
+  ],
+  ["an access log setting that isn't a list", "access_logs.router.ignore_query_params_list", "*"],
+  ["a larger request body", "traffic_shaping.router.max_request_body_size", "5MB"],
 ];
 
 describe("findBannedSandboxSettings", () => {
   it("[GR-11] accepts a config that sets every setting safely, with query plans on", () => {
-    const config = {
-      ...safeSandbox(),
-      query_plans_enabled: true,
-      engine: { debug: { always_include_query_plan: true } },
-    };
+    expect(findBannedSandboxSettings(safeSandbox())).toEqual([]);
+  });
 
-    expect(findBannedSandboxSettings(config)).toEqual([]);
+  it.each([
+    [
+      "a routing override, which could point a subgraph anywhere",
+      "override_routing_url.subgraphs.packages",
+      "http://169.254.169.254",
+    ],
+    ["a second listener", "telemetry.metrics.prometheus.listen_addr", "0.0.0.0:8088"],
+    ["variables exported in traces", "telemetry.tracing.export_graphql_variables", true],
+    ["forwarded headers", "headers.all.request", [{ op: "propagate", matching: ".*" }]],
+    ["plugins", "plugins.enabled", true],
+    ["a graph token", "graph.token", "token"],
+    ["printed query plans", "engine.debug.print_query_plans", true],
+    ["a section left empty", "events", {}],
+  ])("[GR-11] refuses %s, because the sandbox has no rule for it", (_, setting, value) => {
+    const config = safeSandbox();
+    const keys = setting.split(".");
+    const last = keys.pop() as string;
+    const parent = keys.reduce<Record<string, unknown>>(
+      (node, key) => (node[key] ??= {}) as Record<string, unknown>,
+      config,
+    );
+    parent[last] = value;
+
+    expect(findBannedSandboxSettings(config)).toEqual([setting]);
   });
 
   it.each(UNSAFE_SANDBOX)("[GR-11] refuses %s", (_, setting, value) => {
@@ -280,7 +332,8 @@ describe("findBannedSandboxSettings", () => {
     (setting) => {
       const config = withSetting(setting, undefined, safeSandbox());
 
-      expect(findBannedSandboxSettings(config)).toEqual([setting]);
+      // The section it sat in may now be empty, which is reported too.
+      expect(findBannedSandboxSettings(config)).toContain(setting);
     },
   );
 
@@ -299,6 +352,25 @@ describe("the sandbox router's variables and environment", () => {
     ROUTER_LISTEN_ADDR: "127.0.0.1:3004",
     ROUTER_EXECUTION_CONFIG: "/config/config.json",
   };
+
+  it("[GR-1] keeps each router to its own file, though both sit in one folder", () => {
+    expect(
+      findUnsafeRouterEnvironment({ ...environment(), CONFIG_PATH: "/config/sandbox.yaml" }),
+    ).toEqual(["CONFIG_PATH"]);
+    expect(
+      findUnsafeSandboxEnvironment({ ...sandboxEnvironment, CONFIG_PATH: "/config/config.yaml" }),
+    ).toEqual(["CONFIG_PATH"]);
+  });
+
+  it("[GR-11] isn't fooled by a name every object has", () => {
+    expect(findUnknownSandboxVariables("a: ${constructor}\nb: ${toString}")).toEqual([
+      "constructor",
+      "toString",
+    ]);
+    expect(findUnsafeSandboxEnvironment({ ...sandboxEnvironment, toString: "x" })).toEqual([
+      "toString",
+    ]);
+  });
 
   it("[GR-11] knows three variables, and names any other", () => {
     const text =

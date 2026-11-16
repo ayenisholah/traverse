@@ -47,6 +47,15 @@ security:
     root_field_aliases:
       enabled: true
       limit: 0
+# A GET carries the operation and its variables in the address. The web server only sends POST,
+# and if anything else ever sends a GET, the access log keeps none of it (C-55, GR-4).
+access_logs:
+  router:
+    ignore_query_params_list:
+      - query
+      - variables
+      - extensions
+      - operationName
 websocket:
   enabled: false
 batching:

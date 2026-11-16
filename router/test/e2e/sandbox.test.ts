@@ -21,6 +21,36 @@ const post = async (url: string, body: unknown, headers: Record<string, string> 
   return { status: response.status, text, json: JSON.parse(text) as GraphqlResponse };
 };
 
+/** The status a WebSocket upgrade gets, or "upgraded" if the router accepts it. */
+const upgradeStatus = async (url: string): Promise<number | string | undefined> => {
+  const upgrade = request(`${url}/graphql`, {
+    headers: {
+      connection: "Upgrade",
+      upgrade: "websocket",
+      "sec-websocket-version": "13",
+      // Any 16 bytes will do. Built here, because a secret scanner reads the literal as a key.
+      "sec-websocket-key": Buffer.from("the sample nonce").toString("base64"),
+      "sec-websocket-protocol": "graphql-transport-ws",
+    },
+  }).end();
+  const outcome = await Promise.race([
+    once(upgrade, "upgrade").then(() => "upgraded"),
+    once(upgrade, "response").then(([response]) => (response as IncomingMessage).statusCode),
+  ]);
+  upgrade.destroy();
+  return outcome;
+};
+
+const isRefused = async (host: string, port: number): Promise<boolean> => {
+  const socket = connect({ host, port });
+  const [outcome] = (await Promise.race([
+    once(socket, "error"),
+    once(socket, "connect").then(() => ["connected"]),
+  ])) as [Error | string];
+  socket.destroy();
+  return String(outcome).includes("ECONNREFUSED");
+};
+
 const MUTATION = `mutation Add { addNote(text: "x") }`;
 const HOSTILE_PORT = 3905;
 
@@ -76,7 +106,19 @@ describe("the sandbox router on a graph that has writes", { timeout: 60_000 }, (
     expect(received.length).toBe(before);
   });
 
-  it("[GR-11] refuses a mutation sent as a GET", async () => {
+  it("[GR-4] keeps a GET's operation and variables out of its log", async () => {
+    const query = encodeURIComponent(`query Sentinel { note # planted-in-query\n}`);
+    const variables = encodeURIComponent(JSON.stringify({ secret: "planted-in-variables" }));
+    const response = await fetch(`${sandbox.url}/graphql?query=${query}&variables=${variables}`);
+    await response.text();
+    // The access log line is written just after the answer.
+    await new Promise((done) => setTimeout(done, 500));
+
+    expect(sandbox.logs()).toContain('"path":"/graphql"');
+    expect(sandbox.logs()).not.toMatch(/planted-in-query|planted-in-variables|Sentinel/);
+  });
+
+  it("[GR-11] refuses a mutation sent as a GET, as the router does for any mutation", async () => {
     const before = received.length;
     const response = await fetch(`${sandbox.url}/graphql?query=${encodeURIComponent(MUTATION)}`);
 
@@ -109,23 +151,7 @@ describe("the sandbox router on a graph that has writes", { timeout: 60_000 }, (
   });
 
   it("[GR-11] opens no WebSocket", async () => {
-    const upgrade = request(`${sandbox.url}/graphql`, {
-      headers: {
-        connection: "Upgrade",
-        upgrade: "websocket",
-        "sec-websocket-version": "13",
-        // Any 16 bytes will do. Built here, because a secret scanner reads the literal as a key.
-        "sec-websocket-key": Buffer.from("the sample nonce").toString("base64"),
-        "sec-websocket-protocol": "graphql-transport-ws",
-      },
-    }).end();
-    const outcome = await Promise.race([
-      once(upgrade, "upgrade").then(() => "upgraded"),
-      once(upgrade, "response").then(([response]) => (response as IncomingMessage).statusCode),
-    ]);
-    upgrade.destroy();
-
-    expect(outcome).toBe(400);
+    expect(await upgradeStatus(sandbox.url)).toBe(400);
   });
 
   it("[GR-11] refuses a batch, so one request is one operation", async () => {
@@ -165,14 +191,9 @@ describe("the sandbox router on a graph that has writes", { timeout: 60_000 }, (
     // Without another address there's nothing to test, and a pass would mean nothing.
     if (outside === undefined) throw new Error("This machine has no address besides loopback");
 
-    const socket = connect({ host: outside, port: Number(new URL(sandbox.url).port) });
-    const [outcome] = (await Promise.race([
-      once(socket, "error"),
-      once(socket, "connect").then(() => ["connected"]),
-    ])) as [Error | string];
-    socket.destroy();
-
-    expect(String(outcome)).toContain("ECONNREFUSED");
+    expect(await isRefused(outside, Number(new URL(sandbox.url).port))).toBe(true);
+    // Proves the check can tell an open port from a closed one.
+    expect(await isRefused("127.0.0.1", Number(new URL(sandbox.url).port))).toBe(false);
   });
 
   it("[GR-11] still refuses writes when the environment tries to allow them", async () => {
@@ -205,9 +226,22 @@ describe("the sandbox router on a graph that has writes", { timeout: 60_000 }, (
         headers: { origin: "https://evil.example", "access-control-request-method": "POST" },
       });
 
+      const page = await fetch(`${hostile.url}/`, { headers: { accept: "text/html" } });
+      const batch = await fetch(`${hostile.url}/graphql`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify([{ query: "{ note }" }]),
+      });
+
       expect(mutation.json.errors?.[0]?.message).toBe("operation type 'mutation' is blocked");
       expect(schema.json.errors?.[0]?.message).toMatch(/introspection is disabled/);
       expect(cors.headers.get("access-control-allow-origin")).toBeNull();
+      // DEV_MODE and PLAYGROUND_ENABLED would serve a playground, and BATCHING_ENABLED a batch.
+      expect(await page.text()).not.toMatch(/playground|graphiql/i);
+      expect(await batch.text()).not.toContain('"note":"hello"');
+      expect(await upgradeStatus(hostile.url)).toBe(400);
+      // MCP_ENABLED would open the MCP server's own port.
+      expect(await isRefused("127.0.0.1", 5025)).toBe(true);
       expect(received.length).toBe(before);
     } finally {
       await hostile.stop();
