@@ -1,0 +1,22 @@
+{
+  "data": {
+    "package": {
+      "name": "express",
+      "license": "MIT"
+    }
+  },
+  "extensions": {
+    "queryPlan": {
+      "version": "1",
+      "kind": "Single",
+      "fetch": {
+        "kind": "Single",
+        "subgraphName": "packages",
+        "subgraphId": "0",
+        "fetchId": 0,
+        "query": "query($a: String!){\n    package(name: $a){\n        name\n        license\n    }\n}"
+      },
+      "normalizedQuery": "query Name($a: String!){package(name: $a){name license}}"
+    }
+  }
+}

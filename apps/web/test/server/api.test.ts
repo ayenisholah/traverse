@@ -1,19 +1,22 @@
 import { describe, expect, it, vi } from "vitest";
 import { PackageOperation } from "../../src/generated/operations.ts";
-import { handleApiRequest } from "../../src/server/api.ts";
-import type { RouterClient, RouterResult } from "../../src/server/router-client.ts";
+import { handleApiRequest as handle, type Context } from "../../src/server/api.ts";
+import type { RouteAnswer } from "../../src/route/types.ts";
+import type { RouterResult } from "../../src/server/router-client.ts";
+
+const unused = { route: vi.fn(async (): Promise<RouteAnswer> => ({ kind: "unavailable" })) };
 
 const routerThat = (result: RouterResult | Error) => {
   const run = vi.fn(async () => {
     if (result instanceof Error) throw result;
     return result;
   });
-  return { router: { run } as unknown as RouterClient, run };
+  return { router: { router: { run }, sandbox: unused } as unknown as Context, run };
 };
 
-const call = async (input: unknown, router: RouterClient, path = "package") => {
+const call = async (input: unknown, router: Context, path = "package") => {
   const url = `http://web.test/api/trpc/${path}?input=${encodeURIComponent(JSON.stringify(input))}`;
-  const response = await handleApiRequest(new Request(url), router);
+  const response = await handle(new Request(url), router);
   return { status: response.status, body: (await response.json()) as unknown };
 };
 
@@ -76,7 +79,7 @@ describe("the package procedure", () => {
       headers: { cookie: "session=1", authorization: "Bearer x" },
     });
 
-    await handleApiRequest(request, router);
+    await handle(request, router);
 
     expect(run).toHaveBeenCalledWith(PackageOperation, { name: "ms", version: null });
   });
@@ -102,7 +105,7 @@ describe("the package procedure", () => {
     const { router } = routerThat({ ok: true, data: { package: null }, incomplete: false });
     const url = `http://web.test/api/trpc/package?input=${encodeURIComponent('{"name":"ms"}')}`;
 
-    const response = await handleApiRequest(new Request(url), router);
+    const response = await handle(new Request(url), router);
 
     expect(response.headers.get("cache-control")).toBe("no-store");
     expect(response.headers.get("x-content-type-options")).toBe("nosniff");
@@ -145,7 +148,7 @@ describe("the package procedure", () => {
 
   it("doesn't repeat input it can't parse", async () => {
     const { router } = routerThat({ ok: false });
-    const response = await handleApiRequest(
+    const response = await handle(
       new Request("http://web.test/api/trpc/package?input=%7Bplanted-text"),
       router,
     );
@@ -159,9 +162,93 @@ describe("the package procedure", () => {
     const input = encodeURIComponent(JSON.stringify({ 0: { name: "a" }, 1: { name: "b" } }));
     const url = `http://web.test/api/trpc/package,package?batch=1&input=${input}`;
 
-    const response = await handleApiRequest(new Request(url), router);
+    const response = await handle(new Request(url), router);
 
     expect(response.status).toBeGreaterThanOrEqual(400);
     expect(run).not.toHaveBeenCalled();
+  });
+});
+
+const ROUTE: RouteAnswer = {
+  kind: "route",
+  route: {
+    steps: [
+      {
+        id: 0,
+        subgraph: "packages",
+        kind: "root",
+        path: null,
+        after: [],
+        stage: 0,
+        query: "{ q }",
+      },
+    ],
+  },
+};
+
+const sandboxThat = (answer: RouteAnswer) => {
+  const route = vi.fn(async () => answer);
+  const context = { router: { run: vi.fn() }, sandbox: { route } } as unknown as Context;
+  return { context, route };
+};
+
+const askRoute = async (input: unknown, context: Context, method = "POST") => {
+  const request =
+    method === "POST"
+      ? new Request("http://web.test/api/trpc/route", {
+          method,
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(input),
+        })
+      : new Request(
+          `http://web.test/api/trpc/route?input=${encodeURIComponent(JSON.stringify(input))}`,
+        );
+  const response = await handle(request, context);
+  return { status: response.status, body: (await response.json()) as unknown };
+};
+
+describe("the route procedure", () => {
+  it("[FR-WB-7] sends the operation and variables to the sandbox, and returns its answer", async () => {
+    const { context, route } = sandboxThat(ROUTE);
+
+    const { status, body } = await askRoute(
+      { operation: "query Q { a }", variables: { name: "express" } },
+      context,
+    );
+
+    expect(route).toHaveBeenCalledWith("query Q { a }", { name: "express" });
+    expect(status).toBe(200);
+    expect(body).toEqual({ result: { data: ROUTE } });
+  });
+
+  it("sends no variables when none are given", async () => {
+    const { context, route } = sandboxThat({ kind: "refused", messages: ["no"] });
+
+    const { body } = await askRoute({ operation: "{ a }" }, context);
+
+    expect(route).toHaveBeenCalledWith("{ a }", {});
+    expect(body).toEqual({ result: { data: { kind: "refused", messages: ["no"] } } });
+  });
+
+  it("[GR-4] takes the operation in a POST body only, never in an address", async () => {
+    const { context, route } = sandboxThat(ROUTE);
+
+    const { status } = await askRoute({ operation: "query Q { a }" }, context, "GET");
+
+    expect(status).toBe(405);
+    expect(route).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["no operation", {}],
+    ["an empty operation", { operation: "" }],
+    ["an operation too long to be one", { operation: "x".repeat(10_001) }],
+    ["variables that aren't an object", { operation: "{ a }", variables: "name" }],
+    ["variables too large", { operation: "{ a }", variables: { name: "x".repeat(10_000) } }],
+  ])("refuses %s before the sandbox is called", async (_, input) => {
+    const { context, route } = sandboxThat(ROUTE);
+
+    expect((await askRoute(input, context)).status).toBe(400);
+    expect(route).not.toHaveBeenCalled();
   });
 });

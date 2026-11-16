@@ -13,10 +13,15 @@ const isRouterOrigin = (value: string): boolean => {
   );
 };
 
-const schema = z.object({ PUBLIC_ROUTER_URL: z.string().refine(isRouterOrigin) });
+const schema = z.object({
+  PUBLIC_ROUTER_URL: z.string().refine(isRouterOrigin),
+  SANDBOX_ROUTER_URL: z.string().refine(isRouterOrigin),
+});
 
 export interface Settings {
   publicRouterUrl: string;
+  /** The sandbox router, which only this server may reach (GR-11). */
+  sandboxRouterUrl: string;
 }
 
 /**
@@ -28,8 +33,11 @@ export const readSettings = (env: Record<string, string | undefined>): Settings 
   const parsed = schema.safeParse(env);
   if (!parsed.success) {
     throw new Error(
-      "Set PUBLIC_ROUTER_URL to the public router's origin, such as http://127.0.0.1:3002",
+      "Set PUBLIC_ROUTER_URL and SANDBOX_ROUTER_URL to each router's origin, such as http://127.0.0.1:3002",
     );
   }
-  return { publicRouterUrl: parsed.data.PUBLIC_ROUTER_URL };
+  return {
+    publicRouterUrl: parsed.data.PUBLIC_ROUTER_URL,
+    sandboxRouterUrl: parsed.data.SANDBOX_ROUTER_URL,
+  };
 };

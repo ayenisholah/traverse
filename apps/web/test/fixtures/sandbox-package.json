@@ -1,0 +1,169 @@
+{
+  "data": {
+    "package": {
+      "name": "express",
+      "latestVersion": "5.3.0",
+      "license": "MIT",
+      "weeklyDownloads": 196349991,
+      "repositoryUrl": "https://github.com/expressjs/express",
+      "repository": {
+        "url": "https://github.com/expressjs/express",
+        "stars": 69576,
+        "owner": "expressjs",
+        "latestRelease": "v5.3.0"
+      },
+      "advisories": [
+        {
+          "id": "GHSA-cm5g-3pgc-8rg4",
+          "summary": "Express ressource injection",
+          "severity": "MODERATE",
+          "fixedIn": "4.0.0-rc1"
+        },
+        {
+          "id": "GHSA-gpvr-g6gh-9mc2",
+          "summary": "No Charset in Content-Type Header in express",
+          "severity": "MODERATE",
+          "fixedIn": "4.5.0"
+        },
+        {
+          "id": "GHSA-jj78-5fmv-mv28",
+          "summary": "Express Open Redirect vulnerability",
+          "severity": "LOW",
+          "fixedIn": "4.0.0-rc1"
+        },
+        {
+          "id": "GHSA-qw6h-vgh9-j6wx",
+          "summary": "express vulnerable to XSS via response.redirect()",
+          "severity": "LOW",
+          "fixedIn": "5.0.0"
+        },
+        {
+          "id": "GHSA-rv95-896h-c2vc",
+          "summary": "Express.js Open Redirect in malformed URLs",
+          "severity": "MODERATE",
+          "fixedIn": "5.0.0-beta.3"
+        }
+      ]
+    }
+  },
+  "extensions": {
+    "queryPlan": {
+      "version": "1",
+      "kind": "Sequence",
+      "children": [
+        {
+          "kind": "Single",
+          "fetch": {
+            "kind": "Single",
+            "subgraphName": "packages",
+            "subgraphId": "0",
+            "fetchId": 0,
+            "query": "query($a: String!){\n    package(name: $a){\n        name\n        latestVersion\n        license\n        weeklyDownloads\n        repositoryUrl\n        __typename\n    }\n}"
+          }
+        },
+        {
+          "kind": "Parallel",
+          "children": [
+            {
+              "kind": "Single",
+              "fetch": {
+                "kind": "Entity",
+                "path": "package",
+                "subgraphName": "repositories",
+                "subgraphId": "1",
+                "fetchId": 1,
+                "dependsOnFetchIds": [0],
+                "representations": [
+                  {
+                    "kind": "@requires",
+                    "typeName": "Package",
+                    "fieldName": "repository",
+                    "fragment": "fragment Requires_for_repository on Package {\n    repositoryUrl\n}"
+                  },
+                  {
+                    "kind": "@key",
+                    "typeName": "Package",
+                    "fragment": "fragment Key on Package {\n    __typename\n    name\n}"
+                  }
+                ],
+                "query": "query($representations: [_Any!]!){\n    _entities(representations: $representations){\n        ... on Package {\n            __typename\n            repository {\n                url\n                stars\n                owner\n                latestRelease\n            }\n        }\n    }\n}",
+                "dependencies": [
+                  {
+                    "coordinate": {
+                      "typeName": "Package",
+                      "fieldName": "repository"
+                    },
+                    "isUserRequested": true,
+                    "dependsOn": [
+                      {
+                        "fetchId": 0,
+                        "subgraph": "packages",
+                        "coordinate": {
+                          "typeName": "Package",
+                          "fieldName": "repositoryUrl"
+                        },
+                        "isKey": false,
+                        "isRequires": true
+                      },
+                      {
+                        "fetchId": 0,
+                        "subgraph": "packages",
+                        "coordinate": {
+                          "typeName": "Package",
+                          "fieldName": "name"
+                        },
+                        "isKey": true,
+                        "isRequires": false
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "kind": "Single",
+              "fetch": {
+                "kind": "Entity",
+                "path": "package",
+                "subgraphName": "advisories",
+                "subgraphId": "2",
+                "fetchId": 2,
+                "dependsOnFetchIds": [0],
+                "representations": [
+                  {
+                    "kind": "@key",
+                    "typeName": "Package",
+                    "fragment": "fragment Key on Package {\n    __typename\n    name\n}"
+                  }
+                ],
+                "query": "query($representations: [_Any!]!, $b: String){\n    _entities(representations: $representations){\n        ... on Package {\n            __typename\n            advisories(version: $b){\n                id\n                summary\n                severity\n                fixedIn\n            }\n        }\n    }\n}",
+                "dependencies": [
+                  {
+                    "coordinate": {
+                      "typeName": "Package",
+                      "fieldName": "advisories"
+                    },
+                    "isUserRequested": true,
+                    "dependsOn": [
+                      {
+                        "fetchId": 0,
+                        "subgraph": "packages",
+                        "coordinate": {
+                          "typeName": "Package",
+                          "fieldName": "name"
+                        },
+                        "isKey": true,
+                        "isRequires": false
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "normalizedQuery": "query Package($a: String!, $b: String){package(name: $a){name latestVersion license weeklyDownloads repositoryUrl repository {url stars owner latestRelease} advisories(version: $b){id summary severity fixedIn}}}"
+    }
+  }
+}

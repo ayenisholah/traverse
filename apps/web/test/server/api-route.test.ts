@@ -1,5 +1,5 @@
 import { afterEach, expect, it, vi } from "vitest";
-import { GET } from "../../src/app/api/trpc/[trpc]/route.live.ts";
+import { GET, POST } from "../../src/app/api/trpc/[trpc]/route.live.ts";
 import { PackageOperation } from "../../src/generated/operations.ts";
 import { register } from "../../src/instrumentation.live.ts";
 
@@ -13,8 +13,9 @@ const request = () =>
     `http://web.test/api/trpc/package?input=${encodeURIComponent(JSON.stringify({ name: "express" }))}`,
   );
 
-it("[FR-WB-12] sends a browser's call to the configured router, once it has settings", async () => {
+it("[FR-WB-12] sends each call to the router it belongs to, once the server has settings", async () => {
   vi.stubEnv("PUBLIC_ROUTER_URL", "");
+  vi.stubEnv("SANDBOX_ROUTER_URL", "");
   await expect(async () => GET(request())).rejects.toThrow("Set PUBLIC_ROUTER_URL");
 
   const fetch = vi.fn<typeof globalThis.fetch>(
@@ -22,14 +23,26 @@ it("[FR-WB-12] sends a browser's call to the configured router, once it has sett
   );
   vi.stubGlobal("fetch", fetch);
   vi.stubEnv("PUBLIC_ROUTER_URL", "https://router.test");
+  vi.stubEnv("SANDBOX_ROUTER_URL", "https://sandbox.test");
 
   const first = await GET(request());
   await GET(request());
+  await POST(
+    new Request("http://web.test/api/trpc/route", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ operation: "query Q { a }" }),
+    }),
+  );
 
   expect(await first.json()).toEqual({ result: { data: { package: null, incomplete: false } } });
-  expect(fetch).toHaveBeenCalledTimes(2);
-  expect(fetch.mock.calls[0]?.[0]).toBe("https://router.test/graphql");
+  expect(fetch.mock.calls.map(([url]) => url)).toEqual([
+    "https://router.test/graphql",
+    "https://router.test/graphql",
+    "https://sandbox.test/graphql",
+  ]);
   expect(fetch.mock.calls[0]?.[1]?.body as string).toContain(PackageOperation.sha256);
+  expect(fetch.mock.calls[2]?.[1]?.body as string).toContain("query Q { a }");
 });
 
 it("ends the process at start when a setting is missing, and says which one", () => {
@@ -37,6 +50,7 @@ it("ends the process at start when a setting is missing, and says which one", ()
   const write = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
 
   vi.stubEnv("PUBLIC_ROUTER_URL", "https://router.test");
+  vi.stubEnv("SANDBOX_ROUTER_URL", "http://127.0.0.1:3004");
   register();
   expect(exit).not.toHaveBeenCalled();
 
