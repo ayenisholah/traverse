@@ -1,6 +1,6 @@
 # Progress
 
-**Updated:** 2026-11-16
+**Updated:** 2026-11-18
 
 Read this first. It says what's done, what's in progress and what's left, so any agent can resume after a session ends unexpectedly. Update it in the same commit as the work.
 
@@ -12,6 +12,7 @@ Traverse is built on WunderGraph Cosmo and helps frontend developers explore a f
 
 | Date | Work | PR |
 |---|---|---|
+| 2026-11-18 | `fix/zod-range`: every workspace's `zod` range is `^4.6.6`, so none allows a version with GHSA-mrhx-c7xc-m3w5. The lockfile already installed 4.6.7, so nothing installed changes. The owner approved it on 2026-11-18. | `fix/zod-range` |
 | 2026-11-16 | `feat/package-explorer`, which closes M3. `/packages` looks a package up and checks a pasted `package.json`; `/packages/[...name]` shows a package's facts, advisories, repository, dependencies and newest versions. Two persisted operations (C-58), strict answer schemas, and a check that reads only names and ranges, at the lowest version each range allows (W-34), 100 at most, 4 at a time. Proven against npm and OSV recordings for this repository's own `packages/subgraph-kit` dependencies. FR-WB-8, FR-WB-9 and NFR-9 are done, and M3 is done. | `feat/package-explorer` |
 | 2026-11-16 | `feat/route-view`: `/operations` in the server build. A CodeMirror 6 editor with the composed schema for completion and checking, and the route as an ordered, keyboard-navigable list with an SVG outline (ADRs 0018 and 0019). The server posts the operation to the sandbox router, builds the route from the plan (C-56), and returns only that: no data, and a refusal's message only when the operation never ran. Playwright and axe cover the page in both themes, by keyboard, and a Docker test proves the route matches the pinned router's plan for `Package`. FR-WB-7 is done. | `feat/route-view` |
 | 2026-11-16 | `feat/sandbox-router`: `router/sandbox.yaml`, a second config for the pinned router. It returns the query plan with every answer and runs free-form reads, and refuses mutations, subscriptions, WebSockets, batches and uploads, with the public router's limits (C-52 to C-54). `packages/repo-checks` holds the file and its three-variable environment to a sandbox rule set, including the limits' values. The e2e suite proves it on a test-only graph with a mutation and a subscription, on the real graph, on loopback only, and with a hostile environment. The gitleaks allowlist covers the fixture's schema hash, with the owner's approval. FR-GW-9 is done. GR-11 stays planned until M7 proves "no public route" on the real network; its mutation half is tested here. | `feat/sandbox-router` |
@@ -66,18 +67,16 @@ Traverse is built on WunderGraph Cosmo and helps frontend developers explore a f
 
 ## In progress
 
-Nothing. `0.9.1` is the latest release. Start the next item below.
+M4, run as the owner approved on 2026-11-18 (see the notes): `fix/zod-range`, then `fix/public-router-allow-list`, then `feat/web-auth` and `feat/workspace-subgraph`.
 
 ## Next
 
 In order:
 
-1. Ask the owner, before anything else:
-   1. Whether to merge the open release pull request. It publishes to npm, and M3's `feat:` merges have added to it.
-   2. Whether to raise `zod` in `packages/subgraph-kit/package.json` from `^4.0.0` to `^4.6.6`. The package.json check found GHSA-mrhx-c7xc-m3w5 in every zod below 4.6.6. The lockfile installs 4.6.7, so nothing installed is affected, but the range allows a vulnerable version. It needs a requirement ID or the owner's go-ahead.
-   3. Whether to hold the public router's config to an allow-list, as the sandbox's is. The sandbox review found its deny-list lets unnamed keys through, such as a routing override. That's GR-1 work.
-2. M4, following [the M4 plan](plans/m4-accounts.md). It needs [account setup](plans/account-setup.md) and an answer to U-22 first, so it's blocked on the owner.
-3. Set aside by the owner on 2026-11-06: three frontend developers trying Traverse on their own repositories, for `docs/USER_FEEDBACK.md`. It's the last M1 exit item, and only the owner can arrange it.
+1. `fix/public-router-allow-list` (GR-1): hold `router/config.yaml` to an allow-list, as the sandbox's is. Approved by the owner on 2026-11-18.
+2. `feat/web-auth`, then `feat/workspace-subgraph`, following [the M4 plan](plans/m4-accounts.md), built against a local issuer (owner, 2026-11-18). Answer U-22 from the AWS docs first.
+3. Ask the owner about the release pull request at the end of M4. The 0.10.0 one (#61) was closed by the owner's account on 2026-11-16, with its branch deleted, so it can't be reopened; the next `feat:` or `fix:` merge should open a new one. The owner approved merging it on 2026-11-18.
+4. Set aside by the owner on 2026-11-06: three frontend developers trying Traverse on their own repositories, for `docs/USER_FEEDBACK.md`. It's the last M1 exit item, and only the owner can arrange it.
 
 ## Blocked
 
@@ -87,6 +86,8 @@ In order:
 
 ## Notes for the next session
 
+- **The approved run for M4** (owner, 2026-11-18): build M4 locally, against a local OIDC issuer that issues Cognito-shaped tokens and Postgres in Docker, without waiting for account setup. A real user pool needs CDK (GR-6), so FR-WB-10 stays "built, Cognito proof pending" until the auth stack deploys. A workspace saves drafts, screens and operations, and FR-WB-11's wording widens to match. Each branch is its own pull request, merged when green.
+- If `docker` fails with "failed to connect to the docker API at …/.docker/desktop/docker.sock", Docker Desktop isn't running. The system daemon is, so set `DOCKER_CONTEXT=default`.
 - **The approved run for M3** (owner, 2026-11-16): the four branches in order, each its own pull request, merged when green. Release pull requests are left open, and the owner is asked once at the end of M3.
 - **Two web builds.** `npm run build:web` writes `apps/web/out`, and `npm run build:server` writes `apps/web/.next-server`. A route for the server only is named `page.live.tsx` or `route.live.ts` (W-26). `test:integration` and `test:router` need both builds. `test:e2e:server` serves the app on port 4174 with a stub router, whose answer is recorded in `apps/web/test/fixtures`.
 - The guardrail review of `feat/web-server` found no blockers. Fixed from it: the router's answer is parsed against a strict schema before any of it reaches the browser, error messages are fixed strings, a broken or oversized router answer is "no answer", plain HTTP is refused for a public router host, and a dependency-cruiser rule keeps `apps/web/src/server` out of browser code. Left open, and in the threat model: the API has no rate limit, so the server build must not face the internet before M6 and M7's limits.

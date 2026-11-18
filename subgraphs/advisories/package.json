@@ -8,7 +8,7 @@
   "dependencies": {
     "@traverse/subgraph-kit": "*",
     "semver": "^7.8.0",
-    "zod": "^4.0.0"
+    "zod": "^4.6.6"
   },
   "devDependencies": {
     "@traverse/graph-core": "*",
