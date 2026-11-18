@@ -8,6 +8,15 @@ import {
   findUnsafeSandboxEnvironment,
 } from "../src/index.ts";
 
+/** The limits both routers hold to, as router/config.yaml sets them. */
+const limits = () => ({
+  mode: "enforce",
+  depth: { enabled: true, limit: 3 },
+  total_fields: { enabled: true, limit: 60 },
+  root_fields: { enabled: true, limit: 3 },
+  root_field_aliases: { enabled: true, limit: 0 },
+});
+
 /** A config that passes: router/config.yaml as parsed, with a real origin. */
 const safe = (): Record<string, unknown> => ({
   version: "1",
@@ -34,13 +43,7 @@ const safe = (): Record<string, unknown> => ({
   automatic_persisted_queries: { enabled: false },
   security: {
     block_non_persisted_operations: { enabled: true, condition: "true" },
-    complexity_limits: {
-      mode: "enforce",
-      depth: { enabled: true, limit: 3 },
-      total_fields: { enabled: true, limit: 60 },
-      root_fields: { enabled: true, limit: 3 },
-      root_field_aliases: { enabled: true, limit: 0 },
-    },
+    complexity_limits: limits(),
   },
   access_logs: {
     router: { ignore_query_params_list: ["query", "variables", "extensions", "operationName"] },
@@ -180,8 +183,18 @@ describe("findBannedRouterSettings", () => {
       ["variables"],
     ],
     ["a larger request body", "traffic_shaping.router.max_request_body_size", "5MB"],
+    [
+      "an access log list with more in it than the four names",
+      "access_logs.router.ignore_query_params_list",
+      ["query", "variables", "extensions", "operationName", { a: 1 }],
+    ],
     ["limits that only measure", "security.complexity_limits.mode", "measure"],
     ["no depth limit", "security.complexity_limits.depth.enabled", false],
+    ["no field limit", "security.complexity_limits.total_fields.enabled", false],
+    ["no root field limit", "security.complexity_limits.root_fields.enabled", false],
+    ["a root field limit nobody would reach", "security.complexity_limits.root_fields.limit", 50],
+    ["no alias limit", "security.complexity_limits.root_field_aliases.enabled", false],
+    ["an alias limit below zero", "security.complexity_limits.root_field_aliases.limit", -1],
     ["a depth limit nobody would reach", "security.complexity_limits.depth.limit", 1000],
     ["a field limit nobody would reach", "security.complexity_limits.total_fields.limit", 100000],
     [
@@ -346,13 +359,7 @@ const safeSandbox = (): Record<string, unknown> => ({
     block_mutations: { enabled: true, condition: "true" },
     block_subscriptions: { enabled: true, condition: "true" },
     block_non_persisted_operations: { enabled: false },
-    complexity_limits: {
-      mode: "enforce",
-      depth: { enabled: true, limit: 3 },
-      total_fields: { enabled: true, limit: 60 },
-      root_fields: { enabled: true, limit: 3 },
-      root_field_aliases: { enabled: true, limit: 0 },
-    },
+    complexity_limits: limits(),
   },
   websocket: { enabled: false },
   batching: { enabled: false },

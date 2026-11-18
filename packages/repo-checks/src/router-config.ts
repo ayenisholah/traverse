@@ -24,9 +24,7 @@ const isAlways = (value: unknown) => value === "true";
 const isEmptyList = (value: unknown) => Array.isArray(value) && value.length === 0;
 const isBoolean = (value: unknown) => typeof value === "boolean";
 const isExactly = (expected: unknown) => (value: unknown) => isDeepStrictEqual(value, expected);
-const QUERY_PARAMS = ["query", "variables", "extensions", "operationName"];
-const hidesOperations = (value: unknown) =>
-  Array.isArray(value) && QUERY_PARAMS.every((name) => value.includes(name));
+const hidesOperations = isExactly(["query", "variables", "extensions", "operationName"]);
 // A limit that's on but set to nothing, or to a number nobody would reach, limits nothing.
 const isWithin = (min: number, max: number) => (value: unknown) =>
   typeof value === "number" && Number.isInteger(value) && value >= min && value <= max;
