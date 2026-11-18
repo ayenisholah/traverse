@@ -151,6 +151,27 @@ describe("the public router", { timeout: 60_000 }, () => {
     }
   });
 
+  it("[GR-4] keeps a GET's operation and variables out of its log", async () => {
+    // A second router, because this one's log is the only thing the test reads. The override
+    // repeats a setting the file already has, so the config is the shipped one.
+    const watched = await stack.startRouter("log_level: info\n");
+    try {
+      const query = encodeURIComponent(
+        `query Sentinel { package(name: "planted-in-query") { name } }`,
+      );
+      const variables = encodeURIComponent(JSON.stringify({ secret: "planted-in-variables" }));
+      const response = await fetch(`${watched.url}/graphql?query=${query}&variables=${variables}`);
+      await response.text();
+      // The access log line is written just after the answer.
+      await new Promise((done) => setTimeout(done, 500));
+
+      expect(watched.logs()).toContain('"path":"/graphql"');
+      expect(watched.logs()).not.toMatch(/planted-in-query|planted-in-variables|Sentinel/);
+    } finally {
+      await watched.stop();
+    }
+  });
+
   it("[FR-GW-4] rejects a body over the size limit", async () => {
     const { status } = await post(JSON.stringify({ ...express, padding: "x".repeat(1_100_000) }));
 

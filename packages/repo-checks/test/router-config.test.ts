@@ -8,32 +8,81 @@ import {
   findUnsafeSandboxEnvironment,
 } from "../src/index.ts";
 
-/** The smallest config that passes: every setting the environment could change, set safely. */
+/** A config that passes: router/config.yaml as parsed, with a real origin. */
 const safe = (): Record<string, unknown> => ({
+  version: "1",
+  listen_addr: "${ROUTER_LISTEN_ADDR}",
+  json_log: true,
+  log_level: "info",
   dev_mode: false,
   demo_mode: false,
   introspection: { enabled: false },
-  introspection_enabled: false,
   playground: { enabled: false },
+  introspection_enabled: false,
   playground_enabled: false,
   query_plans_enabled: false,
   engine: { debug: { always_include_query_plan: false } },
-  cors: { allow_origins: ["https://traverse.example"], match_origins: [] },
-  security: { block_non_persisted_operations: { enabled: true, condition: "true" } },
-  persisted_operations: { disabled: false },
-  automatic_persisted_queries: { enabled: false },
   mcp: { enabled: false },
   connect_rpc: { enabled: false },
-  authentication: { jwt: { on_error: "reject" } },
+  cors: { allow_origins: ["https://traverse.example"], match_origins: [] },
+  execution_config: { file: { path: "${ROUTER_EXECUTION_CONFIG}" } },
+  storage_providers: { file_system: [{ id: "operations", path: "${ROUTER_OPERATIONS_DIR}" }] },
+  persisted_operations: {
+    disabled: false,
+    storage: { provider_id: "operations", object_prefix: "operations" },
+  },
+  automatic_persisted_queries: { enabled: false },
+  security: {
+    block_non_persisted_operations: { enabled: true, condition: "true" },
+    complexity_limits: {
+      mode: "enforce",
+      depth: { enabled: true, limit: 3 },
+      total_fields: { enabled: true, limit: 60 },
+      root_fields: { enabled: true, limit: 3 },
+      root_field_aliases: { enabled: true, limit: 0 },
+    },
+  },
+  access_logs: {
+    router: { ignore_query_params_list: ["query", "variables", "extensions", "operationName"] },
+  },
+  traffic_shaping: { router: { max_request_body_size: "1MB" } },
+  authentication: {
+    jwt: {
+      on_error: "reject",
+      jwks: [{ url: "${ROUTER_JWKS_URL}", audiences: ["${ROUTER_JWT_AUDIENCE}"] }],
+    },
+  },
+  authorization: { require_authentication: false },
+  headers: { all: { request: [{ op: "propagate", named: "Authorization" }] } },
 });
 
+/** Every rule's setting, in the order the check reports them. */
 const SETTINGS = [
+  "version",
+  "listen_addr",
+  "execution_config.file.path",
+  "json_log",
+  "log_level",
+  "access_logs.router.ignore_query_params_list",
+  "traffic_shaping.router.max_request_body_size",
   "dev_mode",
   "demo_mode",
   "introspection.enabled",
   "introspection_enabled",
   "playground.enabled",
   "playground_enabled",
+  "mcp.enabled",
+  "connect_rpc.enabled",
+  "automatic_persisted_queries.enabled",
+  "security.complexity_limits.mode",
+  "security.complexity_limits.depth.enabled",
+  "security.complexity_limits.depth.limit",
+  "security.complexity_limits.total_fields.enabled",
+  "security.complexity_limits.total_fields.limit",
+  "security.complexity_limits.root_fields.enabled",
+  "security.complexity_limits.root_fields.limit",
+  "security.complexity_limits.root_field_aliases.enabled",
+  "security.complexity_limits.root_field_aliases.limit",
   "query_plans_enabled",
   "engine.debug.always_include_query_plan",
   "cors.allow_origins",
@@ -41,11 +90,42 @@ const SETTINGS = [
   "security.block_non_persisted_operations.enabled",
   "security.block_non_persisted_operations.condition",
   "persisted_operations.disabled",
-  "automatic_persisted_queries.enabled",
-  "mcp.enabled",
-  "connect_rpc.enabled",
+  "storage_providers.file_system",
+  "persisted_operations.storage.provider_id",
+  "persisted_operations.storage.object_prefix",
   "authentication.jwt.on_error",
+  "authentication.jwt.jwks",
+  "authorization.require_authentication",
+  "headers.all.request",
 ];
+
+/** Settings neither router has a rule for. Each could undo a guardrail without naming a banned key. */
+const UNRULED: [string, string, unknown][] = [
+  [
+    "a routing override, which could point a subgraph anywhere",
+    "override_routing_url.subgraphs.packages",
+    "http://169.254.169.254",
+  ],
+  ["a second listener", "telemetry.metrics.prometheus.listen_addr", "0.0.0.0:8088"],
+  ["variables exported in traces", "telemetry.tracing.export_graphql_variables", true],
+  ["plugins", "plugins.enabled", true],
+  ["a graph token", "graph.token", "token"],
+  ["printed query plans", "engine.debug.print_query_plans", true],
+  ["a section left empty", "events", {}],
+];
+
+/** Adds a setting, and any section it needs, to a copy of a config. */
+const withNewSetting = (setting: string, value: unknown, base: Record<string, unknown>) => {
+  const config = structuredClone(base);
+  const keys = setting.split(".");
+  const last = keys.pop() as string;
+  const parent = keys.reduce<Record<string, unknown>>(
+    (node, key) => (node[key] ??= {}) as Record<string, unknown>,
+    config,
+  );
+  parent[last] = value;
+  return config;
+};
 
 /** Sets one dotted setting in a copy of the safe config, or removes it when value is undefined. */
 const withSetting = (setting: string, value: unknown, base = safe()) => {
@@ -89,6 +169,46 @@ describe("findBannedRouterSettings", () => {
     ["the MCP server, which can hand out the schema", "mcp.enabled", true],
     ["the ConnectRPC server", "connect_rpc.enabled", true],
     ["a bad token passed on as anonymous", "authentication.jwt.on_error", "pass"],
+    ["another config version", "version", "2"],
+    ["a literal address, which could be every interface", "listen_addr", "0.0.0.0:3002"],
+    ["a literal execution config", "execution_config.file.path", "/tmp/other.json"],
+    ["plain-text logs", "json_log", false],
+    ["debug logs", "log_level", "debug"],
+    [
+      "an access log that keeps a GET's operation",
+      "access_logs.router.ignore_query_params_list",
+      ["variables"],
+    ],
+    ["a larger request body", "traffic_shaping.router.max_request_body_size", "5MB"],
+    ["limits that only measure", "security.complexity_limits.mode", "measure"],
+    ["no depth limit", "security.complexity_limits.depth.enabled", false],
+    ["a depth limit nobody would reach", "security.complexity_limits.depth.limit", 1000],
+    ["a field limit nobody would reach", "security.complexity_limits.total_fields.limit", 100000],
+    [
+      "operations from a second folder",
+      "storage_providers.file_system",
+      [
+        { id: "operations", path: "${ROUTER_OPERATIONS_DIR}" },
+        { id: "extra", path: "/tmp" },
+      ],
+    ],
+    ["operations from another provider", "persisted_operations.storage.provider_id", "s3"],
+    ["operations under another prefix", "persisted_operations.storage.object_prefix", "../"],
+    [
+      "a second key source",
+      "authentication.jwt.jwks",
+      [
+        { url: "${ROUTER_JWKS_URL}", audiences: ["${ROUTER_JWT_AUDIENCE}"] },
+        { url: "https://attacker.example/jwks.json" },
+      ],
+    ],
+    ["keys with no audience check", "authentication.jwt.jwks", [{ url: "${ROUTER_JWKS_URL}" }]],
+    ["sign-in required for public data", "authorization.require_authentication", true],
+    [
+      "every header forwarded to subgraphs",
+      "headers.all.request",
+      [{ op: "propagate", matching: ".*" }],
+    ],
   ])("[GR-1] refuses %s", (_, setting, value) => {
     expect(findBannedRouterSettings(withSetting(setting, value))).toEqual([setting]);
   });
@@ -96,7 +216,8 @@ describe("findBannedRouterSettings", () => {
   // The router reads its environment first and lays the file on top, so a key the file leaves
   // out still takes its environment variable: APQ_ENABLED, MCP_ENABLED, CORS_MATCH_ORIGINS...
   it.each(SETTINGS)("[GR-1] refuses a config that leaves %s to the environment", (setting) => {
-    expect(findBannedRouterSettings(withSetting(setting, undefined))).toEqual([setting]);
+    // The section it sat in may now be empty, which is reported too.
+    expect(findBannedRouterSettings(withSetting(setting, undefined))).toContain(setting);
   });
 
   it("[GR-1] refuses a variable where a literal belongs", () => {
@@ -108,6 +229,13 @@ describe("findBannedRouterSettings", () => {
 
     expect(findBannedRouterSettings(config)).toEqual([]);
   });
+
+  it.each(UNRULED)(
+    "[GR-1] refuses %s, because the public router has no rule for it",
+    (_, setting, value) => {
+      expect(findBannedRouterSettings(withNewSetting(setting, value, safe()))).toEqual([setting]);
+    },
+  );
 
   it("[GR-1] reports every banned setting at once", () => {
     expect(findBannedRouterSettings({})).toEqual(SETTINGS);
@@ -296,29 +424,12 @@ describe("findBannedSandboxSettings", () => {
   });
 
   it.each([
-    [
-      "a routing override, which could point a subgraph anywhere",
-      "override_routing_url.subgraphs.packages",
-      "http://169.254.169.254",
-    ],
-    ["a second listener", "telemetry.metrics.prometheus.listen_addr", "0.0.0.0:8088"],
-    ["variables exported in traces", "telemetry.tracing.export_graphql_variables", true],
+    ...UNRULED,
     ["forwarded headers", "headers.all.request", [{ op: "propagate", matching: ".*" }]],
-    ["plugins", "plugins.enabled", true],
-    ["a graph token", "graph.token", "token"],
-    ["printed query plans", "engine.debug.print_query_plans", true],
-    ["a section left empty", "events", {}],
   ])("[GR-11] refuses %s, because the sandbox has no rule for it", (_, setting, value) => {
-    const config = safeSandbox();
-    const keys = setting.split(".");
-    const last = keys.pop() as string;
-    const parent = keys.reduce<Record<string, unknown>>(
-      (node, key) => (node[key] ??= {}) as Record<string, unknown>,
-      config,
-    );
-    parent[last] = value;
-
-    expect(findBannedSandboxSettings(config)).toEqual([setting]);
+    expect(findBannedSandboxSettings(withNewSetting(setting, value, safeSandbox()))).toEqual([
+      setting,
+    ]);
   });
 
   it.each(UNSAFE_SANDBOX)("[GR-11] refuses %s", (_, setting, value) => {

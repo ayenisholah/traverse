@@ -1,6 +1,6 @@
 # Roadmap
 
-**Updated:** 2026-11-16
+**Updated:** 2026-11-18
 
 Each branch is one pull request and lists the requirements it delivers. Plans for each milestone are in [`plans/`](plans/). [Progress](PROGRESS.md) shows the current state.
 
@@ -57,6 +57,7 @@ Each branch is one pull request and lists the requirements it delivers. Plans fo
 | M3 | `feat/sandbox-router` | FR-GW-9, GR-11 | Merged |
 | M3 | `feat/route-view` | FR-WB-7 | Merged |
 | M3 | `feat/package-explorer` | FR-WB-8, FR-WB-9, NFR-9 | Merged |
+| M4 | `fix/public-router-allow-list` | GR-1 | Merged |
 | M4 | `feat/web-auth` | FR-WB-10, GR-3 | Planned |
 | M4 | `feat/workspace-subgraph` | FR-SG-1, FR-SG-9, FR-WB-11 | Planned |
 | M5 | `feat/bedrock-client` | FR-AI-4, GR-13, GR-14, GR-15 | Planned |

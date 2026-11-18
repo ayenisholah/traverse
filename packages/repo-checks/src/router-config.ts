@@ -1,3 +1,5 @@
+import { isDeepStrictEqual } from "node:util";
+
 /**
  * GR-1 and GR-2 for the public router. The router reads its environment first and lays the config
  * file on top, so a key the file leaves out still takes its environment variable (C-50), and the
@@ -17,17 +19,60 @@ const read = (config: Record<string, unknown>, setting: string): unknown =>
     .reduce<unknown>((node, key) => (isRecord(node) ? node[key] : undefined), config);
 
 const isFalse = (value: unknown) => value === false;
+const isTrue = (value: unknown) => value === true;
+const isAlways = (value: unknown) => value === "true";
+const isEmptyList = (value: unknown) => Array.isArray(value) && value.length === 0;
+const isBoolean = (value: unknown) => typeof value === "boolean";
+const isExactly = (expected: unknown) => (value: unknown) => isDeepStrictEqual(value, expected);
+const QUERY_PARAMS = ["query", "variables", "extensions", "operationName"];
+const hidesOperations = (value: unknown) =>
+  Array.isArray(value) && QUERY_PARAMS.every((name) => value.includes(name));
+// A limit that's on but set to nothing, or to a number nobody would reach, limits nothing.
+const isWithin = (min: number, max: number) => (value: unknown) =>
+  typeof value === "number" && Number.isInteger(value) && value >= min && value <= max;
 
 const ORIGIN = /^(?:https:\/\/[a-z0-9.-]+|http:\/\/(?:127\.0\.0\.1|localhost))(?::\d{1,5})?$/;
 const ORIGIN_VARIABLE = "${ROUTER_CORS_ORIGIN}";
 
-const RULES: Rule[] = [
+/** What both routers must set the same way: where they listen and log, and what they never serve. */
+const SHARED_RULES: Rule[] = [
+  ["version", (value) => value === "1"],
+  ["listen_addr", (value) => value === "${ROUTER_LISTEN_ADDR}"],
+  ["execution_config.file.path", (value) => value === "${ROUTER_EXECUTION_CONFIG}"],
+  ["json_log", isTrue],
+  ["log_level", (value) => value === "info" || value === "warn" || value === "error"],
+  // A GET carries the operation and its variables in the address, which the access log would
+  // otherwise keep (C-55, GR-4).
+  ["access_logs.router.ignore_query_params_list", hidesOperations],
+  ["traffic_shaping.router.max_request_body_size", (value) => value === "1MB"],
   ["dev_mode", isFalse],
   ["demo_mode", isFalse],
   ["introspection.enabled", isFalse],
   ["introspection_enabled", isFalse],
   ["playground.enabled", isFalse],
   ["playground_enabled", isFalse],
+  // MCP's get_schema returns the whole schema, even with introspection off (C-51).
+  ["mcp.enabled", isFalse],
+  ["connect_rpc.enabled", isFalse],
+  ["automatic_persisted_queries.enabled", isFalse],
+  ["security.complexity_limits.mode", (value) => value === "enforce"],
+  ["security.complexity_limits.depth.enabled", isTrue],
+  ["security.complexity_limits.depth.limit", isWithin(1, 10)],
+  ["security.complexity_limits.total_fields.enabled", isTrue],
+  ["security.complexity_limits.total_fields.limit", isWithin(1, 200)],
+  ["security.complexity_limits.root_fields.enabled", isTrue],
+  ["security.complexity_limits.root_fields.limit", isWithin(1, 10)],
+  ["security.complexity_limits.root_field_aliases.enabled", isTrue],
+  // Zero aliases is a real limit: the router refuses any (C-45).
+  ["security.complexity_limits.root_field_aliases.limit", isWithin(0, 10)],
+];
+
+/**
+ * GR-1 and GR-2 for the public router. It's an allow-list: a setting with no rule fails, because a
+ * list of banned settings can't name every key the router has.
+ */
+const RULES: Rule[] = [
+  ...SHARED_RULES,
   // Overrides engine.debug.always_include_query_plan (C-37), and both stay off.
   ["query_plans_enabled", isFalse],
   ["engine.debug.always_include_query_plan", isFalse],
@@ -41,74 +86,44 @@ const RULES: Rule[] = [
           origin === ORIGIN_VARIABLE || (typeof origin === "string" && ORIGIN.test(origin)),
       ),
   ],
-  ["cors.match_origins", (patterns) => Array.isArray(patterns) && patterns.length === 0],
-  ["security.block_non_persisted_operations.enabled", (value) => value === true],
-  ["security.block_non_persisted_operations.condition", (value) => value === "true"],
+  ["cors.match_origins", isEmptyList],
+  ["security.block_non_persisted_operations.enabled", isTrue],
+  ["security.block_non_persisted_operations.condition", isAlways],
   ["persisted_operations.disabled", isFalse],
-  ["automatic_persisted_queries.enabled", isFalse],
-  // MCP's get_schema returns the whole schema, even with introspection off (C-51).
-  ["mcp.enabled", isFalse],
-  ["connect_rpc.enabled", isFalse],
-  // A bad token is refused, never treated as anonymous (ADR 0015).
+  // Operations load from the one folder the environment check holds to an absolute path.
+  [
+    "storage_providers.file_system",
+    isExactly([{ id: "operations", path: "${ROUTER_OPERATIONS_DIR}" }]),
+  ],
+  ["persisted_operations.storage.provider_id", (value) => value === "operations"],
+  ["persisted_operations.storage.object_prefix", (value) => value === "operations"],
+  // A bad token is refused, never treated as anonymous, and anonymous reads stay open (ADR 0015).
   ["authentication.jwt.on_error", (value) => value === "reject"],
+  [
+    "authentication.jwt.jwks",
+    isExactly([{ url: "${ROUTER_JWKS_URL}", audiences: ["${ROUTER_JWT_AUDIENCE}"] }]),
+  ],
+  ["authorization.require_authentication", isFalse],
+  // Subgraphs verify the token again themselves (C-40), and no other header reaches them.
+  ["headers.all.request", isExactly([{ op: "propagate", named: "Authorization" }])],
 ];
-
-const isTrue = (value: unknown) => value === true;
-const isAlways = (value: unknown) => value === "true";
-const isEmptyList = (value: unknown) => Array.isArray(value) && value.length === 0;
-const isBoolean = (value: unknown) => typeof value === "boolean";
-const QUERY_PARAMS = ["query", "variables", "extensions", "operationName"];
-const hidesOperations = (value: unknown) =>
-  Array.isArray(value) && QUERY_PARAMS.every((name) => value.includes(name));
-// A limit that's on but set to nothing, or to a number nobody would reach, limits nothing.
-const isWithin = (min: number, max: number) => (value: unknown) =>
-  typeof value === "number" && Number.isInteger(value) && value >= min && value <= max;
 
 /**
  * GR-11 for the sandbox router, which only the web server calls. It may return query plans and
- * run free-form reads, so those two rules are gone. Everything else stays banned, and it must
- * block mutations and subscriptions, with their conditions set so the environment can't supply
- * one (C-53). No browser calls it, so it allows no origin at all.
+ * run free-form reads, but must block mutations and subscriptions, with their conditions set so
+ * the environment can't supply one (C-53). No browser calls it, so it allows no origin at all.
  */
 const SANDBOX_RULES: Rule[] = [
-  ["version", (value) => value === "1"],
-  ["listen_addr", (value) => value === "${ROUTER_LISTEN_ADDR}"],
-  ["execution_config.file.path", (value) => value === "${ROUTER_EXECUTION_CONFIG}"],
-  ["json_log", isTrue],
-  ["log_level", (value) => value === "info" || value === "warn" || value === "error"],
+  ...SHARED_RULES,
   // What the sandbox is for. Either value is safe here, and only here.
   ["query_plans_enabled", isBoolean],
   ["engine.debug.always_include_query_plan", isBoolean],
   ["security.block_non_persisted_operations.enabled", isBoolean],
-  // A GET carries the operation and its variables in the address, which the access log would
-  // otherwise keep (C-55, GR-4).
-  ["access_logs.router.ignore_query_params_list", hidesOperations],
-  ["traffic_shaping.router.max_request_body_size", (value) => value === "1MB"],
   ["cors.allow_credentials", isFalse],
-  ["dev_mode", isFalse],
-  ["demo_mode", isFalse],
-  ["introspection.enabled", isFalse],
-  ["introspection_enabled", isFalse],
-  ["playground.enabled", isFalse],
-  ["playground_enabled", isFalse],
-  ["mcp.enabled", isFalse],
-  ["connect_rpc.enabled", isFalse],
-  ["automatic_persisted_queries.enabled", isFalse],
   ["security.block_mutations.enabled", isTrue],
   ["security.block_mutations.condition", isAlways],
   ["security.block_subscriptions.enabled", isTrue],
   ["security.block_subscriptions.condition", isAlways],
-  // A free-form operation must cost no more than the limits allow.
-  ["security.complexity_limits.mode", (value) => value === "enforce"],
-  ["security.complexity_limits.depth.enabled", isTrue],
-  ["security.complexity_limits.depth.limit", isWithin(1, 10)],
-  ["security.complexity_limits.total_fields.enabled", isTrue],
-  ["security.complexity_limits.total_fields.limit", isWithin(1, 200)],
-  ["security.complexity_limits.root_fields.enabled", isTrue],
-  ["security.complexity_limits.root_fields.limit", isWithin(1, 10)],
-  ["security.complexity_limits.root_field_aliases.enabled", isTrue],
-  // Zero aliases is a real limit: the router refuses any (C-45).
-  ["security.complexity_limits.root_field_aliases.limit", isWithin(0, 10)],
   // Subscriptions arrive over WebSockets, a batch is many operations in one request, and an
   // upload only ever belongs to a mutation.
   ["websocket.enabled", isFalse],
@@ -128,26 +143,26 @@ const settingsIn = (node: Record<string, unknown>, prefix = ""): string[] =>
   );
 
 /**
- * `closed` also refuses any setting with no rule. A list of banned settings can't name every key
- * the router has, such as a second listener, a routing override or a telemetry export.
+ * Refuses each setting its rule rejects, and any setting with no rule, such as a second listener,
+ * a routing override or a telemetry export.
  */
 const findBanned =
-  (rules: Rule[], closed = false) =>
+  (rules: Rule[]) =>
   (config: unknown): string[] => {
     if (!isRecord(config)) return ["(the config itself)"];
     const known = new Set(rules.map(([setting]) => setting));
     const banned = rules
       .filter(([setting, isSafe]) => !isSafe(read(config, setting)))
       .map(([setting]) => setting);
-    const unknown = closed ? settingsIn(config).filter((setting) => !known.has(setting)) : [];
+    const unknown = settingsIn(config).filter((setting) => !known.has(setting));
     return [...banned, ...unknown];
   };
 
-/** Lists each setting that breaks GR-1 or GR-2, or the whole config if it isn't one. */
+/** Lists each setting that breaks GR-1 or GR-2 or has no rule, or the whole config if it isn't one. */
 export const findBannedRouterSettings = findBanned(RULES);
 
 /** Lists each setting that breaks GR-11 or that the sandbox has no rule for, or the whole config if it isn't one. */
-export const findBannedSandboxSettings = findBanned(SANDBOX_RULES, true);
+export const findBannedSandboxSettings = findBanned(SANDBOX_RULES);
 
 const ABSOLUTE_PATH = /^\/[A-Za-z0-9._-]+(?:\/[A-Za-z0-9._-]+)*$/;
 const LOCAL_URL = String.raw`http:\/\/127\.0\.0\.1:\d{1,5}`;
