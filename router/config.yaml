@@ -1,5 +1,6 @@
 # The public router (GR-1, GR-2). router/test/config.test.ts fails if this file enables dev mode,
-# the playground, introspection, query plans or wildcard CORS, or lets non-persisted operations run.
+# the playground, introspection, query plans or wildcard CORS, lets non-persisted operations run, or
+# sets any key that has no rule in packages/repo-checks.
 # Every key is checked against config.schema.json at router@0.366.1.
 #
 # The router reads its environment first and lays this file on top, so a key left out here could
@@ -77,6 +78,15 @@ security:
     root_field_aliases:
       enabled: true
       limit: 0
+# A GET carries the operation in the address. The access log keeps none of what a client sends
+# there: by default it would keep the operation's text, though not its variables (C-55, GR-4).
+access_logs:
+  router:
+    ignore_query_params_list:
+      - query
+      - variables
+      - extensions
+      - operationName
 traffic_shaping:
   router:
     # The smallest size the router allows.

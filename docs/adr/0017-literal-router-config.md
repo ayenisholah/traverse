@@ -10,7 +10,7 @@ The router also expands variables into the file's raw text, comments included, b
 
 ## Decision
 
-- `router/config.yaml` writes out every setting that could weaken GR-1 or GR-2, even where it matches the default. `findBannedRouterSettings` fails on any that are missing or unsafe, including client-registered operations, MCP, ConnectRPC, CORS patterns, the block's condition and `on_error`.
+- `router/config.yaml` writes out every setting that could weaken GR-1 or GR-2, even where it matches the default. `findBannedRouterSettings` fails on any that are missing or unsafe, including client-registered operations, MCP, ConnectRPC, CORS patterns, the block's condition and `on_error`. Since 2026-11-18 it's also an allow-list, as the sandbox's rules are: a setting with no rule fails.
 - The file may use only six known variables, checked by `findUnknownRouterVariables`.
 - A deployment's whole environment must pass `findUnsafeRouterEnvironment`: only a single-file `CONFIG_PATH` and those six variables, each in a strict format. The e2e harness runs the router under the same check.
 

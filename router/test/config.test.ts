@@ -35,6 +35,15 @@ describe("the public router's config", () => {
 
     expect(findBannedRouterSettings(planted)).toEqual(["dev_mode", "playground_enabled"]);
   });
+
+  it("[GR-1] would fail if a setting it has no rule for were planted in it", () => {
+    const planted = {
+      ...publicConfig(),
+      override_routing_url: { subgraphs: { packages: "http://169.254.169.254" } },
+    };
+
+    expect(findBannedRouterSettings(planted)).toEqual(["override_routing_url.subgraphs.packages"]);
+  });
 });
 
 const sandboxConfig = () => parse(read("router/sandbox.yaml")) as Record<string, unknown>;
