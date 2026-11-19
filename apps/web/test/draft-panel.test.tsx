@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { DraftPanel } from "../src/assistant/draft-panel.tsx";
 import { createDraft, type Draft, type DraftAnswer } from "../src/assistant/draft-request.ts";
-import { expectNothingShown, expectToAskServer } from "./assistant-panel.ts";
+import { expectNothingShown, expectToAskServer, NOT_OFFERED } from "./assistant-panel.ts";
 import { expectNoAxeViolations } from "./axe.ts";
 
 const canAsk = () => Promise.resolve({ canSignIn: true, signedIn: true, canAsk: true });
@@ -28,13 +28,7 @@ const describeAndAsk = async (text: string) => {
 };
 
 describe("DraftPanel", () => {
-  it.each([
-    [
-      "to someone who can't ask",
-      { loadViewer: () => Promise.resolve({ canSignIn: true, signedIn: false, canAsk: false }) },
-    ],
-    ["when the server can't say", { loadViewer: () => Promise.reject(new Error("offline")) }],
-  ])("[FR-AI-4] shows nothing %s", async (_, props) => {
+  it.each(NOT_OFFERED)("[FR-AI-4] shows nothing %s", async (_, props) => {
     const { container } = renderPanel(vi.fn(), props);
 
     await expectNothingShown(container);

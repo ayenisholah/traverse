@@ -12,6 +12,7 @@ Traverse is built on WunderGraph Cosmo and helps frontend developers explore a f
 
 | Date | Work | PR |
 |---|---|---|
+| 2026-11-19 | `feat/ai-draft`, which finishes M5's local build. "Draft an operation" on `/operations` in the server build: a signed-in user describes the data they need, and the drafted query reaches the editor only if it parses, is one query, fits the routers' own limits (held to `router/config.yaml` by a test) and validates against the composed schema. Proven in the browser against the stand-in, including a mutation the model wrote, which never reached the editor. GR-12 is done; FR-AI-3 is `partial` until the real-model evaluation. | `feat/ai-draft` |
 | 2026-11-19 | `feat/ai-suggest`: "Suggest a safe change" on `/impact` in the server build, for a breaking draft. The server reruns the real check on its own copy of the demo graph, once for the draft and once for the model's revised schema, and shows the suggestion only if it composes, breaks no operation the draft didn't, and breaks fewer than the draft did (GR-12). It's shown as changes to the draft, with "Use this schema". Proven in the browser against the stand-in, including a suggestion that doesn't compose, which is never shown. FR-AI-2 is `partial` until the real-model evaluation. | `feat/ai-suggest` |
 | 2026-11-19 | `feat/ai-explain`: "Explain this result" on `/impact` in the server build, for signed-in users. The server explains the check's own result, composition errors or the changes, operations and screens it found, and shows an explanation only if every field it names is in that result and it holds no link, markup or code (GR-12). Otherwise it says why. With the model blocked, the check's result stands and the panel says so (FR-AI-4). Proven in the browser against the stand-in, and on the built server, where a planted email and token reached no prompt and nothing of a call was printed (GR-14). FR-AI-4 and GR-14 are done; FR-AI-1 is `partial` until the real-model evaluation. | `feat/ai-explain` |
 | 2026-11-19 | `feat/bedrock-client`: the assistant's server side, built against a local stand-in for Bedrock (owner, 2026-11-19). One port (ADR 0022): Converse with a single forced tool whose schema is the task's, untrusted text fenced in randomly bounded data blocks and scrubbed of token, key and email shapes, daily limits per user and in all in Redis that fail closed, and nothing logged. Signed-in users only; `viewer` gains `canAsk`. The stand-in speaks Converse over HTTP/2, as the SDK does (A-18). GR-13, GR-14 and GR-15 are `partial`. | `feat/bedrock-client` |
@@ -74,22 +75,13 @@ Traverse is built on WunderGraph Cosmo and helps frontend developers explore a f
 
 ## In progress
 
-`feat/ai-draft` (FR-AI-3), pushed, with no pull request yet. Built and unit-tested:
-- `apps/web/src/server/assistant/{operation-check,draft}.ts` and the `draft` procedure;
-- `apps/web/src/assistant/{draft-panel.tsx,draft-request.ts}`, wired into `/operations`.
-
-Left:
-- In `apps/web/test/support/serve-live.ts`, a stand-in reply for draft prompts (system text "Write one GraphQL query").
-- A Playwright spec on `/operations`: a draft reaching the editor, a hostile answer refused, and axe.
-- `npm run test:coverage` and the other gates, then a `guardrail-reviewer` pass.
-- Docs: FR-AI-3 `partial`, GR-12 `done`, SPEC, VERIFICATION, ROADMAP.
-- Then `open-pr`.
+Nothing. M5 is built locally and merged: `feat/bedrock-client`, `feat/ai-explain`, `feat/ai-suggest` and `feat/ai-draft`. What's left of it needs AWS (below). The release pull request holds M4 and M5's changes; ask the owner before merging it.
 
 ## Next
 
 In order:
 
-1. `feat/ai-draft`, following [the M5 plan](plans/m5-ai-assistant.md) and ADR 0022. Each validates the model's answer against the real graph before showing it (GR-12).
+1. Ask the owner about the open release pull request, which publishes M4 and M5.
 2. Once account setup is done: M4's Cognito proof (a CDK user pool, then the account and workspace Playwright specs against it), and M5's real-model evaluation (`scripts/eval-assistant.ts`, planned), U-19, the task role's Bedrock permission and the spend alarm (GR-15).
 3. Set aside by the owner on 2026-11-06: three frontend developers trying Traverse on their own repositories, for `docs/USER_FEEDBACK.md`. It's the last M1 exit item, and only the owner can arrange it.
 

@@ -42,6 +42,7 @@ describe("createOperationCheck", () => {
     ["a subscription", "subscription S { a }"],
     ["two operations", "query A { b } query B { c }"],
     ["a fragment", "query Q { a { ...F } } fragment F on A { x }"],
+    ["a spread of a fragment it doesn't define", "query Q { a { ...F } }"],
     ["a field the schema doesn't have", "query Q { nope }"],
     ["a selection too deep", "query Q { a { b { c { d } } } }"],
     ["too many top-level fields", "query Q { a { x } b c d }"],

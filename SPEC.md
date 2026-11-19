@@ -118,7 +118,7 @@ A Next.js app in `apps/web`, built two ways from one config. The static export h
 | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `/`                     | Graph map                                                                                                                                                        |
 | `/impact`               | Edit a schema draft and see composition errors, operations, screens. In the server build, a signed-in user can have the result explained, and get a safer change |
-| `/operations`           | Write an operation and see its route                                                                                                                             |
+| `/operations`           | Write an operation and see its route. A signed-in user can have one drafted from a description                                                                   |
 | `/packages`             | Look a package up, or check a `package.json`'s dependencies                                                                                                      |
 | `/packages/[...name]`   | Package explorer, on live data                                                                                                                                   |
 | `/sign-in`, `/sign-out` | Cognito sign-in and sign-out, needed only to save. Server build                                                                                                  |
