@@ -12,6 +12,7 @@ Traverse is built on WunderGraph Cosmo and helps frontend developers explore a f
 
 | Date | Work | PR |
 |---|---|---|
+| 2026-11-19 | Released 0.10.0, with the owner's approval of 2026-11-18. It carries M3 and M4. Confirmed with `npm view @ayenis/traverse@0.10.0 version`. | #68 |
 | 2026-11-19 | `feat/workspace-subgraph`, which finishes M4's work. `subgraphs/workspace` keeps a signed-in user's drafts, operations and screen map in Postgres (ADR 0021), through four persisted operations. `requireUser` in `packages/subgraph-kit`, which also refuses to start a subgraph of users' data without token settings. Save and reopen on `/impact`, and `/workspaces` to open or delete, in the server build. Proven on the pinned router, the subgraph and Postgres in Docker, from sign-in at the local issuer to the database. FR-WB-11, FR-SG-1, FR-SG-9 and GR-3 are done. | `feat/workspace-subgraph` |
 | 2026-11-19 | `feat/web-auth`: sign-in in the server build, against a local issuer. Authorization code with PKCE and a resource indicator, so the access token's `aud` is the router (U-22 answered from the AWS docs as A-10 to A-14). No ID token, so no email reaches Traverse. The session is the two tokens, each sealed into an `HttpOnly` cookie, refreshed on the server and ended by a POST from the app's own origin (ADR 0020). `packages/subgraph-kit` now accepts only `token_use: access`. FR-WB-10 and GR-9 are `partial`: the Cognito proof waits for a real user pool. | `feat/web-auth` |
 | 2026-11-18 | `fix/public-router-allow-list`: the public router's rules are an allow-list, as the sandbox's are, so a setting with no rule fails, such as a routing override, a second listener or a telemetry export. Rules both routers share are in one place. `router/config.yaml` now keeps a GET's operation out of the access log (C-55), proven on the pinned image. Approved by the owner on 2026-11-18 (GR-1). | `fix/public-router-allow-list` |
@@ -70,16 +71,15 @@ Traverse is built on WunderGraph Cosmo and helps frontend developers explore a f
 
 ## In progress
 
-Nothing. M4 is built locally: `fix/zod-range`, `fix/public-router-allow-list`, `feat/web-auth` and `feat/workspace-subgraph`. What's left of it needs AWS (below).
+Nothing. `0.10.0` is the latest release. M4 is built locally and merged: `fix/zod-range`, `fix/public-router-allow-list`, `feat/web-auth` and `feat/workspace-subgraph`. What's left of it needs AWS (below).
 
 ## Next
 
 In order:
 
-1. Ask the owner about the release pull request. The 0.10.0 one (#61) was closed by the owner's account on 2026-11-16, with its branch deleted; the M4 merges open a new one. The owner approved merging it on 2026-11-18.
-2. M4's remaining proof, once account setup is done: a CDK user pool (resource server identifier = the router's audience, short access tokens, refresh rotation off, `${APP_ORIGIN}/auth/callback` and `${APP_ORIGIN}/` registered), then the account and workspace Playwright specs against it. That makes FR-WB-10 and GR-9 `done`. It belongs with M6's stacks, so ask the owner where it goes.
-3. M5, following [the M5 plan](plans/m5-ai-assistant.md). It needs Bedrock, so it's blocked on account setup and U-19 too.
-4. Set aside by the owner on 2026-11-06: three frontend developers trying Traverse on their own repositories, for `docs/USER_FEEDBACK.md`. It's the last M1 exit item, and only the owner can arrange it.
+1. M4's remaining proof, once account setup is done: a CDK user pool (resource server identifier = the router's audience, short access tokens, refresh rotation off, `${APP_ORIGIN}/auth/callback` and `${APP_ORIGIN}/` registered), then the account and workspace Playwright specs against it. That makes FR-WB-10 and GR-9 `done`. It belongs with M6's stacks, so ask the owner where it goes.
+2. M5, following [the M5 plan](plans/m5-ai-assistant.md). It needs Bedrock, so it's blocked on account setup and U-19 too.
+3. Set aside by the owner on 2026-11-06: three frontend developers trying Traverse on their own repositories, for `docs/USER_FEEDBACK.md`. It's the last M1 exit item, and only the owner can arrange it.
 
 ## Blocked
 
