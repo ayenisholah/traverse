@@ -1,19 +1,10 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
+import { nav, signIn } from "./session.ts";
 
 const TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"];
-const nav = (page: Page) => page.getByRole("navigation", { name: "Main" });
 const bar = (page: Page) => page.getByRole("region", { name: "Workspace" });
 const draft = (page: Page) => page.getByRole("textbox", { name: /Schema draft/ });
-
-/** Signs in at the local issuer as `username`, from `from`, and waits to be back. */
-const signIn = async (page: Page, username: string, from = "/impact") => {
-  await page.goto(from, { waitUntil: "networkidle" });
-  await nav(page).getByRole("link", { name: "Sign in" }).click();
-  await page.getByLabel("Username").fill(username);
-  await page.getByRole("button", { name: "Sign in" }).click();
-  await expect(nav(page).getByRole("button", { name: "Sign out" })).toBeVisible();
-};
 
 const saveDraft = async (page: Page, name: string, sdl: string) => {
   await draft(page).fill(sdl);

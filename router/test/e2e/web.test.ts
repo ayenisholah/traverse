@@ -7,6 +7,7 @@ import {
   waitUntilReady,
   type WebServer,
 } from "../../../apps/web/test/support/live-server.ts";
+import { signInOverHttp } from "../../../apps/web/test/support/sign-in.ts";
 import { recordings as osv } from "../../../subgraphs/advisories/test/helpers.ts";
 import { fixture } from "../../../subgraphs/packages/test/helpers.ts";
 import { recordings as repositories } from "../../../subgraphs/repositories/test/helpers.ts";
@@ -320,35 +321,7 @@ describe("the package.json check on the real graph", { timeout: 60_000 }, () => 
   });
 });
 
-/** Signs in as a browser would: the app, the issuer's form, then back. Returns the cookies. */
-const signIn = async (username: string): Promise<string> => {
-  const cookies = new Map<string, string>();
-  const take = (response: Response) => {
-    for (const cookie of response.headers.getSetCookie()) {
-      const [pair] = cookie.split(";") as [string];
-      const at = pair.indexOf("=");
-      cookies.set(pair.slice(0, at), pair.slice(at + 1));
-    }
-  };
-  const header = () => [...cookies].map(([name, value]) => `${name}=${value}`).join("; ");
-  const start = await fetch(`${web.url}/sign-in`, { redirect: "manual" });
-  take(start);
-  const authorize = new URL(start.headers.get("location") ?? "");
-  const signedIn = await fetch(`${stack.auth.domainUrl}/oauth2/authorize`, {
-    method: "POST",
-    body: new URLSearchParams({ ...Object.fromEntries(authorize.searchParams), username }),
-    redirect: "manual",
-  });
-  const back = await fetch(signedIn.headers.get("location") ?? "", {
-    headers: { cookie: header() },
-    redirect: "manual",
-  });
-  take(back);
-  return [...cookies]
-    .filter(([, value]) => value !== "")
-    .map(([name, value]) => `${name}=${value}`)
-    .join("; ");
-};
+const signIn = (username: string) => signInOverHttp(web.url, stack.auth.domainUrl, username);
 
 const trpc = async (cookie: string, path: string, input?: unknown, method = "GET") => {
   const url =
