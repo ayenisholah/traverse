@@ -12,6 +12,8 @@ import type { RouterClient } from "./router-client.ts";
 import { subjectOf, type Assistant } from "./assistant/assistant.ts";
 import { explain, explainInput } from "./assistant/explain.ts";
 import { suggest, suggestInput } from "./assistant/suggest.ts";
+import { createDraft, draftInput } from "./assistant/draft.ts";
+import { clientSchemaSdl } from "../generated/schema.ts";
 import demoImpact from "../generated/demo-impact.json" with { type: "json" };
 import type { SandboxClient } from "./sandbox-client.ts";
 import {
@@ -43,6 +45,8 @@ const MESSAGES: Partial<Record<TRPCError["code"], string>> = {
   UNAUTHORIZED: "Sign in first",
   PRECONDITION_FAILED: "Keep at most 50 workspaces. Delete one first.",
 };
+
+const draftOperation = createDraft(clientSchemaSdl);
 
 const t = initTRPC.context<Context>().create({
   // tRPC's own messages repeat the caller's path and parser errors, and an unexpected fault's
@@ -149,6 +153,14 @@ const api = t.router({
     if (userId === undefined) throw new TRPCError({ code: "UNAUTHORIZED" });
     if (ctx.assistant === undefined) return { kind: "unavailable" as const };
     return suggest(ctx.assistant, userId, demoImpact.subgraphs, input);
+  }),
+
+  // Drafted against the composed schema the editor checks, and shown only if it validates (GR-12).
+  draft: t.procedure.input(draftInput).mutation(async ({ ctx, input }) => {
+    const userId = subjectOf(signedInToken(ctx.accessToken));
+    if (userId === undefined) throw new TRPCError({ code: "UNAUTHORIZED" });
+    if (ctx.assistant === undefined) return { kind: "unavailable" as const };
+    return draftOperation(ctx.assistant, userId, input);
   }),
 
   package: t.procedure.input(packageInput).query(async ({ ctx, input }) => {
