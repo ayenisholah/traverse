@@ -33,6 +33,8 @@ export interface ModelStub {
   calls: ConverseCall[];
   /** Replaces the script: each call gets the next reply, or the last one once they run out. */
   reply: (...replies: Reply[]) => void;
+  /** Answers each call from what it holds, for a server another process drives. */
+  respond: (choose: (call: ConverseCall) => Reply) => void;
   stop: () => Promise<void>;
 }
 
@@ -69,9 +71,12 @@ const answer = (reply: Exclude<Reply, { kind: "error" | "hang" }>) => ({
   metrics: { latencyMs: 1 },
 });
 
+const UNAVAILABLE: Reply = { kind: "error", status: 503, type: "ServiceUnavailableException" };
+
 export const startModelStub = async (port = 0): Promise<ModelStub> => {
   const calls: ConverseCall[] = [];
-  let script: Reply[] = [{ kind: "error", status: 503, type: "ServiceUnavailableException" }];
+  let script: Reply[] = [UNAVAILABLE];
+  let chooser: ((call: ConverseCall) => Reply) | undefined;
   const server = createServer((request, response) => {
     let text = "";
     request.on("data", (chunk: Buffer) => (text += chunk.toString()));
@@ -82,7 +87,7 @@ export const startModelStub = async (port = 0): Promise<ModelStub> => {
         return;
       }
       const body = JSON.parse(text) as ConverseBody;
-      calls.push({
+      const call: ConverseCall = {
         modelId: decodeURIComponent(path[1] as string),
         system: (body.system ?? []).map((block) => block.text ?? "").join("\n"),
         prompt: (body.messages?.[0]?.content ?? []).map((block) => block.text ?? "").join("\n"),
@@ -90,8 +95,10 @@ export const startModelStub = async (port = 0): Promise<ModelStub> => {
         toolSchema: body.toolConfig?.tools?.[0]?.toolSpec?.inputSchema?.json,
         maxTokens: body.inferenceConfig?.maxTokens,
         authorization: String(request.headers.authorization ?? ""),
-      });
-      const reply = (script.length > 1 ? script.shift() : script[0]) as Reply;
+      };
+      calls.push(call);
+      const next = script.length > 1 ? script.shift() : script[0];
+      const reply: Reply = chooser?.(call) ?? next ?? UNAVAILABLE;
       if (reply.kind === "hang") return;
       if (reply.kind === "error") {
         response
@@ -118,7 +125,11 @@ export const startModelStub = async (port = 0): Promise<ModelStub> => {
     url: `http://127.0.0.1:${String((server.address() as AddressInfo).port)}`,
     calls,
     reply: (...replies) => {
+      chooser = undefined;
       script = replies;
+    },
+    respond: (choose) => {
+      chooser = choose;
     },
     stop: async () => {
       // HTTP/2 sessions stay open between calls, so close waits only for those to end.
