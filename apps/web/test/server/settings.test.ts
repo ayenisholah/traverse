@@ -11,6 +11,7 @@ describe("readSettings", () => {
         publicRouterUrl: url,
         sandboxRouterUrl: url,
         auth: undefined,
+        ai: undefined,
       });
     },
   );
@@ -90,6 +91,52 @@ describe("readSettings", () => {
 
     expect(read).toThrow("Set APP_ORIGIN, AUTH_DOMAIN_URL, AUTH_CLIENT_ID");
     expect(read).not.toThrow(/test-client-secret|example\/app|BwcH/);
+  });
+
+  const ai = {
+    AI_MODEL_ID: "eu.test.model-v1:0",
+    AI_REGION: "eu-north-1",
+    REDIS_URL: "rediss://cache.traverse.example:6379",
+  };
+
+  it("[FR-AI-4] has no assistant without its settings", () => {
+    expect(readSettings({ ...routers, ...auth }).ai).toBeUndefined();
+  });
+
+  it("[FR-AI-1] reads the assistant's settings, with a local stand-in or without one", () => {
+    expect(readSettings({ ...routers, ...auth, ...ai }).ai).toEqual({
+      modelId: "eu.test.model-v1:0",
+      region: "eu-north-1",
+      redisUrl: "rediss://cache.traverse.example:6379",
+      endpoint: undefined,
+    });
+    const local = {
+      ...ai,
+      REDIS_URL: "redis://127.0.0.1:6379",
+      AI_ENDPOINT: "http://127.0.0.1:4998",
+    };
+    expect(readSettings({ ...routers, ...auth, ...local }).ai?.endpoint).toBe(
+      "http://127.0.0.1:4998",
+    );
+  });
+
+  it.each([
+    ["one of them left out", { AI_REGION: undefined }],
+    ["a model ID with a space", { AI_MODEL_ID: "eu.test model" }],
+    ["a region that isn't one", { AI_REGION: "europe" }],
+    ["plain Redis to a public host", { REDIS_URL: "redis://cache.traverse.example:6379" }],
+    ["Redis that isn't a URL", { REDIS_URL: "cache" }],
+    ["a model endpoint that isn't this machine", { AI_ENDPOINT: "https://bedrock.example" }],
+    ["a model endpoint with a path", { AI_ENDPOINT: "http://127.0.0.1:4998/x" }],
+  ])("[FR-AI-4] refuses %s, and never repeats a value", (_, change) => {
+    const read = () => readSettings({ ...routers, ...auth, ...ai, ...change });
+
+    expect(read).toThrow("Set AI_MODEL_ID, AI_REGION and REDIS_URL together");
+    expect(read).not.toThrow(/test model|europe|cache\.traverse|bedrock\.example/);
+  });
+
+  it("[GR-15] refuses an assistant where nobody can sign in, so every call counts against someone", () => {
+    expect(() => readSettings({ ...routers, ...ai })).toThrow("with sign-in set up");
   });
 
   it("[GR-9] finds no variable in the app that Next.js would copy into the browser", () => {

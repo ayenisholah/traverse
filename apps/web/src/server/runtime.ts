@@ -1,3 +1,7 @@
+import { BedrockRuntimeClient } from "@aws-sdk/client-bedrock-runtime";
+import { createAssistant } from "./assistant/assistant.ts";
+import { createBedrockModel } from "./assistant/bedrock-model.ts";
+import { createLimits, createRedisCounter } from "./assistant/limits.ts";
 import { createAuth, type Auth } from "./auth.ts";
 import type { Context } from "./api.ts";
 import { createSealedCookies } from "./cookies.ts";
@@ -5,7 +9,24 @@ import { createOAuthClient } from "./oauth-client.ts";
 import { createPostGraphql } from "./post-graphql.ts";
 import { createRouterClient } from "./router-client.ts";
 import { createSandboxClient } from "./sandbox-client.ts";
-import { readSettings } from "./settings.ts";
+import { readSettings, type AiSettings } from "./settings.ts";
+
+// A local run talks to the stand-in, and signs with these test values, so the SDK never reads the
+// machine's own AWS credentials (A-17). Unset, the SDK finds the task role's (GR-5).
+const LOCAL_CREDENTIALS = { accessKeyId: "test-local-key", secretAccessKey: "test-local-secret" };
+
+const createAssistantFor = (ai: AiSettings) =>
+  createAssistant({
+    model: createBedrockModel({
+      client: new BedrockRuntimeClient({
+        region: ai.region,
+        maxAttempts: 2,
+        ...(ai.endpoint !== undefined && { endpoint: ai.endpoint, credentials: LOCAL_CREDENTIALS }),
+      }),
+      modelId: ai.modelId,
+    }),
+    limits: createLimits({ counter: createRedisCounter(ai.redisUrl) }),
+  });
 
 export interface Runtime {
   /** What every call shares. Each call adds its own session. */
@@ -15,7 +36,7 @@ export interface Runtime {
 }
 
 /** The server's parts, built from its settings and the network. */
-const createRuntime = (
+export const createRuntime = (
   env: Record<string, string | undefined>,
   fetch: typeof globalThis.fetch,
 ): Runtime => {
@@ -35,6 +56,7 @@ const createRuntime = (
       router: createRouterClient(createPostGraphql({ url: settings.publicRouterUrl, fetch })),
       sandbox: createSandboxClient(createPostGraphql({ url: settings.sandboxRouterUrl, fetch })),
       canSignIn: auth !== undefined,
+      assistant: settings.ai && createAssistantFor(settings.ai),
     },
     auth,
   };

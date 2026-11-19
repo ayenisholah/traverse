@@ -24,6 +24,8 @@ interface ConverseCall {
   toolChoice: unknown;
   toolSchema: unknown;
   maxTokens: unknown;
+  /** The request's signature, which names the key ID that signed it. */
+  authorization: string;
 }
 
 export interface ModelStub {
@@ -87,6 +89,7 @@ export const startModelStub = async (port = 0): Promise<ModelStub> => {
         toolChoice: body.toolConfig?.toolChoice,
         toolSchema: body.toolConfig?.tools?.[0]?.toolSpec?.inputSchema?.json,
         maxTokens: body.inferenceConfig?.maxTokens,
+        authorization: String(request.headers.authorization ?? ""),
       });
       const reply = (script.length > 1 ? script.shift() : script[0]) as Reply;
       if (reply.kind === "hang") return;

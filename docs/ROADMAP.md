@@ -11,7 +11,7 @@ Each branch is one pull request and lists the requirements it delivers. Plans fo
 | M2 | Real graph: npm, GitHub and OSV subgraphs behind the pinned Cosmo Router | [Plan](plans/m2-real-graph.md) | Done |
 | M3 | Live routes: web server, sandbox router, query plans, Package explorer | [Plan](plans/m3-live-routes.md) | Done |
 | M4 | Accounts and saved workspaces | [Plan](plans/m4-accounts.md) | Built locally; the Cognito proof waits for account setup |
-| M5 | AI assistant on Amazon Bedrock | [Plan](plans/m5-ai-assistant.md) | Planned |
+| M5 | AI assistant on Amazon Bedrock | [Plan](plans/m5-ai-assistant.md) | In progress, built locally |
 | M6 | Network, data and edge in CDK | [Plan](plans/m6-network-data-edge.md) | Planned |
 | M7 | Router, subgraphs and web app on staging | [Plan](plans/m7-services.md) | Planned |
 | M8 | Observability | [Plan](plans/m8-observability.md) | Planned |
@@ -60,7 +60,7 @@ Each branch is one pull request and lists the requirements it delivers. Plans fo
 | M4 | `fix/public-router-allow-list` | GR-1 | Merged |
 | M4 | `feat/web-auth` | FR-WB-10, GR-3 | Merged |
 | M4 | `feat/workspace-subgraph` | FR-SG-1, FR-SG-9, FR-WB-11 | Merged |
-| M5 | `feat/bedrock-client` | FR-AI-4, GR-13, GR-14, GR-15 | Planned |
+| M5 | `feat/bedrock-client` | FR-AI-4, GR-13, GR-14, GR-15 | Merged |
 | M5 | `feat/ai-explain` | FR-AI-1 | Planned |
 | M5 | `feat/ai-suggest` | FR-AI-2, GR-12 | Planned |
 | M5 | `feat/ai-draft` | FR-AI-3, GR-12 | Planned |

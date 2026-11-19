@@ -12,6 +12,7 @@ Traverse is built on WunderGraph Cosmo and helps frontend developers explore a f
 
 | Date | Work | PR |
 |---|---|---|
+| 2026-11-19 | `feat/bedrock-client`: the assistant's server side, built against a local stand-in for Bedrock (owner, 2026-11-19). One port (ADR 0022): Converse with a single forced tool whose schema is the task's, untrusted text fenced in randomly bounded data blocks and scrubbed of token, key and email shapes, daily limits per user and in all in Redis that fail closed, and nothing logged. Signed-in users only; `viewer` gains `canAsk`. The stand-in speaks Converse over HTTP/2, as the SDK does (A-18). GR-13, GR-14 and GR-15 are `partial`. | `feat/bedrock-client` |
 | 2026-11-19 | Released 0.10.0, with the owner's approval of 2026-11-18. It carries M3 and M4. Confirmed with `npm view @ayenis/traverse@0.10.0 version`. | #68 |
 | 2026-11-19 | `feat/workspace-subgraph`, which finishes M4's work. `subgraphs/workspace` keeps a signed-in user's drafts, operations and screen map in Postgres (ADR 0021), through four persisted operations. `requireUser` in `packages/subgraph-kit`, which also refuses to start a subgraph of users' data without token settings. Save and reopen on `/impact`, and `/workspaces` to open or delete, in the server build. Proven on the pinned router, the subgraph and Postgres in Docker, from sign-in at the local issuer to the database. FR-WB-11, FR-SG-1, FR-SG-9 and GR-3 are done. | `feat/workspace-subgraph` |
 | 2026-11-19 | `feat/web-auth`: sign-in in the server build, against a local issuer. Authorization code with PKCE and a resource indicator, so the access token's `aud` is the router (U-22 answered from the AWS docs as A-10 to A-14). No ID token, so no email reaches Traverse. The session is the two tokens, each sealed into an `HttpOnly` cookie, refreshed on the server and ended by a POST from the app's own origin (ADR 0020). `packages/subgraph-kit` now accepts only `token_use: access`. FR-WB-10 and GR-9 are `partial`: the Cognito proof waits for a real user pool. | `feat/web-auth` |
@@ -71,14 +72,14 @@ Traverse is built on WunderGraph Cosmo and helps frontend developers explore a f
 
 ## In progress
 
-Nothing. `0.10.0` is the latest release. M4 is built locally and merged: `fix/zod-range`, `fix/public-router-allow-list`, `feat/web-auth` and `feat/workspace-subgraph`. What's left of it needs AWS (below).
+M5, run as the owner approved on 2026-11-19 (see the notes): `feat/bedrock-client` is built; `feat/ai-explain`, `feat/ai-suggest` and `feat/ai-draft` follow.
 
 ## Next
 
 In order:
 
-1. M4's remaining proof, once account setup is done: a CDK user pool (resource server identifier = the router's audience, short access tokens, refresh rotation off, `${APP_ORIGIN}/auth/callback` and `${APP_ORIGIN}/` registered), then the account and workspace Playwright specs against it. That makes FR-WB-10 and GR-9 `done`. It belongs with M6's stacks, so ask the owner where it goes.
-2. M5, following [the M5 plan](plans/m5-ai-assistant.md). It needs Bedrock, so it's blocked on account setup and U-19 too.
+1. `feat/ai-explain`, `feat/ai-suggest` and `feat/ai-draft`, following [the M5 plan](plans/m5-ai-assistant.md) and ADR 0022. Each validates the model's answer against the real graph before showing it (GR-12).
+2. Once account setup is done: M4's Cognito proof (a CDK user pool, then the account and workspace Playwright specs against it), and M5's real-model evaluation (`scripts/eval-assistant.ts`, planned), U-19, the task role's Bedrock permission and the spend alarm (GR-15).
 3. Set aside by the owner on 2026-11-06: three frontend developers trying Traverse on their own repositories, for `docs/USER_FEEDBACK.md`. It's the last M1 exit item, and only the owner can arrange it.
 
 ## Blocked
@@ -89,6 +90,8 @@ In order:
 
 ## Notes for the next session
 
+- **The approved run for M5** (owner, 2026-11-19): build M5 locally against a stand-in for Bedrock, as M4 did with the issuer, and offer the assistant to signed-in users only. FR-AI-1 to FR-AI-3 and GR-13 stay `partial` until a real-model evaluation runs; the spend alarm waits for AWS.
+- **The assistant** (ADR 0022). Every model call goes through `createAssistant` in `apps/web/src/server/assistant`. A task passes fixed `task` and `instructions` text, its untrusted text as `data`, and a zod `schema`, and gets back a parsed value or `limit`, `too-large` or `unavailable`. Validate the value against the real graph before showing it. The stand-in is `router/test/support/model-stub.ts`: `reply(...)` scripts its answers, `calls` records each prompt. It speaks HTTP/2, because the Bedrock runtime client always does (A-18). The assistant needs `AI_MODEL_ID`, `AI_REGION`, `REDIS_URL` and sign-in; `AI_ENDPOINT` points at the stand-in. The real Redis counter test is in `apps/web/test/redis` and runs with `test:router`.
 - **Workspaces** (ADR 0021). Every statement in `subgraphs/workspace/src/postgres-store.ts` carries `user_id = $1`; keep it that way, and add a test to `test/postgres-store.test.ts` for any new one. Migrations are numbered files in `subgraphs/workspace/migrations`. The Postgres tests in `subgraphs/*/test/postgres` need Docker, so they run with `test:router`, which now also starts Postgres on 5434 and the workspace subgraph on 4105. The router wraps a subgraph's error, so its own message and code are in `errors[0].extensions.errors` (C-57); the web server reads only the codes.
 - The stub router in `apps/web/test/support/live-server.ts` keeps workspaces in memory by token subject, without checking signatures. `router/test/e2e/web.test.ts` proves the real path.
 - **Sign-in** (ADR 0020). The server build reads `APP_ORIGIN`, `AUTH_DOMAIN_URL`, `AUTH_CLIENT_ID`, `AUTH_CLIENT_SECRET`, `AUTH_RESOURCE` and `SESSION_KEY` together, or none, and with none nobody can sign in. `router/test/support/issuer.ts` is the local issuer: `apps/web/test/support/serve-live.ts` and `router/test/support/stack.ts` both run it, and `stack.token()` now issues Cognito-shaped access tokens bound to `https://router.traverse.test`. When the CDK user pool arrives: set the resource server's identifier to the router's audience, keep the access token lifetime short (a signed-out access token lasts until it expires), keep refresh token rotation off (the server drops a rotated token), register `${APP_ORIGIN}/auth/callback` and `${APP_ORIGIN}/`, and run the Playwright account spec against it before marking FR-WB-10 done.

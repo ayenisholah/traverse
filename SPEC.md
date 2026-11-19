@@ -134,7 +134,7 @@ A Next.js app in `apps/web`, built two ways from one config. The static export h
 
 ### AI assistant
 
-An optional layer over deterministic results, called only from the server through its task role. It explains results, suggests safe migrations and drafts operations. A suggestion is run through real composition, and a draft is validated against the schema, before either is shown (GR-12). See GR-12 to GR-15 and FR-AI-4.
+An optional layer over deterministic results, called only from the server through its task role, for signed-in users. It explains results, suggests safe migrations and drafts operations. A suggestion is run through real composition, and a draft is validated against the schema, before either is shown (GR-12). Every call goes through one port: the model answers only through one schema-shaped tool, untrusted text is fenced as data and scrubbed, and calls are counted per user per day in Redis ([ADR 0022](docs/adr/0022-assistant-model-boundary.md)). It's off unless `AI_MODEL_ID`, `AI_REGION` and `REDIS_URL` are set. See GR-12 to GR-15 and FR-AI-4.
 
 ## Interfaces
 

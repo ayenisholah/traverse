@@ -9,6 +9,7 @@ import { parseManifest } from "./manifest.ts";
 import { loadPackagePage } from "./package-page.ts";
 import { readCapped } from "./read-capped.ts";
 import type { RouterClient } from "./router-client.ts";
+import type { Assistant } from "./assistant/assistant.ts";
 import type { SandboxClient } from "./sandbox-client.ts";
 import {
   deleteWorkspace,
@@ -27,6 +28,8 @@ export interface Context {
   canSignIn: boolean;
   /** The signed-in user's access token, read from their sealed cookies. It never leaves the server. */
   accessToken: string | undefined;
+  /** The assistant, when the server has one (FR-AI-4). */
+  assistant: Assistant | undefined;
 }
 
 const UNAVAILABLE = "The graph didn't answer";
@@ -89,6 +92,8 @@ const api = t.router({
   viewer: t.procedure.query(({ ctx }) => ({
     canSignIn: ctx.canSignIn,
     signedIn: ctx.accessToken !== undefined,
+    // Only a signed-in user may ask, so each call counts against someone (GR-15).
+    canAsk: ctx.assistant !== undefined && ctx.accessToken !== undefined,
   })),
   packagePage: t.procedure
     .input(z.object({ name: z.string().refine(isPackageName) }))

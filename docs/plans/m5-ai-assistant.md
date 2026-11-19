@@ -1,6 +1,6 @@
 # M5: AI assistant
 
-**Needs:** [account setup](account-setup.md), and an answer to U-19.
+**Needs:** [account setup](account-setup.md) and an answer to U-19 for the real model. The owner chose on 2026-11-19 to build it first against a local stand-in for Bedrock, for signed-in users only (ADR 0022).
 
 **Outcome:** Amazon Bedrock explains results and proposes validated changes. Every other feature works with it off.
 

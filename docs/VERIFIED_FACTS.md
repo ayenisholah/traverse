@@ -1,6 +1,6 @@
 # Verified facts
 
-**Updated:** 2026-11-18
+**Updated:** 2026-11-19
 
 This file records what Traverse relies on from Cosmo and AWS, and how far each claim can be trusted. Add a fact here before depending on it.
 
@@ -37,6 +37,7 @@ The versions below are the only ones whose docs count. Upgrades change this tabl
 | `semver` | `7.8.6` | `package-lock.json` |
 | Postgres image | `postgres:17-alpine` @ `sha256:526f86d93c6ea08fd3f1fe5605650cacc781b2c6013169a0ad8f42c7d3d84f32`, PostgreSQL 17.12 | Docker Hub, read directly. Tests only, until the RDS engine version is chosen in M6 |
 | `pg` | `8.23.1` | `subgraphs/workspace/package.json` |
+| `@aws-sdk/client-bedrock-runtime` | `3.1162.0` | `apps/web/package.json`. Chosen as the newest release at least two weeks old |
 | `@graphql-codegen/core` | `7.0.0` | `packages/typed-operations/package.json` |
 | `@graphql-codegen/typescript-operations` | `7.0.1` | `packages/typed-operations/package.json` |
 
@@ -177,6 +178,10 @@ The versions below are the only ones whose docs count. Upgrades change this tabl
 | A-12 | A `resource` parameter on `GET /oauth2/authorize` (RFC 8707) binds the access token: Cognito sets its `aud` to that URL, which must start `https://` or `http://localhost`. One resource per request, managed login and code or implicit grants only. A refresh keeps the `aud`. | `documented` | [Resource binding](https://docs.aws.amazon.com/cognito/latest/developerguide/cognito-user-pools-define-resource-servers.html#cognito-user-pools-resource-binding), [Token endpoint](https://docs.aws.amazon.com/cognito/latest/developerguide/token-endpoint.html) |
 | A-13 | `GET /oauth2/authorize` takes `response_type=code`, `client_id`, a pre-registered absolute `redirect_uri` (HTTPS, or `http://localhost`), `state`, `scope`, and PKCE with `code_challenge_method=S256` only. The code lasts five minutes. `POST /oauth2/token` (form-encoded, `client_secret_basic` or `_post`) redeems it with `code`, the same `redirect_uri` and `code_verifier`, and returns `access_token`, `refresh_token`, `expires_in` and, with `openid`, `id_token`. `grant_type=refresh_token` returns a new refresh token only when rotation is on. A mismatched `redirect_uri` gets `unauthorized_client`. | `documented` | [Authorize endpoint](https://docs.aws.amazon.com/cognito/latest/developerguide/authorization-endpoint.html), [Token endpoint](https://docs.aws.amazon.com/cognito/latest/developerguide/token-endpoint.html) |
 | A-14 | `POST /oauth2/revoke` takes a refresh token and revokes it and the tokens issued from it, answering 200 even for an unknown token. `GET /logout` with `client_id` and a registered `logout_uri` clears the managed login session and redirects, but revokes no token. | `documented` | [Revoke endpoint](https://docs.aws.amazon.com/cognito/latest/developerguide/revocation-endpoint.html), [Logout endpoint](https://docs.aws.amazon.com/cognito/latest/developerguide/logout-endpoint.html) |
+| A-15 | Converse is `POST /model/{modelId}/converse` on `bedrock-runtime`. `toolConfig.toolChoice` can be `auto`, `any` or `tool: { name }`, which forces that one tool. `inferenceConfig` takes `maxTokens`, `temperature`, `topP` and `stopSequences`, and `maxTokens` must be set or it defaults to the model's maximum and reserves that much quota. | `documented` | `@aws-sdk/client-bedrock-runtime` 3.1162.0 types and serializer; [Converse](https://docs.aws.amazon.com/bedrock/latest/APIReference/API_runtime_Converse.html) |
+| A-16 | The runtime client's errors are `AccessDeniedException`, `ValidationException`, `ThrottlingException`, `ServiceUnavailableException`, `ServiceQuotaExceededException`, `InternalServerException`, `ModelTimeoutException`, `ModelErrorException`, `ModelNotReadyException` and `ResourceNotFoundException`. Only throttling, timeouts and server-side errors are worth retrying. | `documented` | The same SDK's `models/errors.d.ts` |
+| A-17 | The SDK's default credential chain reads environment variables and `~/.aws` before the container credentials an ECS task role provides (`@aws-sdk/credential-provider-node` 3.972.97). A deployment must set no AWS key variables, and a local run must pass its own credentials. | `documented` | The provider's source in `node_modules` |
+| A-18 | The runtime client always speaks HTTP/2 (`NodeHttp2Handler`), also to an `endpoint` override over plain HTTP. The local stand-in therefore speaks cleartext HTTP/2, and the real SDK round-trips a forced tool answer and each error type through it. | `tested` | `apps/web/test/server/assistant/bedrock-model.test.ts`, 2026-11-19 |
 
 ## Open questions
 
