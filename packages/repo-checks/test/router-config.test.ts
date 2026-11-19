@@ -281,7 +281,7 @@ const environment = (): Record<string, string> => ({
   ROUTER_EXECUTION_CONFIG: "/config/config.json",
   ROUTER_OPERATIONS_DIR: "/files/persisted",
   ROUTER_JWKS_URL: "https://auth.traverse.example/.well-known/jwks.json",
-  ROUTER_JWT_AUDIENCE: "traverse-router",
+  ROUTER_JWT_AUDIENCE: "https://api.traverse.example",
 });
 
 describe("findUnsafeRouterEnvironment", () => {
@@ -318,6 +318,10 @@ describe("findUnsafeRouterEnvironment", () => {
     ["ROUTER_JWKS_URL", "http://auth.traverse.example/jwks.json"],
     ["ROUTER_JWKS_URL", "https://auth.example/jwks.json #"],
     ["ROUTER_JWT_AUDIENCE", "a b"],
+    ["ROUTER_JWT_AUDIENCE", "traverse-router"],
+    ["ROUTER_JWT_AUDIENCE", "http://api.traverse.example"],
+    ["ROUTER_JWT_AUDIENCE", "https://api.traverse.example/ #"],
+    ["ROUTER_JWT_AUDIENCE", "https://api.traverse.example\n  - other"],
     ["ROUTER_EXECUTION_CONFIG", "/config/config.json\n"],
     ["ROUTER_OPERATIONS_DIR", "../persisted"],
   ])("[GR-1] refuses %s set to %j", (name, value) => {

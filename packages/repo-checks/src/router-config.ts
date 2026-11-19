@@ -177,7 +177,8 @@ const VARIABLES: Record<string, RegExp> = {
   ROUTER_JWKS_URL: new RegExp(
     String.raw`^(?:https:\/\/[a-z0-9.-]+(?::\d{1,5})?|${LOCAL_URL})(?:\/[A-Za-z0-9._-]+)+$`,
   ),
-  ROUTER_JWT_AUDIENCE: /^[A-Za-z0-9._:-]{1,128}$/,
+  // The resource the web server binds access tokens to, which Cognito holds to a URL (A-12).
+  ROUTER_JWT_AUDIENCE: /^https:\/\/[a-z0-9.-]+(?::\d{1,5})?(?:\/[A-Za-z0-9._-]+)*$/,
 };
 
 /** The sandbox config uses three of them: it has no origin, no persisted operations and no tokens. */
