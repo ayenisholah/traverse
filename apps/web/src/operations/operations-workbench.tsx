@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, type FormEvent } from "react";
+import { DraftPanel } from "../assistant/draft-panel.tsx";
 import { TextField } from "../impact/draft-fields.tsx";
 import type { RouteAnswer } from "../route/types.ts";
 import { OperationEditor } from "./operation-editor.tsx";
@@ -67,20 +68,11 @@ function Answer({ state }: { state: State }) {
   );
 }
 
-/** Write an operation, run it, and see its route. Only the latest run's answer is shown. */
-export function OperationsWorkbench({
-  schemaSdl,
-  seedOperation,
-  seedVariables,
-  fetchRoute = defaultFetchRoute,
-}: OperationsWorkbenchProps) {
-  const [operation, setOperation] = useState(seedOperation);
-  const [variables, setVariables] = useState(seedVariables);
+/** Finds an operation's route. Only the latest run's answer is kept. */
+const useRoute = (fetchRoute: FetchRoute) => {
   const [state, setState] = useState<State>({ status: "idle" });
   const latest = useRef(0);
-
-  const run = async (event: FormEvent) => {
-    event.preventDefault();
+  const run = async (operation: string, variables: string) => {
     const parsed = parseVariables(variables);
     const id = (latest.current += 1);
     if (parsed === undefined) {
@@ -91,39 +83,73 @@ export function OperationsWorkbench({
     const answer = await fetchRoute(operation, parsed);
     if (id === latest.current) setState({ status: "done", answer });
   };
+  return { state, run };
+};
+
+function RouteSection({ state }: { state: State }) {
+  return (
+    <section aria-labelledby="route-heading" aria-live="polite" className="min-w-0">
+      <h2 id="route-heading" className="mb-2 text-h6">
+        Route
+      </h2>
+      <Answer state={state} />
+    </section>
+  );
+}
+
+/** Write an operation, run it, and see its route. Only the latest run's answer is shown. */
+export function OperationsWorkbench({
+  schemaSdl,
+  seedOperation,
+  seedVariables,
+  fetchRoute = defaultFetchRoute,
+}: OperationsWorkbenchProps) {
+  const [operation, setOperation] = useState(seedOperation);
+  // The editor keeps its own text, so a drafted operation remounts it with that text.
+  const [editor, setEditor] = useState({ key: 0, text: seedOperation });
+  const [variables, setVariables] = useState(seedVariables);
+  const { state, run: runRoute } = useRoute(fetchRoute);
+  const run = (event: FormEvent) => {
+    event.preventDefault();
+    void runRoute(operation, variables);
+  };
 
   return (
     <div className="grid gap-6 lg:grid-cols-2">
-      <form className="min-w-0 space-y-4" onSubmit={(event) => void run(event)}>
-        <OperationEditor
-          id="operation"
-          label="Operation"
-          initialValue={seedOperation}
-          schemaSdl={schemaSdl}
-          onChange={setOperation}
+      <div className="min-w-0 space-y-4">
+        <DraftPanel
+          onDrafted={(drafted) => {
+            setEditor(({ key }) => ({ key: key + 1, text: drafted }));
+            setOperation(drafted);
+          }}
         />
-        <TextField
-          id="variables"
-          label="Variables (optional)"
-          rows={3}
-          value={variables}
-          hint="A JSON object"
-          onChange={setVariables}
-        />
-        <button
-          type="submit"
-          disabled={operation.trim() === ""}
-          className="rounded-sm bg-brand px-4 py-2 text-on-brand disabled:opacity-60"
-        >
-          Show route
-        </button>
-      </form>
-      <section aria-labelledby="route-heading" aria-live="polite" className="min-w-0">
-        <h2 id="route-heading" className="mb-2 text-h6">
-          Route
-        </h2>
-        <Answer state={state} />
-      </section>
+        <form className="min-w-0 space-y-4" onSubmit={run}>
+          <OperationEditor
+            key={editor.key}
+            id="operation"
+            label="Operation"
+            initialValue={editor.text}
+            schemaSdl={schemaSdl}
+            onChange={setOperation}
+          />
+          <TextField
+            id="variables"
+            label="Variables (optional)"
+            rows={3}
+            value={variables}
+            hint="A JSON object"
+            onChange={setVariables}
+          />
+          <button
+            type="submit"
+            disabled={operation.trim() === ""}
+            className="rounded-sm bg-brand px-4 py-2 text-on-brand disabled:opacity-60"
+          >
+            Show route
+          </button>
+        </form>
+      </div>
+      <RouteSection state={state} />
     </div>
   );
 }

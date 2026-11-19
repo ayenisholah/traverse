@@ -157,3 +157,39 @@ describe("the suggest procedure", () => {
     expect((await call(context, huge, "suggest")).status).toBe(413);
   });
 });
+
+describe("the draft procedure", () => {
+  it("[FR-AI-3] drafts against the composed schema the editor checks", async () => {
+    const ask = vi.fn(() =>
+      Promise.resolve({
+        kind: "answer" as const,
+        value: {
+          operation: 'query P { package(name: "express") { name } }',
+          summary: "Reads express's name.",
+        },
+      }),
+    );
+    const context = contextWith({
+      accessToken: token({ sub: "user-1" }),
+      assistant: { ask } as unknown as Assistant,
+    });
+
+    expect((await call(context, { description: "express's name" }, "draft")).body).toMatchObject({
+      result: { data: { kind: "drafted" } },
+    });
+  });
+
+  it("[GR-15] refuses someone signed out, and an empty or long description", async () => {
+    const context = contextWith({ accessToken: token({ sub: "u" }) });
+
+    expect((await call(contextWith({}), { description: "x" }, "draft")).status).toBe(401);
+    expect(
+      (await call(contextWith({ accessToken: token({}) }), { description: "x" }, "draft")).status,
+    ).toBe(401);
+    expect((await call(context, { description: "  " }, "draft")).status).toBe(400);
+    expect((await call(context, { description: "x".repeat(1_001) }, "draft")).status).toBe(400);
+    expect((await call(context, { description: "x" }, "draft")).body).toEqual({
+      result: { data: { kind: "unavailable" } },
+    });
+  });
+});

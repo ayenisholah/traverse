@@ -74,7 +74,16 @@ Traverse is built on WunderGraph Cosmo and helps frontend developers explore a f
 
 ## In progress
 
-M5, run as the owner approved on 2026-11-19 (see the notes): `feat/bedrock-client` and `feat/ai-explain` are merged, and `feat/ai-suggest` is built; `feat/ai-draft` follows.
+`feat/ai-draft` (FR-AI-3), pushed, with no pull request yet. Built and unit-tested:
+- `apps/web/src/server/assistant/{operation-check,draft}.ts` and the `draft` procedure;
+- `apps/web/src/assistant/{draft-panel.tsx,draft-request.ts}`, wired into `/operations`.
+
+Left:
+- In `apps/web/test/support/serve-live.ts`, a stand-in reply for draft prompts (system text "Write one GraphQL query").
+- A Playwright spec on `/operations`: a draft reaching the editor, a hostile answer refused, and axe.
+- `npm run test:coverage` and the other gates, then a `guardrail-reviewer` pass.
+- Docs: FR-AI-3 `partial`, GR-12 `done`, SPEC, VERIFICATION, ROADMAP.
+- Then `open-pr`.
 
 ## Next
 
