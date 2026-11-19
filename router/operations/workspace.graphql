@@ -1,0 +1,13 @@
+query Workspace($id: ID!) {
+  workspace(id: $id) {
+    id
+    name
+    drafts {
+      subgraph
+      sdl
+    }
+    operations
+    screenMap
+    updatedAt
+  }
+}

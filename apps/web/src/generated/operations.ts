@@ -14,6 +14,18 @@ export interface TypedOperation<Data, Variables> {
 type Exact<T extends { [key: string]: unknown }> = { [K in keyof T]: T[K] };
 /** Internal type. DO NOT USE DIRECTLY. */
 export type Incremental<T> = T | { [P in keyof T]?: P extends ' $fragmentName' | '__typename' ? T[P] : never };
+export type SchemaDraftInput = {
+  subgraph: string;
+  sdl: string;
+};
+
+export type DeleteWorkspaceMutationVariables = Exact<{
+  id: string | number;
+}>;
+
+
+export type DeleteWorkspaceMutation = { deleteWorkspace: boolean };
+
 export type DependencyQueryVariables = Exact<{
   name: string;
   version: string;
@@ -37,6 +49,34 @@ export type PackageQueryVariables = Exact<{
 
 export type PackageQuery = { package: { name: string, latestVersion: string, license: string | null, weeklyDownloads: number | null, repositoryUrl: string | null, repository: { url: string, stars: number, owner: string, latestRelease: string | null } | null, advisories: Array<{ id: string, summary: string, severity: string | null, fixedIn: string | null }> | null } | null };
 
+export type SaveWorkspaceMutationVariables = Exact<{
+  id?: string | number | null | undefined;
+  name: string;
+  drafts: Array<SchemaDraftInput> | SchemaDraftInput;
+  operations: string;
+  screenMap?: string | null | undefined;
+}>;
+
+
+export type SaveWorkspaceMutation = { saveWorkspace: { id: string, name: string, updatedAt: string } };
+
+export type WorkspaceQueryVariables = Exact<{
+  id: string | number;
+}>;
+
+
+export type WorkspaceQuery = { workspace: { id: string, name: string, operations: string, screenMap: string | null, updatedAt: string, drafts: Array<{ subgraph: string, sdl: string }> } | null };
+
+export type WorkspacesQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type WorkspacesQuery = { workspaces: Array<{ id: string, name: string, updatedAt: string }> };
+
+export const DeleteWorkspaceOperation: TypedOperation<DeleteWorkspaceMutation, DeleteWorkspaceMutationVariables> = {
+  name: "DeleteWorkspace",
+  sha256: "28e2fdaa6605e8e4e205e4976e46cea45302d4c3629a890c3e2f113eadc730b7",
+};
+
 export const DependencyOperation: TypedOperation<DependencyQuery, DependencyQueryVariables> = {
   name: "Dependency",
   sha256: "c717ec2b01fc222d62c457f486272095e5638e89c97e511f9e45993deac28da4",
@@ -50,4 +90,19 @@ export const PackagePageOperation: TypedOperation<PackagePageQuery, PackagePageQ
 export const PackageOperation: TypedOperation<PackageQuery, PackageQueryVariables> = {
   name: "Package",
   sha256: "d61d3e632808b9ec48c2a236cd48a45a8c80d1b9c8f39a434b193712eb0b15ad",
+};
+
+export const SaveWorkspaceOperation: TypedOperation<SaveWorkspaceMutation, SaveWorkspaceMutationVariables> = {
+  name: "SaveWorkspace",
+  sha256: "1769375d33375d94d8052ac0972278ef96793b3ba0a8eef1a2c528acd7327d39",
+};
+
+export const WorkspaceOperation: TypedOperation<WorkspaceQuery, WorkspaceQueryVariables> = {
+  name: "Workspace",
+  sha256: "45da82ece9a7d55bc37156e075ea13b5508706ce11950a0c7e9eee372eb83eb8",
+};
+
+export const WorkspacesOperation: TypedOperation<WorkspacesQuery, WorkspacesQueryVariables> = {
+  name: "Workspaces",
+  sha256: "2f1302ae7df33a37fad53067abc57b759d32e4e22abe27e13477cfa13fa71320",
 };

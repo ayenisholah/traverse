@@ -1,0 +1,19 @@
+mutation SaveWorkspace(
+  $id: ID
+  $name: String!
+  $drafts: [SchemaDraftInput!]!
+  $operations: String!
+  $screenMap: String
+) {
+  saveWorkspace(
+    id: $id
+    name: $name
+    drafts: $drafts
+    operations: $operations
+    screenMap: $screenMap
+  ) {
+    id
+    name
+    updatedAt
+  }
+}

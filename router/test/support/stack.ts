@@ -13,6 +13,8 @@ import {
 import { replay as replayOsv } from "../../../subgraphs/advisories/test/helpers.ts";
 import { replay as replayNpm } from "../../../subgraphs/packages/test/helpers.ts";
 import { replay as replayGithub } from "../../../subgraphs/repositories/test/helpers.ts";
+import { migrate } from "../../../subgraphs/workspace/src/migrate.ts";
+import { startDatabase } from "../../../subgraphs/workspace/test/postgres/database.ts";
 import { startIssuer, type TokenOptions } from "./issuer.ts";
 
 /** The pinned image, by digest, so a moved tag can't change what's tested. */
@@ -23,6 +25,7 @@ const AUDIENCE = "https://router.traverse.test";
 const ROUTER_PORT = 3902;
 const OVERRIDE_PORT = 3903;
 const SANDBOX_PORT = 3904;
+const DATABASE_PORT = 5434;
 
 export interface Stack {
   url: string;
@@ -37,6 +40,8 @@ export interface Stack {
   /** The sandbox router on the same graph, with its own config, unchanged. */
   startSandbox: () => Promise<Router>;
   stop: () => Promise<void>;
+  /** What a web server needs to sign users in at the stack's issuer. */
+  auth: { domainUrl: string; clientId: string; clientSecret: string; resource: string };
 }
 
 export interface Router {
@@ -155,13 +160,28 @@ export const startSandboxRouter = ({
  * on the ports in router/graph.yaml, a local token issuer, and the pinned router with the public
  * config, unchanged. Only the operations folder is a copy, so a test can persist its own.
  */
-export const startStack = async (): Promise<Stack> => {
+export const startStack = async ({ webOrigin }: { webOrigin?: string } = {}): Promise<Stack> => {
   let githubBlocked = false;
   const npm = await serveUpstream((path) => replayNpm(`http://upstream${path}`));
   const github = await serveUpstream((_, body) =>
     githubBlocked ? new Response("{}", { status: 503 }) : replayGithub(body),
   );
   const osv = await serveUpstream(replayOsv);
+
+  // Tests take tokens from it directly, or sign in through a web server at `webOrigin`.
+  const issuer = await startIssuer({
+    clientId: "traverse-web",
+    clientSecret: "test-secret",
+    resource: AUDIENCE,
+    redirectUris: webOrigin === undefined ? [] : [`${webOrigin}/auth/callback`],
+    logoutUris: webOrigin === undefined ? [] : [`${webOrigin}/`],
+  });
+  const { jwksUrl } = issuer;
+
+  const database = await startDatabase(DATABASE_PORT);
+  const migrations = database.pool();
+  await migrate(migrations);
+  await migrations.end();
 
   const subgraphs: RunningSubgraph[] = await Promise.all([
     runSubgraph(resolve("subgraphs/packages/src/main.ts"), {
@@ -175,17 +195,15 @@ export const startStack = async (): Promise<Stack> => {
       GITHUB_GRAPHQL_URL: `${github.url}/graphql`,
     }),
     runSubgraph(resolve("subgraphs/advisories/src/main.ts"), { PORT: "4103", OSV_URL: osv.url }),
+    // Verifies tokens itself against the issuer's keys, as a deployment would (GR-3).
+    runSubgraph(resolve("subgraphs/workspace/src/main.ts"), {
+      PORT: "4105",
+      DATABASE_URL: database.url,
+      JWKS_URL: jwksUrl,
+      JWT_AUDIENCE: AUDIENCE,
+      JWT_ISSUER: issuer.url,
+    }),
   ]);
-
-  // No browser signs in here, so it registers no addresses: tests take tokens from it directly.
-  const issuer = await startIssuer({
-    clientId: "traverse-web",
-    clientSecret: "test-secret",
-    resource: AUDIENCE,
-    redirectUris: [],
-    logoutUris: [],
-  });
-  const { jwksUrl } = issuer;
 
   const files = mkdtempSync(join(tmpdir(), "traverse-router-"));
   cpSync("router/persisted", join(files, "persisted"), { recursive: true });
@@ -194,6 +212,7 @@ export const startStack = async (): Promise<Stack> => {
     for (const subgraph of subgraphs) subgraph.child.kill("SIGKILL");
     for (const server of [npm.server, github.server, osv.server]) server.close();
     void issuer.stop();
+    database.stop();
     rmSync(files, { recursive: true, force: true });
   };
   const router = await runRouter({ port: ROUTER_PORT, files, jwksUrl }).catch((error: unknown) => {
@@ -238,5 +257,11 @@ export const startStack = async (): Promise<Stack> => {
     startRouter: (override) => runRouter({ port: OVERRIDE_PORT, files, jwksUrl, override }),
     startSandbox: () => startSandboxRouter({ executionConfig: "config.json" }),
     stop,
+    auth: {
+      domainUrl: issuer.url,
+      clientId: "traverse-web",
+      clientSecret: "test-secret",
+      resource: AUDIENCE,
+    },
   };
 };

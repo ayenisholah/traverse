@@ -1,0 +1,1 @@
+{"version":1,"body":"mutation DeleteWorkspace($id: ID!) {\n  deleteWorkspace(id: $id)\n}\n"}
