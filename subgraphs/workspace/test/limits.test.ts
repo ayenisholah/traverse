@@ -62,6 +62,10 @@ describe("parseSave", () => {
     ],
     ["operations too long", { operations: "x".repeat(MAX_OPERATIONS_LENGTH + 1) }],
     ["a screen map too long", { screenMap: "x".repeat(MAX_SCREEN_MAP_LENGTH + 1) }],
+    ["a NUL in a draft", { drafts: [{ subgraph: "a", sdl: "type Query { a: Int }\u0000" }] }],
+    ["a NUL in the name", { name: "a\u0000b" }],
+    ["a NUL in the operations", { operations: "query A { a }\u0000" }],
+    ["a NUL in the screen map", { screenMap: "S: A\u0000" }],
   ])("[FR-WB-11] refuses %s, and never repeats it", (_, change) => {
     const parse = () => parseSave({ ...valid, name: "secret-name", ...change });
 

@@ -249,6 +249,15 @@ describe("its settings", () => {
       "postgres://db.traverse.example/x?sslmode=require",
     ],
     ["another scheme", "mysql://127.0.0.1/traverse"],
+    [
+      "a host parameter that would replace the address",
+      "postgres://u:p@localhost/db?host=db.example.com",
+    ],
+    [
+      "a second sslmode that would win",
+      "postgres://u:p@db.example.com/db?sslmode=verify-full&sslmode=disable",
+    ],
+    ["a remote IPv6 address in plain text", "postgres://u:p@[2001:db8::1]/db"],
   ])("[NFR-7] refuses %s, and never repeats it", (_, url) => {
     const create = () => createDatabasePool({ DATABASE_URL: url });
 
