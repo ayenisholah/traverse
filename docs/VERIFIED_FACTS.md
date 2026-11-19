@@ -35,6 +35,8 @@ The versions below are the only ones whose docs count. Upgrades change this tabl
 | CodeMirror | `@codemirror/state` `6.7.6`, `view` `6.43.15`, `commands` `6.11.1`, `language` `6.13.1`, `lint` `6.9.8`, `autocomplete` `6.20.4`, `@lezer/highlight` `1.2.5` | `apps/web/package.json` |
 | `cm6-graphql` | `1.0.0` | `apps/web/package.json` |
 | `semver` | `7.8.6` | `package-lock.json` |
+| Postgres image | `postgres:17-alpine` @ `sha256:526f86d93c6ea08fd3f1fe5605650cacc781b2c6013169a0ad8f42c7d3d84f32`, PostgreSQL 17.12 | Docker Hub, read directly. Tests only, until the RDS engine version is chosen in M6 |
+| `pg` | `8.23.1` | `subgraphs/workspace/package.json` |
 | `@graphql-codegen/core` | `7.0.0` | `packages/typed-operations/package.json` |
 | `@graphql-codegen/typescript-operations` | `7.0.1` | `packages/typed-operations/package.json` |
 
@@ -191,6 +193,7 @@ Each is answered by test before the feature that depends on it ships.
 | U-17 | Can a third-party app read the Platform API? The docs describe it as used by the CLI and Studio. | FR-WB-1 | M3 |
 | U-19 | Which current Claude model does Bedrock offer from the chosen Region, and at what cost? | FR-AI-1 | Before M5 |
 | U-21 | Do the values in `packages/design-tokens` match the Figma file's variables exactly? See W-7. | FR-WB-13 | When the Figma call limit resets |
+| U-23 | Does `pg` 8.23.1 verify an RDS server's certificate chain and name with `sslmode=verify-full` in the connection string, and which CA bundle does it need? | NFR-7 | M6 |
 
 ## Answered questions
 
