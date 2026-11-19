@@ -1,5 +1,38 @@
 # Changelog
 
+## [0.10.0](https://github.com/ayenisholah/traverse/compare/v0.9.1...v0.10.0) (2026-11-19)
+
+
+### Features
+
+* **repo-checks:** hold the sandbox router's limits to real values ([a1004f7](https://github.com/ayenisholah/traverse/commit/a1004f7a100e9c923151d8fdef1f8e59bb5879ea))
+* **router:** add a read-only sandbox router that returns query plans ([4b61726](https://github.com/ayenisholah/traverse/commit/4b61726d65107644de2bd506129ca973861fe200))
+* **router:** serve workspaces through persisted operations ([c5c6933](https://github.com/ayenisholah/traverse/commit/c5c69337af506063c2c0f4092bd8aac6b6aadb62))
+* **subgraph-kit:** accept only an access token as a user ([7584fb2](https://github.com/ayenisholah/traverse/commit/7584fb236ffebeadf76075bcba2085cc007b433f))
+* **subgraph-kit:** require a verified user for users' own data ([77fa236](https://github.com/ayenisholah/traverse/commit/77fa23685650c216b1b5742c773fb5e355412b40))
+* **web:** add package pages and a package.json check ([941c946](https://github.com/ayenisholah/traverse/commit/941c946826becaec16df4060cfeb71bc06dd808d))
+* **web:** run generated operations on the public router from a server build ([e90747c](https://github.com/ayenisholah/traverse/commit/e90747ce0151d72987169d7fa644f38034b93f7f))
+* **web:** save and reopen workspaces in the server build ([593f1dc](https://github.com/ayenisholah/traverse/commit/593f1dca1e79b14d76594ebf8ef7beb0d741f612))
+* **web:** serve package pages and check a package.json's dependencies ([a79ec0b](https://github.com/ayenisholah/traverse/commit/a79ec0b1856ea6a53c7962a2d74895763b394aaf))
+* **web:** show a query's route on the operations page ([ff9a99e](https://github.com/ayenisholah/traverse/commit/ff9a99e35c46e4e78610ba91e22337310d39b361))
+* **web:** sign in with the user pool in the server build ([3260a61](https://github.com/ayenisholah/traverse/commit/3260a610d66c893aca583e46470d114e3de49d3f))
+* **web:** turn a query plan from the sandbox router into a route ([f5b0c55](https://github.com/ayenisholah/traverse/commit/f5b0c552736acdb1d9bd8e46d2e21530a826ce27))
+* **workspace:** keep users' saved workspaces in Postgres ([9dc447c](https://github.com/ayenisholah/traverse/commit/9dc447cb1a532dc4c5a1664d0141b890b72bd85b))
+
+
+### Bug Fixes
+
+* **deps:** raise every zod range past GHSA-mrhx-c7xc-m3w5 ([2e3cd34](https://github.com/ayenisholah/traverse/commit/2e3cd34a4cecd325506056be3bb4263e92b071bb))
+* **router:** hold the access log list to exactly the hidden names ([df3b651](https://github.com/ayenisholah/traverse/commit/df3b65167159c6a55af2c5e807715dae11372d7d))
+* **router:** hold the public router's config to an allow-list ([5fc9644](https://github.com/ayenisholah/traverse/commit/5fc964444d83efb7bd9293b827eedfc59f2706a2))
+* **router:** hold the sandbox config to an allow-list and keep GET operations out of its log ([1b85982](https://github.com/ayenisholah/traverse/commit/1b85982a1339a7ea9cc027fbb2ab04b786d7f120))
+* **web:** cap the API's request body and pass on only the router's own refusals ([f25ff4f](https://github.com/ayenisholah/traverse/commit/f25ff4fc5aa1a93ba4b0bcbdaa7fb3eb423f6a09))
+* **web:** never show a check as clean when a source didn't answer ([38aea6a](https://github.com/ayenisholah/traverse/commit/38aea6a15caf3cd1c9e08e47f8800d157dde7109))
+* **web:** refuse cross-site mutations, and bound saves on their own ([2d39a0f](https://github.com/ayenisholah/traverse/commit/2d39a0f3adbbc2238cc44a7a8aac3dabef9a057a))
+* **web:** say an operation can't run, since the server refuses writes itself ([5dfb14b](https://github.com/ayenisholah/traverse/commit/5dfb14be9d7e3cc1441648cd662062b9e194c83b))
+* **web:** validate the router's answer and keep server code out of the browser ([3fdf011](https://github.com/ayenisholah/traverse/commit/3fdf01188cda87ac28df4ea6c8d71ed2522129fe))
+* **workspace:** refuse a database URL pg would read differently, and NUL text ([cd143a9](https://github.com/ayenisholah/traverse/commit/cd143a9e4dc052fe32db252674773908b1a02c0f))
+
 ## [0.9.1](https://github.com/ayenisholah/traverse/compare/v0.9.0...v0.9.1) (2026-11-09)
 
 
