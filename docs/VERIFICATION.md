@@ -298,3 +298,18 @@ Run on 2026-11-19. Nothing is deployed: account setup isn't done, and the stacks
 | Findings are accepted only from the list | The same | An acknowledgement made outside `infra/src/nag-suppressions.ts`, on a construct, on the whole app, or under one of aws-cdk-lib's own linter rule IDs, was found. A listed one applied, a stale one failed, and a namespaced ID, which would let warnings through, was refused |
 | The VPC | `npx vitest run infra/test/network-stack.test.ts` | Nine subnets over three zones, one NAT gateway on staging and three in production, data subnets with no route while service subnets have one each, an S3 gateway endpoint on the public and service subnets only, the default security group stripped, a flow-log role only this account's flow logs may assume, and flow logs of all traffic to a log group kept 30 or 365 days, under a rotating key whose policy names this account's log groups by their real ARN form. Key and log group are kept when the stack goes |
 
+## Data stack (NFR-7, U-23)
+
+Run on 2026-11-19. Nothing is deployed (owner, 2026-11-19).
+
+| Check | Command | What it showed |
+|---|---|---|
+| Postgres | `npx vitest run infra/test/data-stack.test.ts` | PostgreSQL 17.9 in the data subnets, not public, storage under its own key, `rds.force_ssl` 1, IAM authentication on, deletion protection, a snapshot on removal, the login generated into Secrets Manager under its own key. Production is Multi-AZ with 14 days of backups; staging is one zone with 7 |
+| Valkey | The same | Valkey 8.2 in the data subnets, encrypted at rest under its own key, TLS required, and an AUTH token CloudFormation resolves from Secrets Manager, so it's in no template. Production runs a replica in another zone with failover |
+| Who can reach them | The same | Exactly two ingress rules: Postgres's port and Valkey's, each only from the `clients` group, whose egress goes only there |
+| The router config bucket | The same | Versioned, KMS-encrypted, public access blocked, TLS only, with access logs and old versions expiring after 90 days |
+| Every store, in every stack | `npx vitest run infra/test/guardrails.test.ts` | Every store uses a key its template creates, every database a parameter group there that forces TLS, every cache TLS and AUTH, every bucket policy refuses everyone everything without TLS, no rule lets in anything outside the VPC but TCP 80 and 443, and both stacks are termination protected. Planted ones were found: a database under an AWS-managed key or default parameters, a cache with TLS only preferred or no AUTH, an S3-managed bucket that takes no logs, an Aurora cluster and a DynamoDB table (no rule yet), bucket policies that deny one account, one action or the bucket but not its objects, and rules for every protocol, UDP, a port range from 80, half the internet, one public address, a prefix list and a range known only at deploy time |
+| Logs and secrets | `npx vitest run infra/test/data-stack.test.ts` | Postgres's log groups exist before the instance, under their own key, kept 30 or 365 days. Statements and parameters are never logged. Both secrets are kept when the stack goes, as the snapshot is |
+| Accepted findings | The same | Five, each with its reason: single-zone stores on staging only, the default Postgres port, and secret rotation until M7's services read secrets from Secrets Manager |
+| `pg` verifies the server (U-23) | `npm run test:router` (`subgraphs/workspace/test/postgres/tls.test.ts`) | Against Postgres serving a test CA's certificate for 127.0.0.1, through the subgraph's own pool: connected over TLS with the CA in `NODE_EXTRA_CA_CERTS`, refused without it (`UNABLE_TO_VERIFY_LEAF_SIGNATURE`), and refused at 127.0.0.2 (`ERR_TLS_CERT_ALTNAME_INVALID`) |
+

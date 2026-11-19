@@ -19,6 +19,20 @@ export const environmentConfig = z
     cidr: z.string().regex(/^10\.(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.0\.0\/16$/),
     natGateways: z.int().min(1).max(3),
     logRetentionDays: retentionDays,
+    database: z.strictObject({
+      // An RDS instance class without its `db.` prefix, as CDK's InstanceType takes it.
+      instanceType: z.string().regex(/^[a-z][a-z0-9]*\.[a-z0-9]+$/),
+      multiAz: z.boolean(),
+      allocatedStorageGb: z.int().min(20).max(1_000),
+      maxAllocatedStorageGb: z.int().min(20).max(1_000),
+      // RDS keeps between 1 and 35 days; point-in-time recovery needs at least one.
+      backupRetentionDays: z.int().min(1).max(35),
+    }),
+    cache: z.strictObject({
+      nodeType: z.string().regex(/^cache\.[a-z0-9]+\.[a-z0-9]+$/),
+      // A primary and up to two replicas; with replicas, a failure moves to another zone.
+      nodes: z.int().min(1).max(3),
+    }),
   })
   .refine(
     ({ region, availabilityZones }) =>
@@ -27,9 +41,18 @@ export const environmentConfig = z
     "the zones must be three different zones of the Region",
   )
   .refine(
-    ({ name, natGateways, logRetentionDays }) =>
-      name !== "production" || (natGateways === 3 && logRetentionDays === 365),
-    "production needs a NAT gateway in each zone and a year of logs",
+    ({ name, natGateways, logRetentionDays, database, cache }) =>
+      name !== "production" ||
+      (natGateways === 3 &&
+        logRetentionDays === 365 &&
+        database.multiAz &&
+        database.backupRetentionDays >= 14 &&
+        cache.nodes >= 2),
+    "production needs a NAT gateway in each zone, a year of logs, and data stores in two zones",
+  )
+  .refine(
+    ({ database }) => database.maxAllocatedStorageGb >= database.allocatedStorageGb,
+    "the database can't grow to less than it starts with",
   );
 
 /** All environments: each named once, on networks that don't overlap, so they could be peered. */
@@ -55,6 +78,14 @@ export const ENVIRONMENTS: readonly EnvironmentConfig[] = environmentsConfig.par
     cidr: "10.20.0.0/16",
     natGateways: 1,
     logRetentionDays: 30,
+    database: {
+      instanceType: "t4g.micro",
+      multiAz: false,
+      allocatedStorageGb: 20,
+      maxAllocatedStorageGb: 50,
+      backupRetentionDays: 7,
+    },
+    cache: { nodeType: "cache.t4g.micro", nodes: 1 },
   },
   {
     name: "production",
@@ -63,5 +94,13 @@ export const ENVIRONMENTS: readonly EnvironmentConfig[] = environmentsConfig.par
     cidr: "10.30.0.0/16",
     natGateways: 3,
     logRetentionDays: 365,
+    database: {
+      instanceType: "t4g.medium",
+      multiAz: true,
+      allocatedStorageGb: 20,
+      maxAllocatedStorageGb: 200,
+      backupRetentionDays: 14,
+    },
+    cache: { nodeType: "cache.t4g.small", nodes: 2 },
   },
 ]);

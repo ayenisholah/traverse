@@ -11,8 +11,25 @@ export interface Database {
   stop: () => void;
 }
 
+export interface DatabaseOptions {
+  /** A folder holding `server.crt` and `server.key`, to serve TLS with. */
+  tls?: string;
+  /** Other loopback addresses to publish on, besides 127.0.0.1. */
+  alsoOn?: string[];
+}
+
+// Postgres refuses a key others can read, so the files are copied in and handed to its user.
+const SERVE_TLS = [
+  "mkdir -p /tls && cp /certs/server.crt /certs/server.key /tls/",
+  "chown postgres:postgres /tls/* && chmod 600 /tls/server.key",
+  "exec docker-entrypoint.sh postgres -c ssl=on -c ssl_cert_file=/tls/server.crt -c ssl_key_file=/tls/server.key",
+].join(" && ");
+
 /** Runs Postgres in Docker on a free port, and waits until it takes connections. */
-export const startDatabase = async (port: number): Promise<Database> => {
+export const startDatabase = async (
+  port: number,
+  { tls, alsoOn = [] }: DatabaseOptions = {},
+): Promise<Database> => {
   const name = `traverse-postgres-test-${String(process.pid)}-${String(port)}`;
   execFileSync("docker", [
     "run",
@@ -20,15 +37,19 @@ export const startDatabase = async (port: number): Promise<Database> => {
     "--rm",
     "--name",
     name,
-    "--publish",
-    `127.0.0.1:${String(port)}:5432`,
+    ...["127.0.0.1", ...alsoOn].flatMap((address) => [
+      "--publish",
+      `${address}:${String(port)}:5432`,
+    ]),
     "--env",
     "POSTGRES_USER=traverse",
     "--env",
     "POSTGRES_PASSWORD=traverse",
     "--env",
     "POSTGRES_DB=traverse",
-    POSTGRES_IMAGE,
+    ...(tls === undefined
+      ? [POSTGRES_IMAGE]
+      : ["--volume", `${tls}:/certs:ro`, "--entrypoint", "sh", POSTGRES_IMAGE, "-c", SERVE_TLS]),
   ]);
   const url = `postgres://traverse:traverse@127.0.0.1:${String(port)}/traverse`;
   const stop = () => {

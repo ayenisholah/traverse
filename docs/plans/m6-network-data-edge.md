@@ -4,7 +4,7 @@
 
 ## Status
 
-Built locally, as M4 and M5 were (owner, 2026-11-19): stacks are proven by synthesis, cdk-nag and assertions, and nothing is deployed. Traverse gets its own AWS account, so the stacks name none (ADR 0023). `feat/network-stack` is merged.
+Built locally, as M4 and M5 were (owner, 2026-11-19): stacks are proven by synthesis, cdk-nag and assertions, and nothing is deployed. Traverse gets its own AWS account, so the stacks name none (ADR 0023). `feat/network-stack` and `feat/data-stack` are merged.
 
 ## Work
 
@@ -18,3 +18,10 @@ Staging deploys first, with a single NAT gateway.
 
 - `cdk diff` is clean and `cdk-nag` has no unreviewed suppressions.
 - A CDK test rejects IAM users and access keys.
+
+## On the first deployment
+
+Check what synthesis can't:
+- cross-stack values arrive through `Fn::GetStackOutput` (A-23);
+- the Valkey group is created with `TransitEncryptionMode: required` (U-24);
+- RDS writes into the log groups CDK made (A-25, U-24).
