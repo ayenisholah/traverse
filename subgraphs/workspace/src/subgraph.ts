@@ -16,10 +16,16 @@ import type { WorkspaceStore } from "./store.ts";
 const typeDefs = readFileSync(new URL("../schema.graphqls", import.meta.url), "utf8");
 
 // Plain connections are for this machine or a service on a private network. Anything else must
-// verify the server's certificate (NFR-7, U-23).
+// verify the server's certificate (NFR-7, U-23). pg reads every query parameter as a setting, and
+// a `host` one would replace the address, so `sslmode`, once, is the only one allowed.
 const isTrustedDatabaseUrl = (url: string): boolean => {
   const parsed = new URL(url);
-  const isLocal = parsed.hostname === "127.0.0.1" || !parsed.hostname.includes(".");
+  const names = [...parsed.searchParams.keys()];
+  if (names.some((name) => name !== "sslmode") || names.length > 1) return false;
+  // An IPv6 literal has no dot either, so it isn't taken for a service name.
+  const isLocal =
+    parsed.hostname === "127.0.0.1" ||
+    (!parsed.hostname.includes(".") && !parsed.hostname.startsWith("["));
   const isPostgres = parsed.protocol === "postgres:" || parsed.protocol === "postgresql:";
   return isPostgres && (isLocal || parsed.searchParams.get("sslmode") === "verify-full");
 };
@@ -70,6 +76,8 @@ export const createDatabasePool = (env: Record<string, string | undefined>): pg.
     connectionString: environmentSchema.parse(env).DATABASE_URL,
     max: 10,
     connectionTimeoutMillis: 5_000,
+    // Below the router's own wait, so a slow database frees its connection first.
+    statement_timeout: 5_000,
   });
 
 /** Users' saved workspaces. It won't start without token settings (GR-3). */
