@@ -13,3 +13,7 @@
 
 - One user can't reach another's workspace through any operation.
 - A forged header has no effect.
+
+## Status
+
+Built on 2026-11-19, against a local issuer and Postgres in Docker. Both exit checks pass on the pinned router: one user reaches none of another's workspaces through any operation, and a forged header has no effect. Left: sign-in against a real Cognito user pool, which needs account setup and CDK.

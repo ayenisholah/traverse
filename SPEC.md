@@ -122,6 +122,7 @@ A Next.js app in `apps/web`, built two ways from one config. The static export h
 | `/packages`             | Look a package up, or check a `package.json`'s dependencies         |
 | `/packages/[...name]`   | Package explorer, on live data                                      |
 | `/sign-in`, `/sign-out` | Cognito sign-in and sign-out, needed only to save. Server build     |
+| `/workspaces`           | A signed-in user's saved workspaces, to reopen or delete            |
 
 - Stack: Next.js, React, TypeScript, Tailwind, Radix, tRPC, Zustand and CodeMirror 6 (ADR 0018). The route view is a list with an SVG outline, with no canvas library (ADR 0019).
 - Composition runs in a Web Worker with `@wundergraph/composition`, so the page keeps responding (FR-WB-2).
@@ -230,20 +231,35 @@ type Package @key(fields: "name") {
   advisories(version: String): [Advisory!]
 }
 
-# workspace: Postgres
-type Workspace @key(fields: "id") {
+# workspace: Postgres. No entity key, so nothing can look a workspace up by ID (ADR 0021).
+type Workspace {
   id: ID!
   name: String!
-  draftSchemas: [String!]!
+  drafts: [SchemaDraft!]!
+  operations: String!
   screenMap: String
+  updatedAt: String!
+}
+
+type SchemaDraft {
+  subgraph: String!
+  sdl: String!
 }
 
 type Query {
   workspaces: [Workspace!]!
+  workspace(id: ID!): Workspace
 }
 
 type Mutation {
-  saveWorkspace(name: String!, draftSchemas: [String!]!, screenMap: String): Workspace!
+  saveWorkspace(
+    id: ID
+    name: String!
+    drafts: [SchemaDraftInput!]!
+    operations: String!
+    screenMap: String
+  ): Workspace!
+  deleteWorkspace(id: ID!): Boolean!
 }
 ```
 
@@ -251,12 +267,12 @@ No operation accepts a user ID as an argument. This schema composes with `@wunde
 
 ## Data model
 
-| Subgraph       | Source                     | Rules                                                                       |
-| -------------- | -------------------------- | --------------------------------------------------------------------------- |
-| `packages`     | npm registry and downloads | No key. Maintainer emails are dropped on read (GR-16)                       |
-| `repositories` | GitHub GraphQL             | Read-only token, server-side. 5,000 points an hour, so responses are cached |
-| `advisories`   | OSV                        | No key                                                                      |
-| `workspace`    | RDS Postgres, `workspace`  | Every row carries `user_id` and an index on it                              |
+| Subgraph       | Source                     | Rules                                                                                                       |
+| -------------- | -------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `packages`     | npm registry and downloads | No key. Maintainer emails are dropped on read (GR-16)                                                       |
+| `repositories` | GitHub GraphQL             | Read-only token, server-side. 5,000 points an hour, so responses are cached                                 |
+| `advisories`   | OSV                        | No key                                                                                                      |
+| `workspace`    | RDS Postgres, `workspace`  | Every row carries `user_id`, every statement filters on it, and it leads the index. Numbered SQL migrations |
 
 Upstream responses are cached in Redis, and each subgraph degrades clearly when its source is down (FR-SG-6). Tests replay recorded real responses, and a scheduled check compares them with the live sources (FR-SG-10).
 

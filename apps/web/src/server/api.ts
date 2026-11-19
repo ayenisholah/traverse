@@ -10,6 +10,15 @@ import { loadPackagePage } from "./package-page.ts";
 import { readCapped } from "./read-capped.ts";
 import type { RouterClient } from "./router-client.ts";
 import type { SandboxClient } from "./sandbox-client.ts";
+import {
+  deleteWorkspace,
+  getWorkspace,
+  listWorkspaces,
+  saveInput,
+  saveWorkspace,
+  signedInToken,
+  workspaceId,
+} from "./workspaces.ts";
 
 export interface Context {
   router: RouterClient;
@@ -25,6 +34,8 @@ const MESSAGES: Partial<Record<TRPCError["code"], string>> = {
   SERVICE_UNAVAILABLE: UNAVAILABLE,
   BAD_REQUEST: "Invalid input",
   NOT_FOUND: "Not found",
+  UNAUTHORIZED: "Sign in first",
+  PRECONDITION_FAILED: "Keep at most 50 workspaces. Delete one first.",
 };
 
 const t = initTRPC.context<Context>().create({
@@ -97,6 +108,23 @@ const api = t.router({
     .input(routeInput)
     .mutation(({ ctx, input }) => ctx.sandbox.route(input.operation, input.variables)),
 
+  // A user's own workspaces, run on the router with their access token. The token never leaves
+  // this server, and the subgraph takes the user from it, never from anything sent here (GR-3).
+  workspaces: t.procedure.query(({ ctx }) =>
+    listWorkspaces(ctx.router, signedInToken(ctx.accessToken)),
+  ),
+  workspace: t.procedure
+    .input(workspaceId)
+    .query(({ ctx, input }) => getWorkspace(ctx.router, signedInToken(ctx.accessToken), input.id)),
+  saveWorkspace: t.procedure
+    .input(saveInput)
+    .mutation(({ ctx, input }) => saveWorkspace(ctx.router, signedInToken(ctx.accessToken), input)),
+  deleteWorkspace: t.procedure
+    .input(workspaceId)
+    .mutation(({ ctx, input }) =>
+      deleteWorkspace(ctx.router, signedInToken(ctx.accessToken), input.id),
+    ),
+
   package: t.procedure.input(packageInput).query(async ({ ctx, input }) => {
     const result = await ctx.router.run(PackageOperation, {
       name: input.name,
@@ -114,7 +142,9 @@ const api = t.router({
 export type Api = typeof api;
 
 // Far above the largest call the procedures accept, so only a request no browser would send fails.
-const MAX_BODY_BYTES = 32_000;
+// A saved workspace is the largest: 150,000 characters of SDL, 50,000 of operations and 10,000 of
+// screen map, which JSON escaping can grow.
+const MAX_BODY_BYTES = 512_000;
 
 const tooLarge = (): Response =>
   Response.json(

@@ -10,21 +10,22 @@ interface Options {
   timeoutMs?: number;
 }
 
-export type PostGraphql = (body: unknown) => Promise<unknown>;
+export type PostGraphql = (body: unknown, headers?: Record<string, string>) => Promise<unknown>;
 
 /**
  * Posts one GraphQL request to a router and returns its JSON, or nothing: no connection, no answer
  * in time, a failure status other than 400, a body that stops part way, one too large, or one that isn't JSON.
  * Always a POST, because a router logs a GET's address (C-55). Nothing from the browser's request
- * is passed on: no header, no cookie and no address.
+ * is passed on: no header, no cookie and no address. The only header added is the one the caller
+ * gives, which is the signed-in user's access token from the server's own session.
  */
 export const createPostGraphql =
   ({ url, fetch, timeoutMs = DEFAULT_TIMEOUT_MS }: Options): PostGraphql =>
-  async (body) => {
+  async (body, headers = {}) => {
     try {
       const response = await fetch(`${url}/graphql`, {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: { ...headers, "content-type": "application/json" },
         body: JSON.stringify(body),
         // A router never redirects, so a redirect means the address is wrong.
         redirect: "error",

@@ -18,11 +18,19 @@ let web: WebServer;
 
 // Needs `npm run build:server` first: this runs the built app, as a deployment would.
 beforeAll(async () => {
-  stack = await startStack();
+  const port = await freePort();
+  const origin = `http://127.0.0.1:${String(port)}`;
+  stack = await startStack({ webOrigin: origin });
   sandbox = await stack.startSandbox();
-  web = startWebServer(await freePort(), {
+  web = startWebServer(port, {
     PUBLIC_ROUTER_URL: stack.url,
     SANDBOX_ROUTER_URL: sandbox.url,
+    APP_ORIGIN: origin,
+    AUTH_DOMAIN_URL: stack.auth.domainUrl,
+    AUTH_CLIENT_ID: stack.auth.clientId,
+    AUTH_CLIENT_SECRET: stack.auth.clientSecret,
+    AUTH_RESOURCE: stack.auth.resource,
+    SESSION_KEY: Buffer.alloc(32, 4).toString("base64url"),
   });
   await waitUntilReady(web);
 }, 240_000);
@@ -309,5 +317,97 @@ describe("the package.json check on the real graph", { timeout: 60_000 }, () => 
     expect(result.data.kind).toBe("found");
     expect(result.data.package.latestVersion).toBe(fixture("express.latest").version);
     expect(result.data.package.advisories).toHaveLength(osv.express?.vulns.length ?? -1);
+  });
+});
+
+/** Signs in as a browser would: the app, the issuer's form, then back. Returns the cookies. */
+const signIn = async (username: string): Promise<string> => {
+  const cookies = new Map<string, string>();
+  const take = (response: Response) => {
+    for (const cookie of response.headers.getSetCookie()) {
+      const [pair] = cookie.split(";") as [string];
+      const at = pair.indexOf("=");
+      cookies.set(pair.slice(0, at), pair.slice(at + 1));
+    }
+  };
+  const header = () => [...cookies].map(([name, value]) => `${name}=${value}`).join("; ");
+  const start = await fetch(`${web.url}/sign-in`, { redirect: "manual" });
+  take(start);
+  const authorize = new URL(start.headers.get("location") ?? "");
+  const signedIn = await fetch(`${stack.auth.domainUrl}/oauth2/authorize`, {
+    method: "POST",
+    body: new URLSearchParams({ ...Object.fromEntries(authorize.searchParams), username }),
+    redirect: "manual",
+  });
+  const back = await fetch(signedIn.headers.get("location") ?? "", {
+    headers: { cookie: header() },
+    redirect: "manual",
+  });
+  take(back);
+  return [...cookies]
+    .filter(([, value]) => value !== "")
+    .map(([name, value]) => `${name}=${value}`)
+    .join("; ");
+};
+
+const trpc = async (cookie: string, path: string, input?: unknown, method = "GET") => {
+  const url =
+    method === "GET" && input !== undefined
+      ? `${web.url}/api/trpc/${path}?input=${encodeURIComponent(JSON.stringify(input))}`
+      : `${web.url}/api/trpc/${path}`;
+  const response = await fetch(url, {
+    method,
+    headers: { cookie, "content-type": "application/json" },
+    ...(method === "POST" ? { body: JSON.stringify(input) } : {}),
+  });
+  return {
+    status: response.status,
+    body: (await response.json()) as { result?: { data: unknown } },
+  };
+};
+
+describe("saved workspaces, from sign-in to Postgres", { timeout: 60_000 }, () => {
+  it("[FR-WB-11] a signed-in user saves a workspace through the web server, and reopens it", async () => {
+    const cookie = await signIn("ada");
+    const drafts = [{ subgraph: "packages", sdl: "type Query { a: String }" }];
+    const saved = await trpc(
+      cookie,
+      "saveWorkspace",
+      { name: "Real", drafts, operations: "query A { a }", screenMap: "S: A" },
+      "POST",
+    );
+    const id = (saved.body.result?.data as { id: string }).id;
+
+    const reopened = await trpc(cookie, "workspace", { id });
+    expect(reopened.body.result?.data).toMatchObject({
+      id,
+      name: "Real",
+      drafts,
+      screenMap: "S: A",
+    });
+  });
+
+  it("[FR-SG-1] another user can't see or open it", async () => {
+    const ada = await signIn("ada");
+    const saved = await trpc(
+      ada,
+      "saveWorkspace",
+      { name: "Ada's", drafts: [], operations: "", screenMap: null },
+      "POST",
+    );
+    const id = (saved.body.result?.data as { id: string }).id;
+    const grace = await signIn("grace");
+
+    expect((await trpc(grace, "workspaces")).body.result?.data).toEqual([]);
+    expect((await trpc(grace, "workspace", { id })).body.result?.data).toBeNull();
+    expect((await trpc(grace, "deleteWorkspace", { id }, "POST")).body.result?.data).toBe(false);
+  });
+
+  it("[GR-3] someone signed out gets nothing, whatever they send", async () => {
+    const answer = await fetch(`${web.url}/api/trpc/workspaces`, {
+      headers: { authorization: `Bearer ${await stack.token({ sub: "ada" })}`, "x-user-id": "ada" },
+    });
+
+    expect(answer.status).toBe(401);
   });
 });

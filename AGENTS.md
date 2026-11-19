@@ -56,7 +56,7 @@ npm run check:progress       # the branch updates docs/PROGRESS.md
 | `subgraphs/packages`        | npm data, on the shared subgraph kit                   |
 | `subgraphs/repositories`    | GitHub data, joined to a package by its repository URL |
 | `subgraphs/advisories`      | OSV advisories for a package and version               |
-| `subgraphs/`                | Planned: workspace                                     |
+| `subgraphs/workspace`       | Users' saved workspaces in Postgres, scoped by token   |
 | `graph/cosmo-demo`          | Cosmo demo schemas behind the public demo              |
 | `router/`                   | Public and sandbox router configs, operations, e2e     |
 | `infra/`                    | Planned: CDK app and reusable constructs               |
