@@ -38,8 +38,10 @@ export const createDraft = (schemaSdl: string) => {
     });
     if (outcome.kind !== "answer") return { kind: outcome.kind };
     const { operation, summary } = outcome.value;
-    return isRunnable(operation) && isPlainText(summary)
-      ? { kind: "drafted", operation, summary }
+    // The editor gets the check's own printing of the query, never the model's text as it came.
+    const runnable = isRunnable(operation);
+    return runnable !== undefined && isPlainText(summary)
+      ? { kind: "drafted", operation: runnable, summary }
       : { kind: "invalid" };
   };
 };

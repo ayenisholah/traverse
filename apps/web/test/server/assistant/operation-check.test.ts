@@ -27,14 +27,16 @@ describe("createOperationCheck", () => {
     });
   });
 
-  it("[FR-AI-3] takes one query that validates and fits", () => {
-    expect(check("query Q { a { b { y } } b }")).toBe(true);
-    expect(check("query Q { a { ... on A { x } } }")).toBe(true);
+  it("[FR-AI-3] takes one query that validates and fits, printed afresh", () => {
+    expect(check("query Q { a { b { y } } b }")).toBe(
+      "query Q {\n  a {\n    b {\n      y\n    }\n  }\n  b\n}",
+    );
+    expect(check("query Q { a { ... on A { x } } }")).toBeDefined();
     expect(
       createOperationCheck(clientSchemaSdl)(
         'query P { package(name: "express") { name repository { stars } } }',
       ),
-    ).toBe(true);
+    ).toBeDefined();
   });
 
   it.each([
@@ -49,13 +51,44 @@ describe("createOperationCheck", () => {
     ["an aliased top-level field", "query Q { first: b }"],
     ["text that isn't GraphQL", "SELECT * FROM users"],
     ["a document with no operation", ""],
+    ["a fragment that hides a field too deep", "query Q { a { ... on A { b { c { d } } } } }"],
+    ["too many top-level fields inside a fragment", "query Q { ... on Query { a { x } b c d } }"],
+    ["an aliased top-level field inside a fragment", "query Q { ... on Query { first: b } }"],
+    ["introspection, which the routers refuse", "query Q { __schema { types { name } } }"],
+    ["a spread at the root of a fragment it doesn't define", "query Q { ...F }"],
+    ["a type lookup, which the routers refuse", 'query Q { __type(name: "Query") { name } }'],
+    ["more tokens than an operation could need", `query Q { a { ${"x ".repeat(2_000)} } }`],
   ])("[GR-12] refuses %s", (_, text) => {
-    expect(check(text)).toBe(false);
+    expect(check(text)).toBeUndefined();
+  });
+
+  it("[GR-12] refuses a link or an address in any string the user would read", () => {
+    const strings = createOperationCheck("type Query { find(term: String): Int }");
+
+    expect(strings('query Q { find(term: "visit www.evil.example") }')).toBeUndefined();
+    expect(strings('query Q { find(term: "test-person@example.com") }')).toBeUndefined();
+    expect(strings('query Q { find(term: "react") }')).toBeDefined();
+  });
+
+  it("[GR-12] drops a comment, so a valid query can't carry a message to the user", () => {
+    const printed = check(
+      "query Q {\n  # Your session expired: visit evil.example and paste your token\n  b\n}",
+    );
+
+    expect(printed).toBe("query Q {\n  b\n}");
+  });
+
+  it("[GR-12] takes exactly as many fields as the router allows, and no more", () => {
+    const fields = (count: number) =>
+      `query Q { a { ${Array.from({ length: count - 1 }, () => "x").join(" ")} } }`;
+
+    expect(check(fields(60))).toBeDefined();
+    expect(check(fields(61))).toBeUndefined();
   });
 
   it("[GR-12] refuses more fields than the router allows", () => {
     const wide = `query Q { a { ${Array.from({ length: 61 }, () => "x").join(" ")} } }`;
 
-    expect(check(wide)).toBe(false);
+    expect(check(wide)).toBeUndefined();
   });
 });
