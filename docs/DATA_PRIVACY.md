@@ -6,13 +6,14 @@ Traverse serves real public data about open-source packages, and stores users' o
 
 | Data | Location | Retention |
 |---|---|---|
-| Saved workspaces: a name, schema drafts, operations and a screen map, under the user's Cognito subject. No email or other identity | RDS Postgres (Postgres in Docker until M6) | Until the user deletes them, from `/workspaces` |
+| Saved workspaces: a name, schema drafts, operations and a screen map, under the user's Cognito subject. No email or other identity | RDS Postgres, in the data subnets, under its own KMS key (built in CDK; Postgres in Docker until deployed) | Until the user deletes them, from `/workspaces` |
 | User identity: Cognito subject and email | Cognito | Until the account is deleted |
 | The user's access and refresh tokens, encrypted with the server's key. Never the email: Traverse asks for no ID token, so it never receives one (ADR 0020) | The user's browser, as `HttpOnly` cookies | The access token until it expires, the session 12 hours at most, both cleared on sign-out |
 | Parsed public npm, GitHub and OSV data, never raw responses, with personal fields dropped before storing | Redis, ElastiCache from M6 | Up to 2 days |
 | Rate-limit counters | ElastiCache | Short-lived |
 | Daily AI call counts, keyed by a digest of the user's subject | Redis, ElastiCache from M6 | A day |
 | Backups | RDS automated backups | 14 days |
+| Postgres's own logs: errors with the parameterised statement, never parameter values | CloudWatch Logs, under their own key | A year in production, 30 days on staging |
 | Logs | CloudWatch Logs | 30 days |
 | Traces and metrics | CloudWatch, X-Ray | Service defaults |
 

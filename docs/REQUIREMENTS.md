@@ -103,7 +103,7 @@ The assistant only adds to deterministic results, through Amazon Bedrock.
 | NFR-4 | Survive the loss of an Availability Zone. | With one zone disrupted, the service stays within its availability target. | resilience | M10 | planned |
 | NFR-5 | Recover data within targets. | A restore from backup meets the RPO and RTO in [SLOs](SLOS.md). | resilience | M10 | planned |
 | NFR-6 | Keep costs visible. | Budget alerts exist before the first deployment, and the launch records a measured cost baseline. | infrastructure | M6 | planned |
-| NFR-7 | Encrypt data at rest and in transit. | Stores use KMS encryption, and connections to data stores require TLS. | infrastructure | M6 | planned |
+| NFR-7 | Encrypt data at rest and in transit. | Stores use KMS encryption, and connections to data stores require TLS. | infrastructure | M6 | partial |
 | NFR-8 | Operate from runbooks. | Each alarm's runbook has been followed once in staging. | staging | M11 | planned |
 | NFR-9 | Meet WCAG 2.2 AA. | axe finds no violations on any route, every flow works by keyboard, and token contrast pairs pass in both themes. | e2e | M3 | done |
 | NFR-10 | Scale with the user's font size. | Styles use rem, em and % only, and a check rejects `px`. | CI | M1 | done |

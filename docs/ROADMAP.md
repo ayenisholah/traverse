@@ -65,7 +65,7 @@ Each branch is one pull request and lists the requirements it delivers. Plans fo
 | M5 | `feat/ai-suggest` | FR-AI-2, GR-12 | Merged |
 | M5 | `feat/ai-draft` | FR-AI-3, GR-12 | Merged |
 | M6 | `feat/network-stack` | NFR-7, GR-5 | Merged |
-| M6 | `feat/data-stack` | NFR-5, NFR-7 | Planned |
+| M6 | `feat/data-stack` | NFR-5, NFR-7 | Merged |
 | M6 | `feat/edge-stack` | FR-GW-6, NFR-6 | Planned |
 | M7 | `feat/graph-service-construct` | FR-DP-5 | Planned |
 | M7 | `feat/router-service` | FR-GW-1, FR-GW-3, FR-GW-5, FR-GW-7, FR-GW-8 | Planned |
