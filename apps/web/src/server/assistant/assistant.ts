@@ -12,6 +12,8 @@ interface Question<T> {
   data: Record<string, string>;
   /** Strict, so an answer with anything extra is refused rather than trimmed (GR-12). */
   schema: z.ZodType<T>;
+  /** The most the answer may run to, for a task whose answer is long, such as a whole schema. */
+  maxTokens?: number;
 }
 
 type Outcome<T> =
@@ -20,8 +22,18 @@ type Outcome<T> =
   | { kind: "too-large" }
   | { kind: "unavailable" };
 
+type Ask = <T>(question: Question<T>) => Promise<Outcome<T>>;
+
 export interface Assistant {
   ask: <T>(userId: string, question: Question<T>) => Promise<Outcome<T>>;
+  /**
+   * Takes the user's limit once, then runs `work`, which may do costly checks of its own before
+   * and after asking. The call counts whether or not `work` asks, so the checks are bounded too.
+   */
+  withCall: <T>(
+    userId: string,
+    work: (ask: Ask) => Promise<T>,
+  ) => Promise<T | { kind: "limit" } | { kind: "unavailable" }>;
 }
 
 /**
@@ -58,27 +70,32 @@ const isStrict = (schema: z.ZodType): boolean => {
  * is fenced and scrubbed (GR-13, GR-14), and only an answer that parsed comes back (GR-12).
  * Nothing about a call is logged.
  */
-export const createAssistant = ({
-  model,
-  limits,
-}: {
-  model: Model;
-  limits: Limits;
-}): Assistant => ({
-  ask: async (userId, { task, instructions, data, schema }) => {
-    if (!isStrict(schema)) throw new Error("An answer schema must be strict");
-    // Size first, which costs nothing, then the limit, so a refused call costs nothing more.
-    if (!fitsOneCall(data)) return { kind: "too-large" };
+export const createAssistant = ({ model, limits }: { model: Model; limits: Limits }): Assistant => {
+  const take = async (userId: string) => {
     const allowed = await limits.take(userId);
-    if (allowed === "user-limit" || allowed === "global-limit") return { kind: "limit" };
-    if (allowed === "unavailable") return { kind: "unavailable" };
+    if (allowed === "user-limit" || allowed === "global-limit") return { kind: "limit" as const };
+    return allowed === "unavailable" ? { kind: "unavailable" as const } : undefined;
+  };
+  // The model call itself, once the limit is taken.
+  const askTaken: Ask = async ({ task, instructions, data, schema, maxTokens }) => {
+    if (!isStrict(schema)) throw new Error("An answer schema must be strict");
     const built = buildPrompt({ instructions, data });
     if (built.kind === "too-large") return { kind: "too-large" };
     const answer = await model.ask({
       system: `${SYSTEM_RULES}\n\n${task}`,
       prompt: built.prompt,
       schema,
+      ...(maxTokens === undefined ? {} : { maxTokens }),
     });
     return answer.kind === "answer" ? answer : { kind: "unavailable" };
-  },
-});
+  };
+  return {
+    ask: async (userId, question) => {
+      if (!isStrict(question.schema)) throw new Error("An answer schema must be strict");
+      // Size first, which costs nothing, then the limit, so a refused call costs nothing more.
+      if (!fitsOneCall(question.data)) return { kind: "too-large" };
+      return (await take(userId)) ?? askTaken(question);
+    },
+    withCall: async (userId, work) => (await take(userId)) ?? work(askTaken),
+  };
+};

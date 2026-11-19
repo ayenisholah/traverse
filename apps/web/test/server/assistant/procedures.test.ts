@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { Assistant } from "../../../src/server/assistant/assistant.ts";
+import demoImpact from "../../../src/generated/demo-impact.json" with { type: "json" };
 import { handleApiRequest, type Context } from "../../../src/server/api.ts";
 
 const token = (payload: object) =>
@@ -24,9 +25,9 @@ const contextWith = ({
   assistant,
 });
 
-const call = async (context: Context, body: unknown) => {
+const call = async (context: Context, body: unknown, path = "explain") => {
   const response = await handleApiRequest(
-    new Request("http://web.test/api/trpc/explain", {
+    new Request(`http://web.test/api/trpc/${path}`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(body),
@@ -99,5 +100,60 @@ describe("the explain procedure", () => {
       (await call(contextWith({ accessToken: token({ sub: "u" }), assistant }), body)).status,
     ).toBe(400);
     expect(ask).not.toHaveBeenCalled();
+  });
+});
+
+describe("the suggest procedure", () => {
+  // A draft of the demo graph's family subgraph that removes a field the operation reads.
+  const family = demoImpact.subgraphs.find(({ name }) => name === "family")?.sdl ?? "";
+  const draft = family.replaceAll(/\n\s*maritalStatus: MaritalStatus/g, "");
+  const request = {
+    subgraph: "family",
+    drafts: { family: draft },
+    operations: "query Status { employees { details { maritalStatus } } }",
+    screens: "",
+  };
+
+  it("[FR-AI-2] checks a suggestion against the server's own copy of the demo graph", async () => {
+    const ask = vi.fn(() =>
+      Promise.resolve({
+        kind: "answer" as const,
+        value: { sdl: family, summary: "Keeps maritalStatus." },
+      }),
+    );
+    const withCall = (_: string, work: (asking: typeof ask) => Promise<unknown>) => work(ask);
+    const context = contextWith({
+      accessToken: token({ sub: "user-1" }),
+      assistant: { ask, withCall } as unknown as Assistant,
+    });
+    const answer = await call(context, request, "suggest");
+
+    expect(answer.body).toMatchObject({
+      result: { data: { kind: "suggested", brokenBefore: 1, brokenAfter: 0 } },
+    });
+  });
+
+  it("[GR-15] refuses someone signed out, and says unavailable where there's no assistant", async () => {
+    expect((await call(contextWith({}), request, "suggest")).status).toBe(401);
+    expect(
+      (await call(contextWith({ accessToken: token({ sub: "u" }) }), request, "suggest")).body,
+    ).toEqual({ result: { data: { kind: "unavailable" } } });
+    expect((await call(contextWith({ accessToken: token({}) }), request, "suggest")).status).toBe(
+      401,
+    );
+  });
+
+  it("[GR-15] reads a suggestion's drafts past the usual cap, but not without limit", async () => {
+    const context = contextWith({ accessToken: token({ sub: "u" }) });
+    // Five drafts near their own limit: far past the usual 32 KB, within the suggestion's cap.
+    const near = `${family}\n# ${"x".repeat(20_000)}`;
+    const big = {
+      ...request,
+      drafts: { family: near, hobbies: near, mood: near, products: near, countries: near },
+    };
+    const huge = { ...request, drafts: { family: "x".repeat(300_000) } };
+
+    expect((await call(context, big, "suggest")).status).toBe(200);
+    expect((await call(context, huge, "suggest")).status).toBe(413);
   });
 });

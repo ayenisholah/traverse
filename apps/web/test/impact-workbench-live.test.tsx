@@ -11,6 +11,20 @@ vi.mock("../src/assistant/explain-panel.tsx", () => ({
   ),
 }));
 
+vi.mock("../src/assistant/suggest-panel.tsx", () => ({
+  SuggestPanel: ({
+    subgraph,
+    onApply,
+  }: {
+    subgraph: string;
+    onApply: (subgraph: string, sdl: string) => void;
+  }) => (
+    <button type="button" onClick={() => onApply(subgraph, "type Query { applied: Int }")}>
+      Apply suggestion to {subgraph}
+    </button>
+  ),
+}));
+
 vi.mock("../src/workspaces/workspace-bar.tsx", () => ({
   WorkspaceBar: ({
     current,
@@ -111,5 +125,19 @@ describe("ImpactWorkbench in the server build", () => {
     });
 
     expect(screen.getByLabelText("Panel sees").textContent).toBe("a report");
+  });
+
+  it("[FR-AI-2] puts an applied suggestion in the draft of the subgraph being edited", () => {
+    render(
+      <ImpactWorkbench
+        subgraphs={subgraphs}
+        seedOperations="{ a }"
+        createWorker={createWorker}
+        live
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Apply suggestion to a" }));
+
+    expect(valueOf(/Schema draft/)).toBe("type Query { applied: Int }");
   });
 });

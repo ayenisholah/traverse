@@ -3,6 +3,7 @@ import type { SchemaChangeReport } from "@traverse/graph-core";
 import { describe, expect, it, vi } from "vitest";
 import { ExplainPanel } from "../src/assistant/explain-panel.tsx";
 import type { Explain, ExplainAnswer } from "../src/assistant/explain-request.ts";
+import { expectNothingShown, expectToAskServer } from "./assistant-panel.ts";
 import { expectNoAxeViolations } from "./axe.ts";
 
 const report: SchemaChangeReport = {
@@ -36,8 +37,7 @@ describe("ExplainPanel", () => {
   ])("[FR-AI-4] shows nothing %s", async (_, props) => {
     const { container } = renderPanel(vi.fn(), props);
 
-    await new Promise((done) => setTimeout(done, 0));
-    expect(container.innerHTML).toBe("");
+    await expectNothingShown(container);
   });
 
   it("[FR-AI-1] explains the result in plain points that name its fields, marked as AI", async () => {
@@ -119,14 +119,6 @@ describe("ExplainPanel", () => {
   });
 
   it("[FR-AI-4] asks this app's server whether the assistant is offered", async () => {
-    const fetch = vi.fn(async () =>
-      Response.json({ result: { data: { canSignIn: true, signedIn: true, canAsk: false } } }),
-    );
-    vi.stubGlobal("fetch", fetch);
-    const { container } = render(<ExplainPanel report={report} />);
-
-    await vi.waitFor(() => expect(fetch).toHaveBeenCalled());
-    expect(container.innerHTML).toBe("");
-    vi.unstubAllGlobals();
+    await expectToAskServer(() => render(<ExplainPanel report={report} />));
   });
 });

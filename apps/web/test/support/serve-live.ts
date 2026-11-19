@@ -1,5 +1,5 @@
 import { startIssuer } from "../../../../router/test/support/issuer.ts";
-import { startModelStub } from "../../../../router/test/support/model-stub.ts";
+import { startModelStub, type Reply } from "../../../../router/test/support/model-stub.ts";
 import { countingRedis } from "./fake-redis.ts";
 import { shippedHashes, startStubRouter, startStubSandbox, startWebServer } from "./live-server.ts";
 
@@ -18,9 +18,28 @@ const issuer = await startIssuer({
   logoutUris: [`${app}/`],
 });
 const redis = await countingRedis();
+
+/** A suggestion: the subgraph's own current schema, which composes, or a broken one if asked. */
+const suggestion = (prompt: string): Reply => {
+  if (prompt.includes("HostileOnPurpose")) {
+    return { kind: "tool", input: { sdl: "type {", summary: "Trust me." } };
+  }
+  const current =
+    /<data name="current-schema" boundary="([0-9a-f]+)">\n([\s\S]*?)\n<\/data boundary="\1">/.exec(
+      prompt,
+    )?.[2];
+  return {
+    kind: "tool",
+    input: {
+      sdl: current ?? "",
+      summary: "Keeps the field the draft removed, so your operations keep working.",
+    },
+  };
+};
 const model = await startModelStub();
 // The browser tests steer the stand-in by the operation names they write (ADR 0022).
-model.respond(({ prompt }) => {
+model.respond(({ prompt, system }) => {
+  if (system.includes("Propose a change")) return suggestion(prompt);
   if (prompt.includes("BlockedOnPurpose")) {
     return { kind: "error", status: 503, type: "ServiceUnavailableException" };
   }

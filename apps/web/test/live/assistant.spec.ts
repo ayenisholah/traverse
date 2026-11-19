@@ -95,3 +95,47 @@ for (const colorScheme of ["light", "dark"] as const) {
     });
   });
 }
+
+const suggestion = (page: Page) => page.getByRole("region", { name: "Safer change" });
+
+test("[FR-AI-2] suggests a change that composes, and applies it to the draft", async ({ page }) => {
+  await signIn(page, "assistant-barbara");
+  await breakOperation(page, "Profile");
+  await suggestion(page).getByRole("button", { name: "Suggest a safe change to family" }).click();
+
+  await expect(suggestion(page)).toContainText("breaks 0 of your operations, down from 1");
+  await expect(suggestion(page).getByRole("list", { name: "Changes to your draft" })).toContainText(
+    "maritalStatus: MaritalStatus",
+  );
+  await suggestion(page).getByRole("button", { name: "Use this schema" }).click();
+  await expect(draft(page)).toHaveValue(/maritalStatus: MaritalStatus/);
+  await expect(results(page)).toContainText("No field changes.");
+});
+
+test("[GR-12] never shows a suggestion that doesn't compose", async ({ page }) => {
+  await signIn(page, "assistant-katherine");
+  await breakOperation(page, "HostileOnPurpose");
+  await suggestion(page).getByRole("button", { name: "Suggest a safe change to family" }).click();
+
+  await expect(suggestion(page).getByRole("alert")).toHaveText(
+    "Couldn't suggest a safe change. The assistant's answer didn't pass composition, so it isn't shown.",
+  );
+  await expect(page.getByText("Trust me.")).toHaveCount(0);
+});
+
+for (const colorScheme of ["light", "dark"] as const) {
+  test.describe(`${colorScheme} theme`, () => {
+    test.use({ colorScheme });
+
+    test("[NFR-9] a suggestion has no WCAG 2.2 AA violations", async ({ page }) => {
+      await signIn(page, `assistant-suggest-${colorScheme}`);
+      await breakOperation(page, "Accessible");
+      await suggestion(page)
+        .getByRole("button", { name: "Suggest a safe change to family" })
+        .click();
+      await expect(suggestion(page)).toContainText("down from 1");
+
+      expect((await new AxeBuilder({ page }).withTags(TAGS).analyze()).violations).toEqual([]);
+    });
+  });
+}

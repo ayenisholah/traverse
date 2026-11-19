@@ -260,3 +260,16 @@ Run on 2026-11-19, against the local stand-in. No real model has been called, so
 | Nobody signed out is offered it | The same | Signed out, the check ran and no explanation panel appeared. The procedure refused a missing session and a token with no subject with 401 |
 | No planted secret reaches a prompt, and nothing is printed | `npm run test:integration` | On the built server, a signed-in explain call carrying a planted email and token sent neither to the stand-in, and the server's output held neither, nor the prompt, the answer or the field it was about, for an answered call and a failed one |
 | Explanations meet WCAG 2.2 AA | `npm run test:e2e:server` | axe found nothing with an explanation shown or refused, in both themes |
+
+## Suggestions (FR-AI-2, GR-12)
+
+Run on 2026-11-19, against the local stand-in. No real model has been called, so FR-AI-2 is `partial`.
+
+| Check | Command | What it showed |
+|---|---|---|
+| A safe change is shown and applies | `npm run test:e2e:server` | For a draft removing `Details.maritalStatus`, the stand-in's revised schema was checked by composition, shown as changes adding the field back, "breaks 0 of your operations, down from 1", and "Use this schema" left the draft composing with no field changes |
+| An unsafe change is never shown | The same, and `npx vitest run apps/web/test/server/assistant/suggest.test.ts` | On real composition, refused: a schema that doesn't compose, one breaking as many operations as the draft, one fixing the draft's two breaks while breaking a third, a link in a new comment, an email in a new description, a scrubbed marker carried into the draft, a summary with a link, and a schema on which composition throws. In the browser, a suggestion that didn't compose showed only the refusal, and its summary never appeared |
+| The server checks against its own graph | `npx vitest run apps/web/test/server/assistant/procedures.test.ts` | The procedure checked a suggestion against its copy of the demo graph, refused someone signed out, read a 40 KB draft and refused a 300 KB one with 413 |
+| Suggestions meet WCAG 2.2 AA | `npm run test:e2e:server` | axe found nothing with a suggestion shown, in both themes |
+| Composition is bounded | `npx vitest run apps/web/test/server/assistant/suggest.test.ts` | A subgraph too large to come back in one answer, operations sharing a name, and more than 50 operations were refused before any composition and before the call was counted. A draft that breaks nothing was counted, and no model was asked |
+| A suggestion stays with its subgraph | `npx vitest run apps/web/test/suggest-panel.test.tsx` | Switching to another subgraph dropped the suggestion, and nothing was applied there |
