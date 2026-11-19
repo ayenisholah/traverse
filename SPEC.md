@@ -121,12 +121,12 @@ A Next.js app in `apps/web`, built two ways from one config. The static export h
 | `/operations`           | Write an operation and see its route                                |
 | `/packages`             | Look a package up, or check a `package.json`'s dependencies         |
 | `/packages/[...name]`   | Package explorer, on live data                                      |
-| `/sign-in`, `/sign-out` | Cognito sign-in and sign-out, needed only to save                   |
+| `/sign-in`, `/sign-out` | Cognito sign-in and sign-out, needed only to save. Server build     |
 
 - Stack: Next.js, React, TypeScript, Tailwind, Radix, tRPC, Zustand and CodeMirror 6 (ADR 0018). The route view is a list with an SVG outline, with no canvas library (ADR 0019).
 - Composition runs in a Web Worker with `@wundergraph/composition`, so the page keeps responding (FR-WB-2).
 - Pasted or uploaded SDL stays in the browser unless the user saves it.
-- The server holds the session and calls the routers, so browser code never handles tokens (GR-9).
+- The server holds the session and calls the routers, so browser code never handles tokens (GR-9). The session is the user's tokens, each sealed into an `HttpOnly` cookie, with no store behind it ([ADR 0020](docs/adr/0020-server-held-session.md)).
 - Operations are written as `.graphql` documents, which generate typed clients (FR-WB-12) and the screen map.
 - Every data view has loading, empty and error states.
 - The design is dense and keyboard-first. Semantic tokens come from one source, using the Frox scale as the Tailwind theme, with rem sizing and AA contrast in light and dark themes.
@@ -176,7 +176,7 @@ The GitHub Action in `action.yml` runs both commands on `pull_request`. It comme
 
 ### Identity
 
-Tokens are issued by a Cognito user pool. A token's subject is the only source of user identity. The router validates each token, and the `workspace` subgraph verifies it again against the same keys, so it never trusts a caller's claim alone (GR-3). Public package data needs no sign-in.
+Tokens are issued by a Cognito user pool. The web server signs users in with authorization code and PKCE, asks for no ID token, and binds each access token to the router with a resource indicator, so its `aud` is the router's URL (A-12). Only that access token reaches the router, and the `workspace` subgraph accepts only `token_use: access`. A token's subject is the only source of user identity. The router validates each token, and the `workspace` subgraph verifies it again against the same keys, so it never trusts a caller's claim alone (GR-3). Public package data needs no sign-in.
 
 ### Graph
 

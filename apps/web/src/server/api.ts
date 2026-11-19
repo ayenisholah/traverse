@@ -14,6 +14,10 @@ import type { SandboxClient } from "./sandbox-client.ts";
 export interface Context {
   router: RouterClient;
   sandbox: SandboxClient;
+  /** Whether the server has a user pool to sign in with. */
+  canSignIn: boolean;
+  /** The signed-in user's access token, read from their sealed cookies. It never leaves the server. */
+  accessToken: string | undefined;
 }
 
 const UNAVAILABLE = "The graph didn't answer";
@@ -69,6 +73,12 @@ const routeInput = z.object({
 const MAX_MANIFEST_LENGTH = 30_000;
 
 const api = t.router({
+  // Whether anyone is signed in, and nothing about who: the page needs no more to offer sign-in
+  // or sign-out, and the token stays on the server (GR-9).
+  viewer: t.procedure.query(({ ctx }) => ({
+    canSignIn: ctx.canSignIn,
+    signedIn: ctx.accessToken !== undefined,
+  })),
   packagePage: t.procedure
     .input(z.object({ name: z.string().refine(isPackageName) }))
     .query(({ ctx, input }) => loadPackagePage(ctx.router, input.name)),

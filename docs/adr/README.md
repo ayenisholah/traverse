@@ -21,3 +21,4 @@
 | [0017](0017-literal-router-config.md) | Write every risky router setting out, and hold the router's environment to a list | Accepted |
 | [0018](0018-codemirror-operation-editor.md) | Edit operations in CodeMirror 6, not Monaco | Accepted |
 | [0019](0019-route-view-list.md) | Show a route as an ordered list with an SVG outline | Accepted |
+| [0020](0020-server-held-session.md) | Sign in with a server-held session and a bound access token | Accepted |

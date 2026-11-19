@@ -1,6 +1,6 @@
 # M4: Accounts and saved workspaces
 
-**Needs:** [account setup](account-setup.md).
+**Needs:** [account setup](account-setup.md) to prove sign-in against a real user pool. The owner chose on 2026-11-18 to build both branches first, against a local issuer and Postgres in Docker.
 
 **Outcome:** a signed-in user can save schema drafts and screen maps. The rest of the app still works with no account.
 
