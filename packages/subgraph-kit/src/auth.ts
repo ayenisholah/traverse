@@ -1,3 +1,4 @@
+import { GraphQLError } from "graphql";
 import { createRemoteJWKSet, jwtVerify, type JWTVerifyGetKey } from "jose";
 import type { JwtConfig } from "./config.ts";
 import type { Logger } from "./logging.ts";
@@ -51,3 +52,14 @@ export const createUserVerifier =
     if (token === undefined) return Promise.resolve(undefined);
     return verifyToken(token, keys ?? createRemoteJWKSet(new URL(jwt.url)), jwt, logger);
   };
+
+/**
+ * The verified user, or a refusal for anyone else. Every resolver over a user's own data starts
+ * here, and scopes its query by what this returns, never by anything the caller sent (GR-3).
+ */
+export const requireUser = ({ userId }: { userId: string | undefined }): string => {
+  if (userId === undefined) {
+    throw new GraphQLError("Sign in first.", { extensions: { code: "UNAUTHENTICATED" } });
+  }
+  return userId;
+};
