@@ -179,15 +179,31 @@ describe("the draft procedure", () => {
     });
   });
 
-  it("[GR-15] refuses someone signed out, and an empty or long description", async () => {
+  it("[GR-15] refuses someone signed out, a token with no subject, and an empty or long description, before asking", async () => {
+    const ask = vi.fn();
+    const assistant = { ask } as unknown as Assistant;
+    const refused = [
+      await call(contextWith({ assistant }), { description: "x" }, "draft"),
+      await call(contextWith({ accessToken: token({}), assistant }), { description: "x" }, "draft"),
+      await call(
+        contextWith({ accessToken: token({ sub: "u" }), assistant }),
+        { description: "  " },
+        "draft",
+      ),
+      await call(
+        contextWith({ accessToken: token({ sub: "u" }), assistant }),
+        { description: "x".repeat(1_001) },
+        "draft",
+      ),
+    ];
+
+    expect(refused.map(({ status }) => status)).toEqual([401, 401, 400, 400]);
+    expect(ask).not.toHaveBeenCalled();
+  });
+
+  it("[FR-AI-4] says unavailable where the server has no assistant", async () => {
     const context = contextWith({ accessToken: token({ sub: "u" }) });
 
-    expect((await call(contextWith({}), { description: "x" }, "draft")).status).toBe(401);
-    expect(
-      (await call(contextWith({ accessToken: token({}) }), { description: "x" }, "draft")).status,
-    ).toBe(401);
-    expect((await call(context, { description: "  " }, "draft")).status).toBe(400);
-    expect((await call(context, { description: "x".repeat(1_001) }, "draft")).status).toBe(400);
     expect((await call(context, { description: "x" }, "draft")).body).toEqual({
       result: { data: { kind: "unavailable" } },
     });

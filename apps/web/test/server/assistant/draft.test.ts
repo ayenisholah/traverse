@@ -20,7 +20,8 @@ describe("draft", () => {
 
     expect(await draft(assistant, "user-1", { description: "react's licence" })).toEqual({
       kind: "drafted",
-      ...value,
+      operation: 'query License {\n  package(name: "react") {\n    name\n    license\n  }\n}',
+      summary: value.summary,
     });
     const [, question] = ask.mock.calls[0] as unknown as [string, { data: Record<string, string> }];
     expect(question.data).toEqual({ schema, request: "react's licence" });

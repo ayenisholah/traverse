@@ -83,7 +83,12 @@ const useRoute = (fetchRoute: FetchRoute) => {
     const answer = await fetchRoute(operation, parsed);
     if (id === latest.current) setState({ status: "done", answer });
   };
-  return { state, run };
+  // A new operation's route is unknown until it runs, and any run still on its way is stale.
+  const reset = () => {
+    latest.current += 1;
+    setState({ status: "idle" });
+  };
+  return { state, run, reset };
 };
 
 function RouteSection({ state }: { state: State }) {
@@ -108,7 +113,7 @@ export function OperationsWorkbench({
   // The editor keeps its own text, so a drafted operation remounts it with that text.
   const [editor, setEditor] = useState({ key: 0, text: seedOperation });
   const [variables, setVariables] = useState(seedVariables);
-  const { state, run: runRoute } = useRoute(fetchRoute);
+  const { state, run: runRoute, reset } = useRoute(fetchRoute);
   const run = (event: FormEvent) => {
     event.preventDefault();
     void runRoute(operation, variables);
@@ -121,6 +126,7 @@ export function OperationsWorkbench({
           onDrafted={(drafted) => {
             setEditor(({ key }) => ({ key: key + 1, text: drafted }));
             setOperation(drafted);
+            reset();
           }}
         />
         <form className="min-w-0 space-y-4" onSubmit={run}>
