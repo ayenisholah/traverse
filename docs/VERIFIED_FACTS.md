@@ -1,6 +1,6 @@
 # Verified facts
 
-**Updated:** 2026-11-06
+**Updated:** 2026-11-18
 
 This file records what Traverse relies on from Cosmo and AWS, and how far each claim can be trusted. Add a fact here before depending on it.
 
@@ -170,6 +170,11 @@ The versions below are the only ones whose docs count. Upgrades change this tabl
 | A-7 | A Free plan project is assigned one Region, and other Regions need a plan upgrade and advanced features. | `tested` | Console message and API calls on the development account |
 | A-8 | Activating advanced features can't be reversed, removes any spend limit and prevents new projects in that organisation. | `documented` | [Activate advanced features](https://docs.aws.amazon.com/accounts/latest/reference/activate-advanced-features.md) |
 | A-9 | Upgrading an account plan can't be reversed. | `documented` | [Upgrade your account](https://docs.aws.amazon.com/accounts/latest/reference/upgrade-account.md) |
+| A-10 | A Cognito access token carries `sub`, `iss`, `client_id`, `token_use` (`access`), `scope`, `exp`, `iat`, `jti`, `origin_jti` and `username`, signed RS256 with a different key from ID tokens. It carries `aud` only when the app asked for a resource binding. Its lifetime is set per app client, from 5 minutes to 1 day. | `documented` | [Access token](https://docs.aws.amazon.com/cognito/latest/developerguide/amazon-cognito-user-pools-using-the-access-token.html) |
+| A-11 | A Cognito ID token's `aud` is the app client ID, `token_use` is `id`, and it carries `email` when the attribute is readable. It's issued only when the `openid` scope is requested. | `documented` | [ID token](https://docs.aws.amazon.com/cognito/latest/developerguide/amazon-cognito-user-pools-using-the-id-token.html), [Authorize endpoint](https://docs.aws.amazon.com/cognito/latest/developerguide/authorization-endpoint.html) |
+| A-12 | A `resource` parameter on `GET /oauth2/authorize` (RFC 8707) binds the access token: Cognito sets its `aud` to that URL, which must start `https://` or `http://localhost`. One resource per request, managed login and code or implicit grants only. A refresh keeps the `aud`. | `documented` | [Resource binding](https://docs.aws.amazon.com/cognito/latest/developerguide/cognito-user-pools-define-resource-servers.html#cognito-user-pools-resource-binding), [Token endpoint](https://docs.aws.amazon.com/cognito/latest/developerguide/token-endpoint.html) |
+| A-13 | `GET /oauth2/authorize` takes `response_type=code`, `client_id`, a pre-registered absolute `redirect_uri` (HTTPS, or `http://localhost`), `state`, `scope`, and PKCE with `code_challenge_method=S256` only. The code lasts five minutes. `POST /oauth2/token` (form-encoded, `client_secret_basic` or `_post`) redeems it with `code`, the same `redirect_uri` and `code_verifier`, and returns `access_token`, `refresh_token`, `expires_in` and, with `openid`, `id_token`. `grant_type=refresh_token` returns a new refresh token only when rotation is on. A mismatched `redirect_uri` gets `unauthorized_client`. | `documented` | [Authorize endpoint](https://docs.aws.amazon.com/cognito/latest/developerguide/authorization-endpoint.html), [Token endpoint](https://docs.aws.amazon.com/cognito/latest/developerguide/token-endpoint.html) |
+| A-14 | `POST /oauth2/revoke` takes a refresh token and revokes it and the tokens issued from it, answering 200 even for an unknown token. `GET /logout` with `client_id` and a registered `logout_uri` clears the managed login session and redirects, but revokes no token. | `documented` | [Revoke endpoint](https://docs.aws.amazon.com/cognito/latest/developerguide/revocation-endpoint.html), [Logout endpoint](https://docs.aws.amazon.com/cognito/latest/developerguide/logout-endpoint.html) |
 
 ## Open questions
 
@@ -186,12 +191,12 @@ Each is answered by test before the feature that depends on it ships.
 | U-17 | Can a third-party app read the Platform API? The docs describe it as used by the CLI and Studio. | FR-WB-1 | M3 |
 | U-19 | Which current Claude model does Bedrock offer from the chosen Region, and at what cost? | FR-AI-1 | Before M5 |
 | U-21 | Do the values in `packages/design-tokens` match the Figma file's variables exactly? See W-7. | FR-WB-13 | When the Figma call limit resets |
-| U-22 | Do Cognito access tokens carry `aud`? `packages/subgraph-kit` requires `aud`, `iss`, `exp` and `sub`, and a token shaped with `client_id` instead verifies as no user. Using ID tokens instead may put emails in reach of the router. | GR-3, FR-WB-10 | Before M4 |
 
 ## Answered questions
 
 | ID | Question | Needed by | Answer | Source |
 |---|---|---|---|---|
+| U-22 | Do Cognito access tokens carry `aud`? | GR-3, FR-WB-10 | Only with a resource binding: the web server asks for one, so `aud` is the router's URL, and the router and `packages/subgraph-kit` keep checking it. No ID token is requested, so no email reaches Traverse. | A-10 to A-12 |
 | U-2 | Does the router image contain anything that can run a container health check? | FR-GW-7 | No. It has no shell or health subcommand, so health comes from the load balancer's target group. | C-39 |
 | U-4 | Is the router's HTTP idle timeout longer than the load balancer's? If not, it must change to avoid 502 errors (A-3). | NFR-2 | No. It's 60 seconds, the same as the default, and can't be changed, so the load balancer is set to 50. | C-38 |
 | U-5 | How is the `Authorization` header forwarded to subgraphs, and how is it configured? | GR-3 | With a `propagate` rule under `headers.all.request`. | C-40 |

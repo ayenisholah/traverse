@@ -24,6 +24,9 @@ const verifyToken = async (
       algorithms: ["RS256"],
       requiredClaims: ["exp", "sub"],
     });
+    // An ID token from the same pool has the same issuer and signer, and carries the user's email
+    // (A-11), so only an access token may stand for a user.
+    if (payload.token_use !== "access") return undefined;
     // jose doesn't check the type of `sub`, and this value will scope queries on users' data.
     return typeof payload.sub === "string" && payload.sub !== "" ? payload.sub : undefined;
   } catch (error) {
