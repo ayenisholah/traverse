@@ -42,14 +42,14 @@ export const createBedrockModel = ({
   maxTokens = DEFAULT_MAX_TOKENS,
   timeoutMs = DEFAULT_TIMEOUT_MS,
 }: Options): Model => ({
-  ask: async ({ system, prompt, schema }) => {
+  ask: async ({ system, prompt, schema, maxTokens: forThisCall }) => {
     try {
       const response = await client.send(
         new ConverseCommand({
           modelId,
           system: [{ text: system }],
           messages: [{ role: "user", content: [{ text: prompt }] }],
-          inferenceConfig: { maxTokens, temperature: 0 },
+          inferenceConfig: { maxTokens: forThisCall ?? maxTokens, temperature: 0 },
           toolConfig: {
             tools: [
               {

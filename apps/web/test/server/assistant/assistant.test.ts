@@ -79,6 +79,52 @@ describe("createAssistant", () => {
   });
 });
 
+describe("withCall", () => {
+  it("[GR-15] takes the limit once, and lets the work ask without taking it again", async () => {
+    const { assistant, ask, take } = setup({ kind: "answer", value: { summary: "x" } });
+    const outcome = await assistant.withCall("user-1", async (asking) => {
+      await asking(question);
+      return asking({ ...question, maxTokens: 8_192 });
+    });
+
+    expect(outcome).toEqual({ kind: "answer", value: { summary: "x" } });
+    expect(take).toHaveBeenCalledTimes(1);
+    expect(ask).toHaveBeenCalledTimes(2);
+    expect((ask.mock.calls[1] as unknown as [{ maxTokens?: number }])[0].maxTokens).toBe(8_192);
+    expect((ask.mock.calls[0] as unknown as [{ maxTokens?: number }])[0]).not.toHaveProperty(
+      "maxTokens",
+    );
+  });
+
+  it.each([
+    ["the limit", "user-limit", { kind: "limit" }],
+    ["a counter it can't reach", "unavailable", { kind: "unavailable" }],
+  ] as const)("[GR-15] runs no work past %s", async (_, check, outcome) => {
+    const { assistant } = setup({ kind: "answer", value: {} }, check);
+    const work = vi.fn();
+
+    expect(await assistant.withCall("user-1", work)).toEqual(outcome);
+    expect(work).not.toHaveBeenCalled();
+  });
+
+  it("[GR-12] still refuses a loose answer schema inside a counted call", async () => {
+    const { assistant } = setup({ kind: "answer", value: {} });
+    const loose = { ...question, schema: z.object({ summary: z.string() }) };
+
+    await expect(assistant.withCall("user-1", (asking) => asking(loose))).rejects.toThrow("strict");
+  });
+
+  it("[GR-15] still refuses too much data inside a counted call", async () => {
+    const { assistant, ask } = setup({ kind: "answer", value: { summary: "x" } });
+    const big = { ...question, data: { errors: "x".repeat(MAX_DATA_LENGTH + 1) } };
+
+    expect(await assistant.withCall("user-1", (asking) => asking(big))).toEqual({
+      kind: "too-large",
+    });
+    expect(ask).not.toHaveBeenCalled();
+  });
+});
+
 describe("answer schemas", () => {
   it("[GR-12] must be strict all the way down, so nothing extra is quietly trimmed", async () => {
     const { assistant } = setup({ kind: "answer", value: {} });

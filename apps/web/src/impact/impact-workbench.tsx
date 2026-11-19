@@ -1,8 +1,9 @@
 "use client";
 
-import type { SubgraphInput } from "@traverse/graph-core";
+import type { SchemaChangeFailure, SchemaChangeReport, SubgraphInput } from "@traverse/graph-core";
 import { useMemo, useState } from "react";
 import { ExplainPanel } from "../assistant/explain-panel.tsx";
+import { SuggestPanel } from "../assistant/suggest-panel.tsx";
 import { WorkspaceBar, type WorkbenchState } from "../workspaces/workspace-bar.tsx";
 import { createComposeWorker } from "./create-worker.ts";
 import { SubgraphPicker, TextField } from "./draft-fields.tsx";
@@ -20,7 +21,8 @@ interface ImpactWorkbenchProps {
 const applyDrafts = (subgraphs: SubgraphInput[], drafts: Record<string, string>) =>
   subgraphs.map((subgraph) => ({ ...subgraph, sdl: drafts[subgraph.name] ?? subgraph.sdl }));
 
-const useWorkbench = (seedOperations: string) => {
+const useWorkbench = (seedOperations: string, firstSubgraph: string) => {
+  const [selected, setSelected] = useState(firstSubgraph);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [operations, setOperations] = useState(seedOperations);
   const [screens, setScreens] = useState("");
@@ -29,7 +31,17 @@ const useWorkbench = (seedOperations: string) => {
     setOperations(opened.operations);
     setScreens(opened.screens);
   };
-  return { drafts, setDrafts, operations, setOperations, screens, setScreens, open };
+  return {
+    selected,
+    setSelected,
+    drafts,
+    setDrafts,
+    operations,
+    setOperations,
+    screens,
+    setScreens,
+    open,
+  };
 };
 
 type Workbench = ReturnType<typeof useWorkbench>;
@@ -43,8 +55,16 @@ function WorkbenchFields({
   proposed: SubgraphInput[];
   workbench: Workbench;
 }) {
-  const [selected, setSelected] = useState((subgraphs[0] as SubgraphInput).name);
-  const { drafts, setDrafts, operations, setOperations, screens, setScreens } = workbench;
+  const {
+    selected,
+    setSelected,
+    drafts,
+    setDrafts,
+    operations,
+    setOperations,
+    screens,
+    setScreens,
+  } = workbench;
   const draft = proposed.find(({ name }) => name === selected) as SubgraphInput;
   return (
     <div className="min-w-0 space-y-4">
@@ -80,13 +100,37 @@ function WorkbenchFields({
   );
 }
 
+/** The assistant's help with a finished check, in the server build only. */
+function AssistantPanels({
+  report,
+  workbench,
+}: {
+  report: SchemaChangeReport | SchemaChangeFailure | undefined;
+  workbench: Workbench;
+}) {
+  const { selected, drafts, setDrafts, operations, screens } = workbench;
+  return (
+    <>
+      <ExplainPanel report={report} />
+      <SuggestPanel
+        report={report}
+        subgraph={selected}
+        drafts={drafts}
+        operations={operations}
+        screens={screens}
+        onApply={(subgraph, sdl) => setDrafts({ ...drafts, [subgraph]: sdl })}
+      />
+    </>
+  );
+}
+
 export function ImpactWorkbench({
   subgraphs,
   seedOperations,
   createWorker = createComposeWorker,
   live = false,
 }: ImpactWorkbenchProps) {
-  const workbench = useWorkbench(seedOperations);
+  const workbench = useWorkbench(seedOperations, (subgraphs[0] as SubgraphInput).name);
   const { drafts, operations, screens } = workbench;
   const input = useMemo(
     () => ({ current: subgraphs, proposed: applyDrafts(subgraphs, drafts), operations, screens }),
@@ -107,7 +151,10 @@ export function ImpactWorkbench({
           </h2>
           <ImpactResults state={state} />
           {live ? (
-            <ExplainPanel report={state.status === "done" ? state.report : undefined} />
+            <AssistantPanels
+              report={state.status === "done" ? state.report : undefined}
+              workbench={workbench}
+            />
           ) : null}
         </section>
       </div>

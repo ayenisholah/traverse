@@ -11,6 +11,8 @@ import { readCapped } from "./read-capped.ts";
 import type { RouterClient } from "./router-client.ts";
 import { subjectOf, type Assistant } from "./assistant/assistant.ts";
 import { explain, explainInput } from "./assistant/explain.ts";
+import { suggest, suggestInput } from "./assistant/suggest.ts";
+import demoImpact from "../generated/demo-impact.json" with { type: "json" };
 import type { SandboxClient } from "./sandbox-client.ts";
 import {
   deleteWorkspace,
@@ -140,6 +142,15 @@ const api = t.router({
     return explain(ctx.assistant, userId, input);
   }),
 
+  // The impact page checks drafts against the demo graph, so the server checks a suggestion
+  // against its own copy of that graph, never one the browser sends (GR-12).
+  suggest: t.procedure.input(suggestInput).mutation(async ({ ctx, input }) => {
+    const userId = subjectOf(signedInToken(ctx.accessToken));
+    if (userId === undefined) throw new TRPCError({ code: "UNAUTHORIZED" });
+    if (ctx.assistant === undefined) return { kind: "unavailable" as const };
+    return suggest(ctx.assistant, userId, demoImpact.subgraphs, input);
+  }),
+
   package: t.procedure.input(packageInput).query(async ({ ctx, input }) => {
     const result = await ctx.router.run(PackageOperation, {
       name: input.name,
@@ -161,6 +172,12 @@ const MAX_BODY_BYTES = 32_000;
 // A saved workspace is the one large call: up to 210,000 characters, which UTF-8 and JSON escaping
 // can grow several times. It matches the router's own limit, which the save must pass anyway.
 const MAX_SAVE_BYTES = 1_000_000;
+// A suggestion carries the user's drafts, and a draft of the largest demo schema is 26 KB.
+const MAX_SUGGEST_BYTES = 256_000;
+const LARGE_CALLS: Record<string, number> = {
+  "/api/trpc/saveWorkspace": MAX_SAVE_BYTES,
+  "/api/trpc/suggest": MAX_SUGGEST_BYTES,
+};
 
 const refused = (status: number, message: string, code: string): Response =>
   Response.json(
@@ -190,8 +207,8 @@ export const handleApiRequest = async (request: Request, context: Context): Prom
   }
   let req = request;
   if (request.body !== null) {
-    const isSave = new URL(request.url).pathname === "/api/trpc/saveWorkspace";
-    const body = await readCapped(request.body, isSave ? MAX_SAVE_BYTES : MAX_BODY_BYTES);
+    const path = new URL(request.url).pathname;
+    const body = await readCapped(request.body, LARGE_CALLS[path] ?? MAX_BODY_BYTES);
     if (body === undefined) return tooLarge();
     req = new Request(request.url, {
       method: request.method,

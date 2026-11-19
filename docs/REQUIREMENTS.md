@@ -35,7 +35,7 @@ The assistant only adds to deterministic results, through Amazon Bedrock.
 | ID | Requirement | Acceptance check | Verified by | Milestone | Status |
 |---|---|---|---|---|---|
 | FR-AI-1 | Explain results. | Composition errors and impact results get a plain explanation that names the real fields involved. | integration | M5 | partial |
-| FR-AI-2 | Suggest a safe change. | A suggested migration is shown only if it passes real composition. | integration | M5 | planned |
+| FR-AI-2 | Suggest a safe change. | A suggested migration is shown only if it passes real composition. | integration | M5 | partial |
 | FR-AI-3 | Draft an operation. | A drafted operation reaches the editor only if it validates against the schema. | integration | M5 | planned |
 | FR-AI-4 | Work without AI. | With Bedrock blocked, every deterministic feature still works and the assistant says it's unavailable. | e2e | M5 | done |
 

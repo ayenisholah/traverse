@@ -13,6 +13,8 @@ interface ModelRequest<T> {
   prompt: string;
   /** The only shape an answer may take. Anything else is `invalid` (GR-12). */
   schema: z.ZodType<T>;
+  /** The most the answer may run to, when a task needs more than the usual. */
+  maxTokens?: number;
 }
 
 /**

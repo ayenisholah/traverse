@@ -9,7 +9,7 @@ import type { AddressInfo } from "node:net";
  * text, or an error Bedrock would send, including wrong and hostile answers, so the app's
  * validation is what's tested.
  */
-type Reply =
+export type Reply =
   | { kind: "tool"; input: unknown; name?: string }
   | { kind: "text"; text: string }
   | { kind: "error"; status: number; type: string }
