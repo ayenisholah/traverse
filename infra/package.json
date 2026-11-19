@@ -9,12 +9,12 @@
     "synth": "cdk synth --quiet --no-notices --lookups=false --strict"
   },
   "dependencies": {
-    "aws-cdk-lib": "2.275.0",
+    "aws-cdk-lib": "2.277.0",
     "cdk-nag": "3.0.2",
     "constructs": "10.8.1",
     "zod": "^4.6.6"
   },
   "devDependencies": {
-    "aws-cdk": "2.1147.0"
+    "aws-cdk": "2.1148.1"
   }
 }
