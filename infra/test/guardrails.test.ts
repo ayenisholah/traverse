@@ -37,12 +37,14 @@ const stacks = everyStack(app);
 
 describe("the app's guardrails", () => {
   it("[GR-5] synthesizes every stack with cdk-nag's AWS Solutions checks passing", () => {
-    expect(stacks.map(({ path }) => path).sort()).toEqual([
-      "traverse-production-data",
-      "traverse-production-network",
-      "traverse-staging-data",
-      "traverse-staging-network",
-    ]);
+    expect(stacks.map(({ path }) => path).sort()).toEqual(
+      [
+        "traverse-budgets",
+        ...["staging", "production"].flatMap((name) =>
+          ["data", "edge", "network"].map((kind) => `traverse-${name}-${kind}`),
+        ),
+      ].sort(),
+    );
   });
 
   it("[GR-5] runs only what the app module builds", () => {
@@ -206,6 +208,7 @@ describe("the app's stores", () => {
       store("AWS::SecretsManager::Secret", { KmsKeyId: key }),
       store("AWS::Logs::LogGroup", { KmsKeyId: { "Fn::GetAtt": ["Key", "Arn"] } }),
       store("AWS::SQS::Queue", { KmsMasterKeyId: { Ref: "Key" } }),
+      store("AWS::SNS::Topic", { KmsMasterKeyId: key }),
       store("AWS::RDS::DBClusterParameterGroup", { Parameters: { "rds.force_ssl": "1" } }),
       // A bucket other buckets or a load balancer deliver logs to may use S3-managed keys.
       withKey({
@@ -295,6 +298,7 @@ describe("the app's stores", () => {
     ["a secret under the default key", "AWS::SecretsManager::Secret", {}],
     ["a log group without a key", "AWS::Logs::LogGroup", {}],
     ["a queue with SQS-managed keys", "AWS::SQS::Queue", { SqsManagedSseEnabled: true }],
+    ["a topic under the AWS-managed key", "AWS::SNS::Topic", { KmsMasterKeyId: "alias/aws/sns" }],
     ["a serverless cache, which has no rule yet", "AWS::ElastiCache::ServerlessCache", {}],
     ["a DynamoDB table, which has no rule yet", "AWS::DynamoDB::Table", {}],
   ])("[NFR-7] find %s", (_, Type, Properties) => {

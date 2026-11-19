@@ -72,8 +72,8 @@ flowchart TD
 
 | Component                 | Responsibility                                                          |
 | ------------------------- | ----------------------------------------------------------------------- |
-| AWS WAF                   | Managed rule groups and a coarse rate rule at the edge                  |
-| Application Load Balancer | TLS termination, target health, access logs                             |
+| AWS WAF                   | Managed rule groups and a coarse rate rule at the edge, and its log     |
+| Application Load Balancer | TLS termination and target health, with no access logs (ADR 0024)       |
 | Next.js app               | The workbench UI, sessions, and tRPC from browser to server             |
 | Cosmo Router              | JWT validation, persisted operations, limits, query planning, telemetry |
 | Sandbox router            | Query plans and free-form read operations, for the web server only      |
@@ -95,7 +95,7 @@ flowchart TD
 | Staging     | Proving changes, load and resilience tests | Same stacks, smaller, single NAT gateway   |
 | Production  | Live traffic                               | 3 Availability Zones, Multi-AZ data stores |
 
-Both are built from `infra/` in CDK. Stacks name a Region and never an account, so they deploy into the account of whoever deploys them, and synthesis looks nothing up ([ADR 0023](docs/adr/0023-account-free-infrastructure.md)). Traverse gets its own account. The network stack spreads a VPC over three zones, with public subnets for the load balancer, subnets with a NAT route for services, and data subnets with no route out, not even to S3. Flow logs go to a log group encrypted with its own key. The data stack puts PostgreSQL 17 and Valkey 8.2 in the data subnets, each under its own key, refusing connections without TLS and admitting only a `clients` security group that services join. Production runs both in two zones. The router's fallback config is in a versioned, encrypted bucket.
+Both are built from `infra/` in CDK. Stacks name a Region and never an account, so they deploy into the account of whoever deploys them, and synthesis looks nothing up ([ADR 0023](docs/adr/0023-account-free-infrastructure.md)). Traverse gets its own account. The network stack spreads a VPC over three zones, with public subnets for the load balancer, subnets with a NAT route for services, and data subnets with no route out, not even to S3. Flow logs go to a log group encrypted with its own key. The data stack puts PostgreSQL 17 and Valkey 8.2 in the data subnets, each under its own key, refusing connections without TLS and admitting only a `clients` security group that services join. Production runs both in two zones. The router's fallback config is in a versioned, encrypted bucket. The edge stack puts the load balancer in the public subnets behind a regional WAF, with HTTPS on a TLS 1.3 policy and HTTP redirected to it, and the Cognito user pool, whose app client uses authorization code only and whose tokens are bound to the router. Host names, the hosted zone, the login domain and the alert address are deploy-time parameters. Budgets live in their own stack in us-east-1, the only place CloudFormation offers them, and deploy first.
 
 ### Router sizing
 

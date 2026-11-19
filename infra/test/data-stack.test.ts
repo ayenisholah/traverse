@@ -1,18 +1,9 @@
-import { Match, Template } from "aws-cdk-lib/assertions";
+import { Match, type Template } from "aws-cdk-lib/assertions";
 import { describe, expect, it } from "vitest";
-import { ENVIRONMENTS } from "../src/config.ts";
 import { DataStack } from "../src/data-stack.ts";
-import { NetworkStack } from "../src/network-stack.ts";
-import { newApp } from "./support/app.ts";
+import { onEachNetwork } from "./support/app.ts";
 
-const templates = new Map(
-  ENVIRONMENTS.map((config) => {
-    const app = newApp();
-    const env = { region: config.region };
-    const { vpc } = new NetworkStack(app, "network", { env, config });
-    return [config.name, Template.fromStack(new DataStack(app, "data", { env, config, vpc }))];
-  }),
-);
+const templates = onEachNetwork((app, props) => new DataStack(app, "data", props));
 const each = [...templates.entries()];
 const staging = templates.get("staging") as Template;
 const production = templates.get("production") as Template;

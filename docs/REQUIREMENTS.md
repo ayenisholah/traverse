@@ -48,7 +48,7 @@ The assistant only adds to deterministic results, through Amazon Bedrock.
 | FR-GW-3 | Keep serving if the Cosmo CDN is unavailable. | With the CDN blocked, running tasks and newly started tasks serve the last good configuration. | resilience | M10 | planned |
 | FR-GW-4 | Limit request cost. | Operations over the depth or field limits, and bodies over the size limit, are rejected. | e2e | M2 | done |
 | FR-GW-5 | Rate limit each client. | A client over its limit is rejected while other clients are unaffected. | e2e | M7 | planned |
-| FR-GW-6 | Filter hostile traffic at the edge. | A request matching a managed WAF rule or the rate rule is blocked before it reaches the router. | staging | M6 | planned |
+| FR-GW-6 | Filter hostile traffic at the edge. | A request matching a managed WAF rule or the rate rule is blocked before it reaches the router. | staging | M6 | partial |
 | FR-GW-7 | Report health accurately. | `/health/ready` fails while the router can't serve or is draining, and load balancer targets follow it. | staging | M7 | planned |
 | FR-GW-8 | Drain before stopping. | On SIGTERM the task finishes in-flight requests before it exits, inside `stopTimeout`. | staging | M7 | planned |
 | FR-GW-9 | Run a sandbox router for the workbench. | Reachable only from the web server, it returns query plans and runs free-form read operations. | e2e | M3 | done |
@@ -102,7 +102,7 @@ The assistant only adds to deterministic results, through Amazon Bedrock.
 | NFR-3 | Scale with demand. | Under rising load, tasks scale out before latency leaves its target, then scale back. | load | M10 | planned |
 | NFR-4 | Survive the loss of an Availability Zone. | With one zone disrupted, the service stays within its availability target. | resilience | M10 | planned |
 | NFR-5 | Recover data within targets. | A restore from backup meets the RPO and RTO in [SLOs](SLOS.md). | resilience | M10 | planned |
-| NFR-6 | Keep costs visible. | Budget alerts exist before the first deployment, and the launch records a measured cost baseline. | infrastructure | M6 | planned |
+| NFR-6 | Keep costs visible. | Budget alerts exist before the first deployment, and the launch records a measured cost baseline. | infrastructure | M6 | partial |
 | NFR-7 | Encrypt data at rest and in transit. | Stores use KMS encryption, and connections to data stores require TLS. | infrastructure | M6 | partial |
 | NFR-8 | Operate from runbooks. | Each alarm's runbook has been followed once in staging. | staging | M11 | planned |
 | NFR-9 | Meet WCAG 2.2 AA. | axe finds no violations on any route, every flow works by keyboard, and token contrast pairs pass in both themes. | e2e | M3 | done |

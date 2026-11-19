@@ -2,7 +2,7 @@ import { Validations, type Stack } from "aws-cdk-lib";
 
 import type { EnvironmentConfig } from "./config.ts";
 
-type StackKind = "network" | "data";
+type StackKind = "network" | "data" | "edge";
 
 export interface ReviewedAcknowledgement {
   readonly stack: StackKind;
@@ -56,6 +56,34 @@ export const REVIEWED_ACKNOWLEDGEMENTS: readonly ReviewedAcknowledgement[] = [
     id: "AwsSolutions-SMG4",
     reason:
       "Rotating a Valkey AUTH token means changing the replication group with a ROTATE strategy, which needs a rotation function M7's services can follow. Until then a new token would cut clients off",
+  },
+  {
+    stack: "edge",
+    path: "/LoadBalancer/SecurityGroup/Resource",
+    id: "AwsSolutions-EC23",
+    reason:
+      "The internet-facing load balancer takes HTTPS, and HTTP only to redirect it. A test over every stack refuses any rule open to the internet on anything but TCP 80 and 443",
+  },
+  {
+    stack: "edge",
+    path: "/LoadBalancer/Resource",
+    id: "AwsSolutions-ELB2",
+    reason:
+      "Load balancer access logs record every query string, which holds a GraphQL GET's variables and sign-in's authorization codes, and can't redact them (GR-4). The WAF logs every request with the query string, cookies and authorization redacted",
+  },
+  {
+    stack: "edge",
+    path: "/Users/Resource",
+    id: "AwsSolutions-COG8",
+    reason:
+      "Threat protection needs the Plus feature plan, which costs per active user. Essentials gives managed login and resource binding, which sign-in needs (A-12), and the WAF, with its rate limit, guards the user pool",
+  },
+  {
+    stack: "edge",
+    path: "/Users/Resource",
+    id: "AwsSolutions-COG2",
+    reason:
+      "MFA is offered with an authenticator app, not required: an account holds only saved workspaces, and requiring it is the owner's call",
   },
 ];
 
