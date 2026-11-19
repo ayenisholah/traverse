@@ -76,4 +76,23 @@ describe("createRouterClient", () => {
 
     expect(result).toEqual({ ok: false, codes: ["UNAUTHENTICATED", "PERSISTED_QUERY_NOT_FOUND"] });
   });
+
+  it("[GR-3] keeps the codes beside a partial answer", async () => {
+    const { result } = await run({
+      data: { workspace: null },
+      errors: [
+        {
+          message: "x",
+          extensions: { errors: [{ message: "y", extensions: { code: "UNAUTHENTICATED" } }] },
+        },
+      ],
+    });
+
+    expect(result).toEqual({
+      ok: true,
+      data: { workspace: null },
+      incomplete: true,
+      codes: ["UNAUTHENTICATED"],
+    });
+  });
 });

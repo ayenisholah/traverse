@@ -350,4 +350,29 @@ describe("workspaces through the public router", { timeout: 60_000 }, () => {
     expect(status).toBe(401);
     expect(await stack.subgraphRequests()).toBe(before);
   });
+
+  it("[GR-11] the sandbox router, on the real graph, reads no workspace and runs no workspace mutation", async () => {
+    const { json: saved } = await saveAs("ada", "Not for the sandbox");
+    const id = (saved.data?.saveWorkspace as { id: string }).id;
+    const sandbox = await stack.startSandbox();
+    try {
+      const ask = async (query: string) => {
+        const response = await fetch(`${sandbox.url}/graphql`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ query }),
+        });
+        return (await response.json()) as GraphqlResponse;
+      };
+
+      expect(subgraphMessage(await ask("{ workspaces { id name } }"))).toBe("Sign in first.");
+      const deleted = await ask(`mutation { deleteWorkspace(id: "${id}") }`);
+      expect(deleted.errors?.[0]?.message).toBe("operation type 'mutation' is blocked");
+    } finally {
+      await sandbox.stop();
+    }
+    const ada = bearer(await stack.token({ sub: "ada" }));
+    const { json: still } = await post(persisted(WorkspaceOperation.sha256, { id }), ada);
+    expect(still.data?.workspace).toMatchObject({ id });
+  });
 });

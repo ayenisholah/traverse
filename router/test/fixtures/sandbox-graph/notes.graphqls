@@ -1,5 +1,5 @@
-# A test-only subgraph. The real graph has no mutation or subscription yet, and GR-11 has to be
-# proven on a graph that does: the sandbox router must refuse both before they reach a subgraph.
+# A test-only subgraph with a mutation and a subscription the subgraph would run, so GR-11 is proven
+# on a graph where refusing them matters: the sandbox router must refuse both before they reach it.
 type Query {
   note: String
 }

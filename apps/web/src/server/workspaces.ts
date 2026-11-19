@@ -16,16 +16,27 @@ import type { RouterClient, RouterResult } from "./router-client.ts";
 // can't be larger than a save the subgraph could take.
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 export const workspaceId = z.object({ id: z.string().regex(UUID) });
+// No NUL anywhere: Postgres would quote the text around one into its own log (GR-4).
+const text = (max: number) =>
+  z
+    .string()
+    .max(max)
+    .refine((value) => !value.includes("\u0000"));
 export const saveInput = z.object({
   id: z.string().regex(UUID).optional(),
-  name: z.string().min(1).max(100),
-  drafts: z.array(z.object({ subgraph: z.string().max(64), sdl: z.string().max(150_000) })).max(20),
-  operations: z.string().max(50_000),
-  screenMap: z.string().max(10_000).nullable(),
+  name: text(100).pipe(z.string().min(1)),
+  drafts: z.array(z.object({ subgraph: z.string().max(64), sdl: text(150_000) })).max(20),
+  operations: text(50_000),
+  screenMap: text(10_000).nullable(),
 });
 
 // Each answer is checked against exactly what its operation asked for (GR-16).
-const summary = z.strictObject({ id: z.string(), name: z.string(), updatedAt: z.string() });
+// A UUID, so an ID is safe to put in an address without encoding.
+const summary = z.strictObject({
+  id: z.string().regex(UUID),
+  name: z.string(),
+  updatedAt: z.string(),
+});
 const listData = z.strictObject({
   workspaces: z.array(summary),
 }) satisfies z.ZodType<WorkspacesQuery>;
@@ -56,7 +67,8 @@ export const signedInToken = (accessToken: string | undefined): string => {
 
 // Only the codes the workspace subgraph sends are read, never its messages (C-57).
 const failure = (result: RouterResult): TRPCError => {
-  const codes = result.ok ? [] : (result.codes ?? []);
+  // A nullable field the subgraph refused comes back as null data with the refusal beside it.
+  const codes = result.codes ?? [];
   if (codes.includes("UNAUTHENTICATED")) return new TRPCError({ code: "UNAUTHORIZED" });
   if (codes.includes("NOT_FOUND")) return new TRPCError({ code: "NOT_FOUND" });
   if (codes.includes("WORKSPACE_LIMIT")) return new TRPCError({ code: "PRECONDITION_FAILED" });

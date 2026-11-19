@@ -160,4 +160,50 @@ describe("the workspace procedures", () => {
     expect(answer.status).toBe(503);
     expect(JSON.stringify(answer.body)).not.toContain("a@b.example");
   });
+
+  it("[GR-4] refuses a NUL in any text, which Postgres would quote into its log", async () => {
+    const { context, run } = contextWith({ ok: true, data: {}, incomplete: false });
+    for (const input of [
+      { ...save, name: "a\u0000" },
+      { ...save, operations: "x\u0000" },
+      { ...save, screenMap: "x\u0000" },
+      { ...save, drafts: [{ subgraph: "a", sdl: "x\u0000" }] },
+    ]) {
+      expect((await mutate(context, "saveWorkspace", input)).status).toBe(400);
+    }
+    expect(run).not.toHaveBeenCalled();
+  });
+
+  it("[GR-3] says sign in when the subgraph refused a workspace beside a null answer", async () => {
+    const { context } = contextWith({
+      ok: true,
+      data: { workspace: null },
+      incomplete: true,
+      codes: ["UNAUTHENTICATED"],
+    });
+
+    expect((await query(context, "workspace", { id: ID })).status).toBe(401);
+  });
+
+  it("[FR-WB-11] passes on no workspace whose ID isn't a UUID", async () => {
+    const { context } = contextWith({
+      ok: true,
+      data: { workspaces: [{ ...summary, id: "../evil" }] },
+      incomplete: false,
+    });
+
+    expect((await query(context, "workspaces")).status).toBe(503);
+  });
+
+  it("[FR-WB-11] reads a save far larger than any other call", async () => {
+    const { context, run } = contextWith({
+      ok: true,
+      data: { saveWorkspace: summary },
+      incomplete: false,
+    });
+    const large = { ...save, drafts: [{ subgraph: "a", sdl: "é".repeat(140_000) }] };
+
+    expect((await mutate(context, "saveWorkspace", large)).status).toBe(200);
+    expect(run).toHaveBeenCalled();
+  });
 });
