@@ -1,13 +1,10 @@
 import { execFileSync, spawn, type ChildProcess } from "node:child_process";
 import { createHash } from "node:crypto";
-import { cpSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { createServer, type Server } from "node:http";
 import { once } from "node:events";
-import type { AddressInfo } from "node:net";
+import { cpSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { findUnsafeRouterEnvironment, findUnsafeSandboxEnvironment } from "@traverse/repo-checks";
-import { exportJWK, generateKeyPair, SignJWT, type CryptoKey, type JWK } from "jose";
 import {
   runSubgraph,
   serveUpstream,
@@ -16,11 +13,13 @@ import {
 import { replay as replayOsv } from "../../../subgraphs/advisories/test/helpers.ts";
 import { replay as replayNpm } from "../../../subgraphs/packages/test/helpers.ts";
 import { replay as replayGithub } from "../../../subgraphs/repositories/test/helpers.ts";
+import { startIssuer, type TokenOptions } from "./issuer.ts";
 
 /** The pinned image, by digest, so a moved tag can't change what's tested. */
 const ROUTER_IMAGE =
   "ghcr.io/wundergraph/cosmo/router@sha256:1a8bc23db2c33c2028720b85b56fce68b7bf35f1064bac0f8301eb5ca6cae81c";
-const AUDIENCE = "traverse-router";
+// The resource the web server binds its users' access tokens to (A-12, ADR 0020).
+const AUDIENCE = "https://router.traverse.test";
 const ROUTER_PORT = 3902;
 const OVERRIDE_PORT = 3903;
 const SANDBOX_PORT = 3904;
@@ -46,22 +45,6 @@ export interface Router {
   logs: () => string;
   stop: () => Promise<void>;
 }
-
-interface TokenOptions {
-  audience?: string;
-  expires?: string;
-  key?: CryptoKey;
-}
-
-const serveJwks = async (key: JWK): Promise<Server> => {
-  const server = createServer((_, response) => {
-    response
-      .writeHead(200, { "content-type": "application/json" })
-      .end(JSON.stringify({ keys: [{ ...key, kid: "k", alg: "RS256", use: "sig" }] }));
-  }).listen(0, "127.0.0.1");
-  await once(server, "listening");
-  return server;
-};
 
 const waitForReady = async (url: string, router: ChildProcess, logs: () => string) => {
   for (let attempt = 0; attempt < 120; attempt += 1) {
@@ -112,11 +95,11 @@ const runContainer = async ({ port, env, files }: ContainerOptions): Promise<Rou
 interface RouterOptions {
   port: number;
   files: string;
-  issuer: string;
+  jwksUrl: string;
   override?: string;
 }
 
-const runRouter = ({ port, files, issuer, override }: RouterOptions): Promise<Router> => {
+const runRouter = ({ port, files, jwksUrl, override }: RouterOptions): Promise<Router> => {
   const configs = ["/config/config.yaml"];
   if (override !== undefined) {
     writeFileSync(join(files, `override-${String(port)}.yaml`), override);
@@ -128,7 +111,7 @@ const runRouter = ({ port, files, issuer, override }: RouterOptions): Promise<Ro
     ROUTER_CORS_ORIGIN: "https://traverse.example",
     ROUTER_EXECUTION_CONFIG: "/config/config.json",
     ROUTER_OPERATIONS_DIR: "/files/persisted",
-    ROUTER_JWKS_URL: `${issuer}/jwks.json`,
+    ROUTER_JWKS_URL: jwksUrl,
     ROUTER_JWT_AUDIENCE: AUDIENCE,
   };
   // The public router runs under the same rule a deployment must meet. Only the test-only second
@@ -194,19 +177,26 @@ export const startStack = async (): Promise<Stack> => {
     runSubgraph(resolve("subgraphs/advisories/src/main.ts"), { PORT: "4103", OSV_URL: osv.url }),
   ]);
 
-  const keys = await generateKeyPair("RS256");
-  const jwks = await serveJwks(await exportJWK(keys.publicKey));
-  const issuer = `http://127.0.0.1:${String((jwks.address() as AddressInfo).port)}`;
+  // No browser signs in here, so it registers no addresses: tests take tokens from it directly.
+  const issuer = await startIssuer({
+    clientId: "traverse-web",
+    clientSecret: "test-secret",
+    resource: AUDIENCE,
+    redirectUris: [],
+    logoutUris: [],
+  });
+  const { jwksUrl } = issuer;
 
   const files = mkdtempSync(join(tmpdir(), "traverse-router-"));
   cpSync("router/persisted", join(files, "persisted"), { recursive: true });
 
   const stopGraph = () => {
     for (const subgraph of subgraphs) subgraph.child.kill("SIGKILL");
-    for (const server of [npm.server, github.server, osv.server, jwks]) server.close();
+    for (const server of [npm.server, github.server, osv.server]) server.close();
+    void issuer.stop();
     rmSync(files, { recursive: true, force: true });
   };
-  const router = await runRouter({ port: ROUTER_PORT, files, issuer }).catch((error: unknown) => {
+  const router = await runRouter({ port: ROUTER_PORT, files, jwksUrl }).catch((error: unknown) => {
     stopGraph();
     throw error;
   });
@@ -226,13 +216,7 @@ export const startStack = async (): Promise<Stack> => {
     blockGithub: (blocked) => {
       githubBlocked = blocked;
     },
-    token: ({ audience = AUDIENCE, expires = "1h", key = keys.privateKey } = {}) =>
-      new SignJWT({ sub: "user-1" })
-        .setProtectedHeader({ alg: "RS256", kid: "k" })
-        .setAudience(audience)
-        .setIssuer(issuer)
-        .setExpirationTime(expires)
-        .sign(key),
+    token: (options) => issuer.token({ sub: "user-1", expires: "1h", ...options }),
     persist: (body) => {
       const hash = createHash("sha256").update(body).digest("hex");
       writeFileSync(
@@ -251,7 +235,7 @@ export const startStack = async (): Promise<Stack> => {
         count = next;
       }
     },
-    startRouter: (override) => runRouter({ port: OVERRIDE_PORT, files, issuer, override }),
+    startRouter: (override) => runRouter({ port: OVERRIDE_PORT, files, jwksUrl, override }),
     startSandbox: () => startSandboxRouter({ executionConfig: "config.json" }),
     stop,
   };
