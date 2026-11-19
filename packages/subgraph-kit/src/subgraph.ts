@@ -36,6 +36,11 @@ export const createSubgraph = (
     ...dependencies,
   };
   const config = parseConfig(env);
+  // Without keys every caller is anonymous, which a subgraph of users' data would turn into
+  // refusing everyone, or worse, if a resolver forgot to check (GR-3).
+  if (definition.requiresUser === true && config.jwt === undefined) {
+    throw new Error("This subgraph needs JWKS_URL, JWT_AUDIENCE and JWT_ISSUER");
+  }
   const logger = createLogger(definition.name, config.logLevel, logStream);
   const scope = createRequestScope(logger);
   const verifyUser = config.jwt ? createUserVerifier(keys, config.jwt) : noUser;
@@ -69,6 +74,7 @@ export const createSubgraph = (
     dispose: async () => {
       await yoga.dispose();
       await cache?.close();
+      await definition.dispose?.();
     },
   });
 

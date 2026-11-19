@@ -25,6 +25,10 @@ export interface SubgraphDefinition {
   name: string;
   typeDefs: string;
   resolvers: Resolvers | ((tools: SubgraphTools) => Resolvers);
+  /** Serves users' own data, so it must never run without a way to verify tokens. */
+  requiresUser?: boolean;
+  /** Releases what the subgraph holds, such as a database pool, once it has drained. */
+  dispose?: () => Promise<void>;
 }
 
 export interface RequestContext {

@@ -1,4 +1,5 @@
 export { isPackageName, isVersion } from "@traverse/formats";
+export { requireUser } from "./auth.ts";
 export { isSafeEndpoint } from "./formats.ts";
 export { createSubgraph } from "./subgraph.ts";
 export {

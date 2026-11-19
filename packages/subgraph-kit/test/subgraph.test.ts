@@ -6,11 +6,17 @@ import { GraphQLError } from "graphql";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { hangingRedis } from "./support/fake-redis.ts";
-import { createSubgraph, type Subgraph, type SubgraphDependencies } from "../src/index.ts";
+import {
+  createSubgraph,
+  requireUser,
+  type Subgraph,
+  type SubgraphDependencies,
+} from "../src/index.ts";
 
 const typeDefs = /* GraphQL */ `
   type Query {
     whoami: String
+    mine: String
     trace: String
     fails: String
     refuses: String
@@ -27,6 +33,8 @@ const resolvers = {
   Query: {
     whoami: (_: unknown, __: unknown, context: { userId?: string }) =>
       context.userId ?? "anonymous",
+    mine: (_: unknown, __: unknown, context: { userId: string | undefined }) =>
+      `data of ${requireUser(context)}`,
     trace: (_: unknown, __: unknown, context: { traceId: string }) => context.traceId,
     fails: () => {
       throw new Error("connection to secret.internal failed");
@@ -378,6 +386,59 @@ describe("auth context", () => {
       expect.objectContaining({ msg: "token not verified", reason: "ERR_JWT_EXPIRED" }),
     );
     expect(logged.join("\n")).not.toContain(jwt);
+  });
+});
+
+describe("data that needs a user", () => {
+  it("[GR-3] serves it to the user a verified token names", async () => {
+    const url = await start();
+    const result = await query(
+      url,
+      { query: "{ mine }" },
+      { authorization: `Bearer ${await token()}` },
+    );
+
+    expect(result.data?.mine).toBe("data of user-1");
+  });
+
+  it.each([
+    ["no token", {}],
+    ["a forged user header", { "x-user-id": "user-1" }],
+  ])("[GR-3] refuses it with %s, with a fixed message", async (_, headers) => {
+    const url = await start();
+    const result = await query(url, { query: "{ mine }" }, headers);
+
+    expect(result.data?.mine).toBeNull();
+    expect(result.errors?.[0]).toMatchObject({
+      message: "Sign in first.",
+      extensions: { code: "UNAUTHENTICATED" },
+    });
+  });
+
+  it("[GR-3] won't start a subgraph that needs users without token settings", () => {
+    const create = (env: Record<string, string>) =>
+      createSubgraph(
+        { name: "test", typeDefs, resolvers, requiresUser: true },
+        { env, signals: new EventEmitter(), logStream: { write: () => undefined } },
+      );
+
+    expect(() => create(quick)).toThrow(
+      "This subgraph needs JWKS_URL, JWT_AUDIENCE and JWT_ISSUER",
+    );
+    expect(() => create({ ...quick, ...auth })).not.toThrow();
+  });
+
+  it("[FR-SG-7] releases what the subgraph holds when it stops", async () => {
+    const dispose = vi.fn(() => Promise.resolve());
+    running = createSubgraph(
+      { name: "test", typeDefs, resolvers, dispose },
+      { env: quick, signals: new EventEmitter(), logStream: { write: () => undefined } },
+    );
+    await running.listen();
+    await running.shutdown();
+    running = undefined;
+
+    expect(dispose).toHaveBeenCalledOnce();
   });
 });
 
