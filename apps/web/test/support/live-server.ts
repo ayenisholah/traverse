@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import { randomUUID } from "node:crypto";
 import { once } from "node:events";
 import { readFileSync } from "node:fs";
 import { createServer } from "node:http";
@@ -10,9 +11,81 @@ const app = join(import.meta.dirname, "../..");
 const next = createRequire(import.meta.url).resolve("next/dist/bin/next");
 
 interface PersistedRequest {
-  variables?: { name?: string; version?: string };
+  variables?: Record<string, unknown> & { name?: string; version?: string };
   extensions?: { persistedQuery?: { sha256Hash?: string } };
 }
+
+interface StoredWorkspace {
+  id: string;
+  name: string;
+  drafts: { subgraph: string; sdl: string }[];
+  operations: string;
+  screenMap: string | null;
+  updatedAt: string;
+}
+
+/**
+ * The workspace subgraph's behaviour, for the browser tests: each user's own workspaces, keyed by
+ * their token's subject. It reads the subject without checking the signature, which only the
+ * real subgraph does; router/test/e2e proves that path on the pinned router.
+ */
+const createWorkspaces = () => {
+  const byUser = new Map<string, StoredWorkspace[]>();
+  const signIn = {
+    errors: [
+      {
+        message: "x",
+        extensions: {
+          errors: [{ message: "Sign in first.", extensions: { code: "UNAUTHENTICATED" } }],
+        },
+      },
+    ],
+  };
+  const subjectOf = (authorization: string | undefined) => {
+    const payload = authorization?.replace(/^Bearer /, "").split(".")[1];
+    if (payload === undefined) return undefined;
+    return (JSON.parse(Buffer.from(payload, "base64url").toString()) as { sub?: string }).sub;
+  };
+  return (
+    operation: string,
+    variables: Record<string, unknown>,
+    authorization: string | undefined,
+  ) => {
+    const user = subjectOf(authorization);
+    if (user === undefined) return signIn;
+    const own = byUser.get(user) ?? [];
+    byUser.set(user, own);
+    const id = variables.id as string | undefined;
+    if (operation === "workspaces") {
+      return {
+        data: {
+          workspaces: own.map(({ id: key, name, updatedAt }) => ({ id: key, name, updatedAt })),
+        },
+      };
+    }
+    if (operation === "workspace")
+      return { data: { workspace: own.find((each) => each.id === id) ?? null } };
+    if (operation === "deleteWorkspace") {
+      const at = own.findIndex((each) => each.id === id);
+      if (at >= 0) own.splice(at, 1);
+      return { data: { deleteWorkspace: at >= 0 } };
+    }
+    const saved: StoredWorkspace = {
+      id: id ?? randomUUID(),
+      name: variables.name as string,
+      drafts: variables.drafts as StoredWorkspace["drafts"],
+      operations: variables.operations as string,
+      screenMap: (variables.screenMap as string | null | undefined) ?? null,
+      updatedAt: new Date().toISOString(),
+    };
+    const at = own.findIndex((each) => each.id === saved.id);
+    if (at >= 0) own.splice(at, 1);
+    own.unshift(saved);
+    return {
+      data: { saveWorkspace: { id: saved.id, name: saved.name, updatedAt: saved.updatedAt } },
+    };
+  };
+};
 
 export interface StubRouter {
   url: string;
@@ -30,9 +103,16 @@ const fixture = (name: string) => readFileSync(join(app, "test/fixtures", `${nam
  * refuses a hash it doesn't hold. router/test/e2e covers the real path.
  */
 export const startStubRouter = async (
-  hashes: { package: string; packagePage: string; dependency: string },
+  hashes: Awaited<ReturnType<typeof shippedHashes>>,
   port = 0,
 ): Promise<StubRouter> => {
+  const workspaces = createWorkspaces();
+  const workspaceOperations = new Map([
+    [hashes.workspaces, "workspaces"],
+    [hashes.workspace, "workspace"],
+    [hashes.saveWorkspace, "saveWorkspace"],
+    [hashes.deleteWorkspace, "deleteWorkspace"],
+  ]);
   const answers = new Map([
     [`${hashes.package}:express`, fixture("router-package-express")],
     [`${hashes.packagePage}:express`, fixture("router-page-express")],
@@ -41,8 +121,15 @@ export const startStubRouter = async (
     [`${hashes.dependency}:ms@2.1.3`, fixture("router-dep-ms")],
   ]);
   const requests: PersistedRequest[] = [];
-  const answer = ({ extensions, variables = {} }: PersistedRequest): string => {
+  const answer = (
+    { extensions, variables = {} }: PersistedRequest,
+    authorization: string | undefined,
+  ): string => {
     const hash = extensions?.persistedQuery?.sha256Hash ?? "";
+    const workspaceOperation = workspaceOperations.get(hash);
+    if (workspaceOperation !== undefined) {
+      return JSON.stringify(workspaces(workspaceOperation, variables, authorization));
+    }
     if (!Object.values(hashes).includes(hash)) {
       return JSON.stringify({ errors: [{ message: "PersistedQueryNotFound" }] });
     }
@@ -55,7 +142,9 @@ export const startStubRouter = async (
     request.on("end", () => {
       const body = JSON.parse(text) as PersistedRequest;
       requests.push(body);
-      response.writeHead(200, { "content-type": "application/json" }).end(answer(body));
+      response
+        .writeHead(200, { "content-type": "application/json" })
+        .end(answer(body, request.headers.authorization));
     });
   }).listen(port, "127.0.0.1");
   await once(server, "listening");
@@ -68,12 +157,15 @@ export const startStubRouter = async (
 
 /** The shipped operations' hashes, as the stub router needs them. */
 export const shippedHashes = async () => {
-  const { DependencyOperation, PackageOperation, PackagePageOperation } =
-    await import("../../src/generated/operations.ts");
+  const operations = await import("../../src/generated/operations.ts");
   return {
-    package: PackageOperation.sha256,
-    packagePage: PackagePageOperation.sha256,
-    dependency: DependencyOperation.sha256,
+    package: operations.PackageOperation.sha256,
+    packagePage: operations.PackagePageOperation.sha256,
+    dependency: operations.DependencyOperation.sha256,
+    workspaces: operations.WorkspacesOperation.sha256,
+    workspace: operations.WorkspaceOperation.sha256,
+    saveWorkspace: operations.SaveWorkspaceOperation.sha256,
+    deleteWorkspace: operations.DeleteWorkspaceOperation.sha256,
   };
 };
 

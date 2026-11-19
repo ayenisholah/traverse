@@ -210,7 +210,7 @@ const askRoute = async (input: unknown, context: Context, method = "POST") => {
 describe("the route procedure", () => {
   it("[GR-11] refuses a body larger than any real call, before reading it whole or calling the sandbox", async () => {
     const { context, route } = sandboxThat(ROUTE);
-    const operation = "x".repeat(40_000);
+    const operation = "x".repeat(600_000);
 
     const { status, body } = await askRoute({ operation }, context);
 

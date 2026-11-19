@@ -11,7 +11,11 @@ export default function ImpactPage() {
         Edit a schema to see whether it composes, and which operations and screens it breaks. Your
         drafts stay in this browser.
       </p>
-      <ImpactWorkbench subgraphs={demoImpact.subgraphs} seedOperations={demoImpact.exampleQuery} />
+      <ImpactWorkbench
+        subgraphs={demoImpact.subgraphs}
+        seedOperations={demoImpact.exampleQuery}
+        live={process.env.TRAVERSE_BUILD === "server"}
+      />
     </main>
   );
 }

@@ -24,7 +24,10 @@ describe("AccountControl", () => {
     const form = button.closest("form");
     expect(form?.getAttribute("method")).toBe("post");
     expect(form?.getAttribute("action")).toBe("/sign-out");
-    expect(container.textContent).toBe("Sign out");
+    expect(screen.getByRole("link", { name: "Your workspaces" }).getAttribute("href")).toBe(
+      "/workspaces",
+    );
+    expect(container.textContent).toBe("Your workspacesSign out");
   });
 
   it.each([
@@ -40,7 +43,7 @@ describe("AccountControl", () => {
 
   it.each([
     ["signed out", { canSignIn: true, signedIn: false }, "Sign in"],
-    ["signed in", { canSignIn: true, signedIn: true }, "Sign out"],
+    ["signed in", { canSignIn: true, signedIn: true }, "Your workspacesSign out"],
   ])("[NFR-9] has no axe violations when %s", async (_, answer, name) => {
     const { container } = render(<AccountControl loadViewer={viewer(answer)} />);
 

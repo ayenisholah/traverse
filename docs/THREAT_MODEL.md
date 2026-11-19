@@ -33,7 +33,12 @@
 | Another site signs a user out | Sign-out is a POST that must come from the app's own origin | FR-WB-10 |
 | A sign-in link sends the user elsewhere afterwards | `returnTo` must be a path on this app, or the user goes home | FR-WB-10 |
 | A token that was signed out keeps working | Sign-out revokes the refresh token, but the routers verify access tokens themselves, so one already issued lasts until it expires. Accepted: the cookie holding it is cleared at once, and the app client's access token lifetime (planned for the CDK user pool) bounds the rest | FR-WB-10 |
-| A user reads another user's workspace | User from the verified token only; every query scoped; property tests | FR-SG-1, GR-3 |
+| A user reads another user's workspace | The user is the verified token's subject (`requireUser`), and every statement carries `user_id = $1`. No operation takes a user ID, and `Workspace` has no entity key, so no plan can look one up by ID. Another user's workspace reads as none. Proven on the pinned router and Postgres | FR-SG-1, GR-3 |
+| An ID token, or a token for another app, opens workspaces | The router checks the audience, which only a bound access token has (A-12), and the subgraph also requires `token_use: access` | GR-3 |
+| The workspace subgraph runs with no way to check tokens | It refuses to start without `JWKS_URL`, `JWT_AUDIENCE` and `JWT_ISSUER` | GR-3 |
+| The sandbox router reaches workspaces | It shares the execution config, so the schema is there, but the web server never sends it a token, so `requireUser` refuses every workspace field | GR-3, GR-11 |
+| A user fills the database | At most 50 workspaces each, 20 drafts and 150,000 characters of SDL a workspace, limits on every other field, and the web server reads at most 512 KB of a request | FR-WB-11 |
+| The database connection is read in transit | Plain connections only to this machine or a private service name; anything else must ask for `sslmode=verify-full`. Whether `pg` then verifies RDS's certificate is open (U-23) | NFR-7 |
 | A forged user header reaches a subgraph | Subgraphs verify the token themselves, and security groups admit only the router | GR-3 |
 | Arbitrary queries probe or overload the API | Persisted operations only; complexity, size and rate limits; WAF | GR-2, FR-GW-4, FR-GW-5, FR-GW-6 |
 | Schema discovery by attackers | Introspection and playground off in production | GR-1 |

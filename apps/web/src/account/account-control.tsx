@@ -39,11 +39,16 @@ export function AccountControl({ loadViewer = askServer }: { loadViewer?: LoadVi
   if (viewer.signedIn) {
     // A form, so signing out is a POST from this page, which the server checks (ADR 0020).
     return (
-      <form method="post" action="/sign-out" className="ms-auto">
-        <button type="submit" className={link}>
-          Sign out
-        </button>
-      </form>
+      <div className="ms-auto flex gap-6">
+        <a className={link} href="/workspaces">
+          Your workspaces
+        </a>
+        <form method="post" action="/sign-out">
+          <button type="submit" className={link}>
+            Sign out
+          </button>
+        </form>
+      </div>
     );
   }
   return (

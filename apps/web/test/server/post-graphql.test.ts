@@ -23,6 +23,19 @@ describe("createPostGraphql", () => {
     expect(JSON.parse(init?.body as string)).toEqual({ query: "{ a }" });
   });
 
+  it("[GR-3] adds the header its caller gives, and can't be made to change the content type", async () => {
+    const fetch = answer({ data: {} });
+    await createPostGraphql({ url: "http://router.test", fetch })(
+      { query: "{ a }" },
+      { authorization: "Bearer t", "content-type": "text/plain" },
+    );
+
+    expect(fetch.mock.calls[0]?.[1]?.headers).toEqual({
+      authorization: "Bearer t",
+      "content-type": "application/json",
+    });
+  });
+
   it.each([
     ["a failure status", answer({ data: {} }, 503)],
     ["a body that isn't JSON", vi.fn<typeof fetch>(async () => new Response("<html>"))],

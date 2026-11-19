@@ -21,7 +21,7 @@ Every requirement has an ID, a testable acceptance check, how it's verified, the
 | FR-WB-8 | Explore real package data. | A package's versions, repository and advisories render from the graph, and loading, empty and error states all render. | e2e | M3 | done |
 | FR-WB-9 | Vet a project's dependencies. | Pasting a real `package.json` shows licences and advisories that match npm and OSV. | integration | M3 | done |
 | FR-WB-10 | Sign in through Cognito. | Sign-in uses authorization code with PKCE, sessions expire and refresh, and signing out ends the session. | e2e | M4 | partial |
-| FR-WB-11 | Save a workspace. | A signed-in user saves schema drafts and a screen map and reopens them in a new session. | e2e | M4 | planned |
+| FR-WB-11 | Save a workspace. | A signed-in user saves schema drafts, operations and a screen map, and reopens them in a new session. | e2e | M4 | done |
 | FR-WB-12 | Use generated, typed operations. | Every operation the app sends is generated from its documents, and a schema mismatch fails the build. | contract | M3 | done |
 | FR-WB-13 | Build the UI from one design system. | Components use semantic tokens only, generated from one source, and each has state tests and an accessibility check. | unit | M1 | done |
 | FR-WB-14 | Serve the web app from AWS. | The app runs on Fargate behind the load balancer and deploys without failed requests. | staging | M7 | planned |
@@ -57,7 +57,7 @@ The assistant only adds to deterministic results, through Amazon Bedrock.
 
 | ID | Requirement | Acceptance check | Verified by | Milestone | Status |
 |---|---|---|---|---|---|
-| FR-SG-1 | Scope workspace data by user. | A token for one user can't read or change another user's workspace through any operation. | integration | M4 | planned |
+| FR-SG-1 | Scope workspace data by user. | A token for one user can't read or change another user's workspace through any operation. | integration | M4 | done |
 | FR-SG-2 | `packages` serves npm data. | A real package's versions, licence, dependencies and downloads match the npm registry. | contract | M2 | done |
 | FR-SG-3 | `repositories` serves GitHub data. | A real repository's stars, releases and owner match GitHub, and the token stays on the server. | contract | M2 | done |
 | FR-SG-4 | `advisories` serves OSV data. | Advisories for a real package version match OSV. | contract | M2 | done |
@@ -65,7 +65,7 @@ The assistant only adds to deterministic results, through Amazon Bedrock.
 | FR-SG-6 | Degrade when a source fails. | If one upstream fails or rate limits, other fields still return, the error is clear, and repeat reads come from cache. | integration | M2 | done |
 | FR-SG-7 | Every subgraph shares one kit. | A new subgraph gets health, auth context, logging and shutdown by supplying only a schema and resolvers. | unit | M2 | done |
 | FR-SG-8 | Migrations are safe during rollout. | The previous release's tests pass against the migrated schema. | integration | M7 | planned |
-| FR-SG-9 | `workspace` stores users' work. | Saved drafts and screen maps survive a restart. | integration | M4 | planned |
+| FR-SG-9 | `workspace` stores users' work. | Saved drafts and screen maps survive a restart. | integration | M4 | done |
 | FR-SG-10 | Notice upstream changes. | A scheduled check against the live sources fails if a recorded response no longer matches their shape. | CI | M2 | done |
 
 ## Delivery
@@ -118,7 +118,7 @@ Guardrails are enforced by tests or policy, never by convention alone.
 |---|---|---|---|---|---|
 | GR-1 | The public production router never enables dev mode, playground, introspection, query plans or wildcard CORS. | A test parses the production router config and fails on each setting, proven with a planted violation of each. | unit | M2 | done |
 | GR-2 | The public production router runs persisted operations only. | A non-persisted operation is rejected. | e2e | M2 | done |
-| GR-3 | The user ID comes from the verified JWT, never client input. | No operation accepts a user ID, and a forged header has no effect. | integration | M4 | planned |
+| GR-3 | The user ID comes from the verified JWT, never client input. | No operation accepts a user ID, and a forged header has no effect. | integration | M4 | done |
 | GR-4 | GraphQL variables, personal data and secrets never reach logs or telemetry. | Variables sent in a test request appear in no log, span or metric. | e2e | M8 | planned |
 | GR-5 | No long-lived AWS keys anywhere. | A CDK test rejects IAM users and access keys, and CI holds no AWS secrets. | infrastructure | M6 | planned |
 | GR-6 | All infrastructure comes from CDK. | Scheduled drift detection reports no differences. | infrastructure | M9 | planned |

@@ -217,3 +217,18 @@ Run on 2026-11-19, against the local issuer in `router/test/support/issuer.ts`. 
 | An ID token can't stand in for an access token | `npx vitest run packages/subgraph-kit/test/subgraph.test.ts` | Tokens with `token_use` `id`, missing or `refresh` all gave no user, and failed before the check was added |
 | No sign-in setting reaches the browser | `npm run test:integration` | The browser bundle held none of the six setting names |
 | Every sign-in state meets WCAG 2.2 AA | `npm run test:e2e:server` | axe found no violations signed out, signed in, or on the failed page, in both themes |
+
+## Saved workspaces (FR-WB-11, FR-SG-1, FR-SG-9, GR-3)
+
+Run on 2026-11-19.
+
+| Check | Command | What it showed |
+|---|---|---|
+| A user saves and reopens a workspace, from sign-in to Postgres | `npm run test:router` | Through the built server, signed in at the local issuer, a save went through the pinned router and the workspace subgraph into Postgres, and reopened with its drafts and screen map |
+| One user reaches none of another's workspaces through any operation | The same | Through the router, another user's token listed none, opened none, couldn't update (`NOT_FOUND`) and couldn't delete, and the owner's workspace was unchanged. The same held on the real SQL in `subgraphs/workspace/test/postgres` |
+| A forged header has no effect | The same | `x-user-id` with no token got `UNAUTHENTICATED`, and with another user's token opened nothing. A bearer token sent to the web server with no session cookie got 401 |
+| An ID token can't open workspaces | The same | A token whose audience was the app client was refused with 401 before any subgraph |
+| No operation takes a user ID | `npx vitest run subgraphs/workspace` | `workspaces(userId: ...)` was refused as an unknown argument |
+| Saved work survives a restart | `npm run test:router` | A workspace saved through one connection pool read back the same through a new one, and each migration ran once |
+| The subgraph won't start without token settings | `npx vitest run packages/subgraph-kit subgraphs/workspace` | It threw at creation with no `JWKS_URL`, `JWT_AUDIENCE` and `JWT_ISSUER` |
+| Saving works in a browser, by keyboard, with no WCAG 2.2 AA violations | `npm run test:e2e:server` | Saved, signed out, signed in again in a new browser context and reopened from `/workspaces`; deleted; and axe found nothing on the bar or the list in either theme |
