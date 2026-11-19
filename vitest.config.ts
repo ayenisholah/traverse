@@ -17,6 +17,7 @@ export default defineConfig({
             "packages/*/test/**/*.test.ts",
             "subgraphs/*/test/**/*.test.ts",
             "router/test/*.test.ts",
+            "infra/test/**/*.test.ts",
             // The web app's server code, which runs in Node and never in a browser.
             "apps/*/test/server/**/*.test.ts",
           ],
@@ -47,7 +48,7 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       reporter: ["text", "json-summary", "lcov"],
-      include: ["{apps,packages,subgraphs}/*/src/**/*.{ts,tsx}"],
+      include: ["{apps,packages,subgraphs}/*/src/**/*.{ts,tsx}", "infra/src/**/*.ts"],
       // Every exclusion needs a reason. See docs/TEST_STRATEGY.md before adding one.
       exclude: [],
       thresholds: { perFile: true, lines: 100, branches: 100, functions: 100, statements: 100 },

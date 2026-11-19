@@ -23,7 +23,9 @@ The versions below are the only ones whose docs count. Upgrades change this tabl
 | `wgc` | `0.133.6` | npm registry |
 | `@wundergraph/composition` | `0.66.2` | npm registry |
 | `graphql` | `16.15.0` | `package-lock.json`. Composition needs 16, so don't move to 17 alone. |
-| AWS CDK library | `2.275.0` | npm registry |
+| AWS CDK library | `aws-cdk-lib` `2.275.0`, `constructs` `10.8.1` | `infra/package.json`. Chosen as the newest releases at least two weeks old |
+| AWS CDK CLI | `aws-cdk` `2.1147.0` | `infra/package.json` |
+| `cdk-nag` | `3.0.2` | `infra/package.json` |
 | Next.js | `16.4.5` | `package-lock.json` |
 | React | `19.3.1` | `package-lock.json` |
 | Tailwind CSS | `4.3.4` | `package-lock.json` |
@@ -182,6 +184,9 @@ The versions below are the only ones whose docs count. Upgrades change this tabl
 | A-16 | The runtime client's errors are `AccessDeniedException`, `ValidationException`, `ThrottlingException`, `ServiceUnavailableException`, `ServiceQuotaExceededException`, `InternalServerException`, `ModelTimeoutException`, `ModelErrorException`, `ModelNotReadyException` and `ResourceNotFoundException`. Only throttling, timeouts and server-side errors are worth retrying. | `documented` | The same SDK's `models/errors.d.ts` |
 | A-17 | The SDK's default credential chain reads environment variables and `~/.aws` before the container credentials an ECS task role provides (`@aws-sdk/credential-provider-node` 3.972.97). A deployment must set no AWS key variables, and a local run must pass its own credentials. | `documented` | The provider's source in `node_modules` |
 | A-18 | The runtime client always speaks HTTP/2 (`NodeHttp2Handler`), also to an `endpoint` override over plain HTTP. The local stand-in therefore speaks cleartext HTTP/2, and the real SDK round-trips a forced tool answer and each error type through it. | `tested` | `apps/web/test/server/assistant/bedrock-model.test.ts`, 2026-11-19 |
+| A-19 | A stack with a Region and no account synthesizes a 3-zone VPC from a listed set of zones with no lookup, and `cdk synth --lookups=false` succeeds with no AWS credentials. Given an account, the same VPC asks for an `availability-zones` lookup. Such a stack deploys into the account of the credentials deploying it. | `tested` | `infra/test`, and `npm run synth:infra` with and without credentials, 2026-11-19; [CDK environments](https://docs.aws.amazon.com/cdk/v2/guide/environments.html) |
+| A-20 | `cdk-nag` 3 is a CDK validation plugin, added with `Validations.of(app).addPlugins(new AwsSolutionsChecks(app))`. A finding fails synthesis ("Validation failed"), and one is accepted only with `Validations.of(construct).acknowledge({ id, reason })`, recorded as `aws:cdk:acknowledged-rules` metadata. `NagSuppressions` and the v2 aspect are gone. aws-cdk-lib acknowledges some `CloudFormation-Validate::` rules on its own constructs. Node can't list the package's CommonJS exports, so names come off its default export. | `tested` | `node_modules/cdk-nag/README.md` and `infra/test/guardrails.test.ts`, 2026-11-19 |
+| A-21 | eu-north-1 offers the AWS managed WAF rule groups `AWSManagedRulesCommonRuleSet`, `AWSManagedRulesKnownBadInputsRuleSet`, `AWSManagedRulesAmazonIpReputationList` and `AWSManagedRulesAnonymousIpList`, PostgreSQL 17.7 to 17.11 and 18.1 to 18.6 on RDS, and Valkey 8.2, 9.0 and 9.1 on ElastiCache. | `tested` | Read-only `aws wafv2 list-available-managed-rule-groups`, `aws rds describe-db-engine-versions` and `aws elasticache describe-cache-engine-versions`, 2026-11-19 |
 
 ## Open questions
 

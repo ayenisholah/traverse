@@ -20,6 +20,10 @@
     "packages/subgraph-kit": {
       "entry": ["test/integration/fixtures/*.ts"],
       "project": ["src/**", "test/**"]
+    },
+    "infra": {
+      "entry": ["bin/traverse.ts"],
+      "project": ["bin/**", "src/**", "test/**"]
     }
   }
 }

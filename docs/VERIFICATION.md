@@ -284,3 +284,17 @@ Run on 2026-11-19, against the local stand-in. No real model has been called, so
 | Nothing that wouldn't run reaches the editor | The same, and `npx vitest run apps/web/test/server/assistant` | A mutation the model wrote showed only the refusal, and the editor kept what it had. Also refused: a subscription, two operations, a fragment, a spread of an undefined fragment, an unknown field, a selection deeper than 3 even inside a fragment, more than 3 top-level fields or an aliased one even inside a fragment, introspection, 61 fields (60 passed), a link or an email in a string, more than 2,000 tokens, and text that isn't GraphQL. A comment the model wrote was dropped by printing |
 | The limits are the routers' own | `npx vitest run apps/web/test/server/assistant/operation-check.test.ts` | The checker's depth, field, root-field and alias limits equal those in `router/config.yaml` |
 | Drafting meets WCAG 2.2 AA | `npm run test:e2e:server` | axe found nothing with a draft shown, in both themes |
+
+## Network stack and infrastructure guardrails (GR-5, NFR-7)
+
+Run on 2026-11-19. Nothing is deployed: account setup isn't done, and the stacks are proven by synthesis and assertions (owner, 2026-11-19).
+
+| Check | Command | What it showed |
+|---|---|---|
+| Synthesis is offline and clean | `npm run synth:infra` | Both environments synthesized with `--lookups=false --strict` and cdk-nag's AWS Solutions checks, with and without AWS credentials, and no findings to accept. The tests run the same `main()` that `bin/traverse.ts` runs, and hold the script, the `check` chain and the CI step to those flags |
+| No long-lived keys | `npx vitest run infra/test/guardrails.test.ts` | No stack, nested stack or stack in a stage holds an IAM user, access key or login profile, or a policy or custom resource that could create one. Planted ones were found in a nested stack, in a stage, in a role's policy and in an `AwsCustomResource` calling IAM, and a planted unencrypted bucket failed synthesis |
+| No account or person in the code | The same | No template and no file under `infra/` holds a 12-digit account ID or an email address; one was found in an ECR image URI and an ARN. The config refuses an `account` field |
+| CI holds no AWS secrets | The same, and `gh secret list` | No workflow or action refers to any stored secret, by any name, or to an AWS credential variable or file; planted ones were refused. The repository holds no secrets |
+| Findings are accepted only from the list | The same | An acknowledgement made outside `infra/src/nag-suppressions.ts`, on a construct, on the whole app, or under one of aws-cdk-lib's own linter rule IDs, was found. A listed one applied, a stale one failed, and a namespaced ID, which would let warnings through, was refused |
+| The VPC | `npx vitest run infra/test/network-stack.test.ts` | Nine subnets over three zones, one NAT gateway on staging and three in production, data subnets with no route while service subnets have one each, an S3 gateway endpoint on the public and service subnets only, the default security group stripped, a flow-log role only this account's flow logs may assume, and flow logs of all traffic to a log group kept 30 or 365 days, under a rotating key whose policy names this account's log groups by their real ARN form. Key and log group are kept when the stack goes |
+

@@ -59,7 +59,7 @@ npm run check:progress       # the branch updates docs/PROGRESS.md
 | `subgraphs/workspace`       | Users' saved workspaces in Postgres, scoped by token   |
 | `graph/cosmo-demo`          | Cosmo demo schemas behind the public demo              |
 | `router/`                   | Public and sandbox router configs, operations, e2e     |
-| `infra/`                    | Planned: CDK app and reusable constructs               |
+| `infra/`                    | CDK app: stacks, environment config, guardrail tests   |
 
 ## Order of truth
 

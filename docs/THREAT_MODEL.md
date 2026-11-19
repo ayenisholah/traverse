@@ -45,6 +45,8 @@
 | Stolen or expired tokens | Short token lifetime; audience, expiry and signature checks | FR-GW-2 |
 | A compromised router image | Digest pinning, ECR mirror, scanning | FR-DP-5 |
 | Stolen deploy credentials | OIDC only, limited to this repository and environment | GR-5, FR-DP-4 |
+| Infrastructure code creates long-lived keys or leaks an account | A test over every stack the app builds, nested stacks and stages included, refuses an IAM user, access key or login profile, and any policy or custom resource that could create one. No template or `infra/` file may hold an account ID or an email. CI may refer to no stored secret at all. Stacks name no account and look nothing up, and `cdk.context.json` is ignored, so no account ID reaches the public repository (ADR 0023). Left open: the log group of CDK's own Lambda that strips the default security group is created by Lambda, without a retention or key; it holds only that function's logs | GR-5 |
+| A cdk-nag finding is quietly accepted | cdk-nag fails synthesis on any finding, and the gate runs with `--strict`. Findings are accepted only from one reviewed list with reasons, by bare rule ID, since a namespaced one would let warnings through. A stale entry fails, and a test refuses an acknowledgement made anywhere else, except the exact ones aws-cdk-lib makes for its own linter | GR-5, GR-6 |
 | A malicious or faulty schema change | Required schema check and review | GR-7, FR-DP-1 |
 | Sensitive data leaves through telemetry | Variables never exported; attributes reviewed | GR-4 |
 | Cosmo Cloud is unavailable or compromised | S3 fallback config; only schema and telemetry cross the boundary | FR-GW-3 |

@@ -14,6 +14,9 @@
     "subgraphs/*/src/**/*.ts",
     "subgraphs/*/test/**/*.ts",
     "router/test/**/*.ts",
+    "infra/bin/**/*.ts",
+    "infra/src/**/*.ts",
+    "infra/test/**/*.ts",
     "*.config.ts"
   ]
 }
