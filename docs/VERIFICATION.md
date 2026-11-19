@@ -273,3 +273,14 @@ Run on 2026-11-19, against the local stand-in. No real model has been called, so
 | Suggestions meet WCAG 2.2 AA | `npm run test:e2e:server` | axe found nothing with a suggestion shown, in both themes |
 | Composition is bounded | `npx vitest run apps/web/test/server/assistant/suggest.test.ts` | A subgraph too large to come back in one answer, operations sharing a name, and more than 50 operations were refused before any composition and before the call was counted. A draft that breaks nothing was counted, and no model was asked |
 | A suggestion stays with its subgraph | `npx vitest run apps/web/test/suggest-panel.test.tsx` | Switching to another subgraph dropped the suggestion, and nothing was applied there |
+
+## Drafted operations (FR-AI-3, GR-12)
+
+Run on 2026-11-19, against the local stand-in. No real model has been called, so FR-AI-3 is `partial`.
+
+| Check | Command | What it showed |
+|---|---|---|
+| A drafted operation reaches the editor and runs | `npm run test:e2e:server` | On `/operations`, a description gave the stand-in's query, checked against the schema, in the editor, and "Show route" ran it |
+| Nothing that wouldn't run reaches the editor | The same, and `npx vitest run apps/web/test/server/assistant` | A mutation the model wrote showed only the refusal, and the editor kept what it had. Also refused: a subscription, two operations, a fragment, a spread of an undefined fragment, an unknown field, a selection deeper than 3, more than 3 top-level fields, an aliased top-level field, more than 60 fields, and text that isn't GraphQL |
+| The limits are the routers' own | `npx vitest run apps/web/test/server/assistant/operation-check.test.ts` | The checker's depth, field, root-field and alias limits equal those in `router/config.yaml` |
+| Drafting meets WCAG 2.2 AA | `npm run test:e2e:server` | axe found nothing with a draft shown, in both themes |

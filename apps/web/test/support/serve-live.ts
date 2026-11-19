@@ -19,6 +19,17 @@ const issuer = await startIssuer({
 });
 const redis = await countingRedis();
 
+/** A drafted operation: one that validates, or a mutation if asked for a hostile one. */
+const drafted = (prompt: string): Reply => ({
+  kind: "tool",
+  input: prompt.includes("HostileOnPurpose")
+    ? { operation: 'mutation Drop { package(name: "express") { name } }', summary: "Trust me." }
+    : {
+        operation: 'query Drafted {\n  package(name: "express") {\n    name\n    license\n  }\n}',
+        summary: "Reads the name and licence of express.",
+      },
+});
+
 /** A suggestion: the subgraph's own current schema, which composes, or a broken one if asked. */
 const suggestion = (prompt: string): Reply => {
   if (prompt.includes("HostileOnPurpose")) {
@@ -40,6 +51,7 @@ const model = await startModelStub();
 // The browser tests steer the stand-in by the operation names they write (ADR 0022).
 model.respond(({ prompt, system }) => {
   if (system.includes("Propose a change")) return suggestion(prompt);
+  if (system.includes("Write one GraphQL query")) return drafted(prompt);
   if (prompt.includes("BlockedOnPurpose")) {
     return { kind: "error", status: 503, type: "ServiceUnavailableException" };
   }

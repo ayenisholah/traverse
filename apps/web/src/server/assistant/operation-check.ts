@@ -56,7 +56,8 @@ export const createOperationCheck = (schemaSdl: string) => {
       const [operation, ...rest] = document.definitions;
       if (operation?.kind !== Kind.OPERATION_DEFINITION || rest.length > 0) return false;
       if (operation.operation !== OperationTypeNode.QUERY) return false;
-      return validate(schema, document).length === 0 && withinLimits(operation);
+      // The limits first: they're cheap, and validation of an oversized operation isn't.
+      return withinLimits(operation) && validate(schema, document).length === 0;
     } catch {
       return false;
     }

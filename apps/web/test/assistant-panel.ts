@@ -18,3 +18,15 @@ export const expectToAskServer = async (renderPanel: () => { container: HTMLElem
   expect(container.innerHTML).toBe("");
   vi.unstubAllGlobals();
 };
+
+/** The ways a panel learns it isn't offered: a viewer who can't ask, or a server that can't say. */
+export const NOT_OFFERED: [
+  string,
+  { loadViewer: () => Promise<{ canSignIn: boolean; signedIn: boolean; canAsk: boolean }> },
+][] = [
+  [
+    "to someone who can't ask",
+    { loadViewer: () => Promise.resolve({ canSignIn: true, signedIn: false, canAsk: false }) },
+  ],
+  ["when the server can't say", { loadViewer: () => Promise.reject(new Error("offline")) }],
+];
