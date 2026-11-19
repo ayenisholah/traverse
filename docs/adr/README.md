@@ -25,3 +25,4 @@
 | [0021](0021-workspace-store.md) | Keep workspaces in Postgres through `pg`, with plain SQL migrations and no entity key | Accepted |
 | [0022](0022-assistant-model-boundary.md) | Reach the model only through a validated, fenced, counted port | Accepted |
 | [0023](0023-account-free-infrastructure.md) | Keep accounts out of the infrastructure code, and accept cdk-nag findings only from one list | Accepted |
+| [0024](0024-waf-log-not-alb-access-logs.md) | Record the edge in the WAF's log, not load balancer access logs | Accepted |

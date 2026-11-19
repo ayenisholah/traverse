@@ -169,6 +169,7 @@ const STORE_RULES: Readonly<Record<string, Rule>> = {
   "AWS::SecretsManager::Secret": (p, r) => isOwnKey(r, p.KmsKeyId),
   "AWS::Logs::LogGroup": (p, r) => isOwnKey(r, p.KmsKeyId),
   "AWS::SQS::Queue": (p, r) => isOwnKey(r, p.KmsMasterKeyId),
+  "AWS::SNS::Topic": (p, r) => isOwnKey(r, p.KmsMasterKeyId),
   ...Object.fromEntries(
     [
       "AWS::ElastiCache::CacheCluster",
@@ -181,7 +182,6 @@ const STORE_RULES: Readonly<Record<string, Rule>> = {
       "AWS::DocDB::DBCluster",
       "AWS::Neptune::DBCluster",
       "AWS::Kinesis::Stream",
-      "AWS::SNS::Topic",
     ].map((type) => [type, () => false]),
   ),
 };

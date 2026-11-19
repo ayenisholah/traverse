@@ -13,6 +13,7 @@ Traverse serves real public data about open-source packages, and stores users' o
 | Rate-limit counters | ElastiCache | Short-lived |
 | Daily AI call counts, keyed by a digest of the user's subject | Redis, ElastiCache from M6 | A day |
 | Backups | RDS automated backups | 14 days |
+| The WAF's log of requests it blocked or counted, nothing else: client address, country, method, host, path, headers such as the user agent, and the rule that matched. Never the query string, cookies, the `authorization` header or the referrer | CloudWatch Logs, under its own key | 30 days |
 | Postgres's own logs: errors with the parameterised statement, never parameter values | CloudWatch Logs, under their own key | A year in production, 30 days on staging |
 | Logs | CloudWatch Logs | 30 days |
 | Traces and metrics | CloudWatch, X-Ray | Service defaults |

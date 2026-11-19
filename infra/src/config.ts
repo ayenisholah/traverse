@@ -28,6 +28,15 @@ export const environmentConfig = z
       // RDS keeps between 1 and 35 days; point-in-time recovery needs at least one.
       backupRetentionDays: z.int().min(1).max(35),
     }),
+    edge: z.strictObject({
+      // Requests one address may make in five minutes before the WAF blocks it.
+      rateLimitPerFiveMinutes: z.int().min(100).max(100_000),
+    }),
+    auth: z.strictObject({
+      // Short, because a signed-out access token lasts until it expires (A-10: 5 to 1,440).
+      accessTokenMinutes: z.int().min(5).max(60),
+      refreshTokenDays: z.int().min(1).max(30),
+    }),
     cache: z.strictObject({
       nodeType: z.string().regex(/^cache\.[a-z0-9]+\.[a-z0-9]+$/),
       // A primary and up to two replicas; with replicas, a failure moves to another zone.
@@ -86,6 +95,8 @@ export const ENVIRONMENTS: readonly EnvironmentConfig[] = environmentsConfig.par
       backupRetentionDays: 7,
     },
     cache: { nodeType: "cache.t4g.micro", nodes: 1 },
+    edge: { rateLimitPerFiveMinutes: 1_000 },
+    auth: { accessTokenMinutes: 15, refreshTokenDays: 1 },
   },
   {
     name: "production",
@@ -102,5 +113,20 @@ export const ENVIRONMENTS: readonly EnvironmentConfig[] = environmentsConfig.par
       backupRetentionDays: 14,
     },
     cache: { nodeType: "cache.t4g.small", nodes: 2 },
+    edge: { rateLimitPerFiveMinutes: 2_000 },
+    auth: { accessTokenMinutes: 15, refreshTokenDays: 1 },
   },
 ]);
+
+/**
+ * Monthly budgets in US dollars for Traverse's one account, which every environment shares, so
+ * they're set once (NFR-6, GR-15). Placeholders for the owner to confirm before the first deploy.
+ */
+export const accountBudget = z.strictObject({
+  monthlyUsd: z.int().min(1),
+  bedrockMonthlyUsd: z.int().min(1),
+});
+
+export type AccountBudget = z.infer<typeof accountBudget>;
+
+export const ACCOUNT_BUDGET = accountBudget.parse({ monthlyUsd: 750, bedrockMonthlyUsd: 70 });

@@ -313,3 +313,17 @@ Run on 2026-11-19. Nothing is deployed (owner, 2026-11-19).
 | Accepted findings | The same | Five, each with its reason: single-zone stores on staging only, the default Postgres port, and secret rotation until M7's services read secrets from Secrets Manager |
 | `pg` verifies the server (U-23) | `npm run test:router` (`subgraphs/workspace/test/postgres/tls.test.ts`) | Against Postgres serving a test CA's certificate for 127.0.0.1, through the subgraph's own pool: connected over TLS with the CA in `NODE_EXTRA_CA_CERTS`, refused without it (`UNABLE_TO_VERIFY_LEAF_SIGNATURE`), and refused at 127.0.0.2 (`ERR_TLS_CERT_ALTNAME_INVALID`) |
 
+## Edge and budget stacks (FR-GW-6, NFR-6, GR-4, GR-15)
+
+Run on 2026-11-19. Nothing is deployed (owner, 2026-11-19), so FR-GW-6's blocked request and NFR-6's alerts are proven only once staging exists.
+
+| Check | Command | What it showed |
+|---|---|---|
+| The load balancer | `npx vitest run infra/test/edge-stack.test.ts` | Internet-facing in the public subnets, HTTPS on `ELBSecurityPolicy-TLS13-1-2-Res-2021-06` with a 404 until M7, HTTP redirected with a 301, a DNS-validated certificate for both names, alias records for both under the names as given, deletion protection, invalid headers dropped, strictest desync handling, and a 55-second idle timeout |
+| No access logs | The same | No `access_logs` attribute and no bucket in the edge stack (ADR 0024) |
+| The WAF | The same | On the load balancer and the user pool: a rate limit of 1,000 (staging) or 2,000 (production) per address per five minutes first, then the IP reputation, common and known-bad-input groups, each group as AWS wrote it, except the common group's body size, which counts. Only blocked and counted requests logged, to `aws-waf-logs-traverse-<env>` under its own key for 30 days, with `authorization`, `cookie`, `referer` and the query string redacted; no sampled requests |
+| The user pool | The same | Essentials plan with managed login and branding, deletion protection, kept on removal, a 12-character password policy and optional authenticator MFA. A resource server named by the router's address with one `graph` scope. The app client: generated secret, authorization code only, that scope only (no `openid`), callback and sign-out on the app's address, refresh as its only flow, revocation on, existence errors hidden, 15-minute access tokens, one-day refresh tokens, no rotation |
+| Nothing personal in code | The same, and `infra/test/guardrails.test.ts` | Host names, the hosted zone, the login domain and the alert address are parameters; no template or `infra/` file holds an account ID or email |
+| Budgets | `npx vitest run infra/test/budget-stack.test.ts` | One stack for the account, in us-east-1 (A-30), that every other stack depends on: one budget for everything and one filtered to Amazon Bedrock, each alerting at 80% and 100% spent and 100% forecast through a KMS-encrypted topic only this account's budgets may publish to, whose key lets them, with an email subscription to an address given at deploy time and not echoed |
+| Every stack | `npm run synth:infra` and `infra/test/guardrails.test.ts` | Seven stacks synthesize strictly, all termination protected, and every guardrail holds over the new ones. Four more findings accepted, each with its reason: the load balancer open on 80 and 443, no access logs, optional MFA and no Plus plan |
+
