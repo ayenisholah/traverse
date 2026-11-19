@@ -124,7 +124,8 @@ const signed = (
   { audience = "traverse", from = issuer, expires = "1h" }: TokenOptions = {},
   key?: CryptoKey,
 ) => {
-  const jwt = new SignJWT({ sub: "user-1", ...claims })
+  // Shaped as a Cognito access token (A-10).
+  const jwt = new SignJWT({ sub: "user-1", token_use: "access", ...claims })
     .setProtectedHeader({ alg: "RS256", kid: "k" })
     .setAudience(audience)
     .setIssuer(from);
@@ -306,6 +307,17 @@ describe("auth context", () => {
     const url = await start();
 
     expect(await whoamiWith(url, await signed({ sub }))).toBe("anonymous");
+  });
+
+  it.each([
+    ["an ID token's", "id"],
+    ["no", undefined],
+    ["an unknown", "refresh"],
+  ])("[GR-3] gives no user for a token with %s token_use", async (_, tokenUse) => {
+    const url = await start();
+
+    // An ID token from the same pool is signed by the same issuer, and carries the email (A-11).
+    expect(await whoamiWith(url, await signed({ token_use: tokenUse }))).toBe("anonymous");
   });
 
   it("[GR-3] ignores a forged user header", async () => {
