@@ -51,7 +51,9 @@ test("[FR-WB-3] lists the field, the subgraph and the operation a change breaks"
 
   await editFamily(page, (sdl) => sdl.replaceAll(/\n\s*maritalStatus: MaritalStatus/g, ""));
 
-  await expect(page.getByRole("main").getByRole("status")).toContainText("breaks 1 operation");
+  // The server build also has the workspace bar's own status, so this reads the results' one.
+  const results = page.getByRole("region", { name: "Results" });
+  await expect(results.getByRole("status")).toContainText("breaks 1 operation");
   const row = page.getByRole("row", { name: /Details\.maritalStatus/ });
   await expect(row).toContainText("Removed");
   await expect(row).toContainText("family");
