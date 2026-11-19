@@ -61,7 +61,7 @@ Each branch is one pull request and lists the requirements it delivers. Plans fo
 | M4 | `feat/web-auth` | FR-WB-10, GR-3 | Merged |
 | M4 | `feat/workspace-subgraph` | FR-SG-1, FR-SG-9, FR-WB-11 | Merged |
 | M5 | `feat/bedrock-client` | FR-AI-4, GR-13, GR-14, GR-15 | Merged |
-| M5 | `feat/ai-explain` | FR-AI-1 | Planned |
+| M5 | `feat/ai-explain` | FR-AI-1 | Merged |
 | M5 | `feat/ai-suggest` | FR-AI-2, GR-12 | Planned |
 | M5 | `feat/ai-draft` | FR-AI-3, GR-12 | Planned |
 | M6 | `feat/network-stack` | NFR-7, GR-5 | Planned |
