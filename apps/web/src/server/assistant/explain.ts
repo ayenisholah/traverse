@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { Assistant } from "./assistant.ts";
-import { fixed, scrub } from "./prompt.ts";
+import { asRead, isPlainText } from "./plain-text.ts";
+import { fixed } from "./prompt.ts";
 
 const text = (max: number) => z.string().max(max);
 const COORDINATE = /^[A-Za-z_][A-Za-z0-9_]{0,99}\.[A-Za-z_][A-Za-z0-9_]{0,99}$/;
@@ -77,19 +78,6 @@ const fieldsIn = (input: ExplainInput): Set<string> => {
   ]);
 };
 
-// Shown as plain text, but a link, an address or markup would still read as something it isn't.
-const LOOKS_LIKE_MARKUP = [
-  /[a-z][a-z0-9+.-]*:\/\//i,
-  /\b(?:mailto|javascript|data|vbscript|file):/i,
-  /\bwww\./i,
-  /<\s*\/?\s*[a-z!]/i,
-  /\]\(|`|\*\*|__|^\s*#/m,
-];
-
-// Look-alike and invisible characters could hide a link from the patterns above.
-const INVISIBLE = new RegExp("[\\u200B-\\u200D\\u2060\\uFEFF\\u00AD]", "g");
-const plain = (line: string) => line.normalize("NFKC").replace(INVISIBLE, "");
-
 /**
  * Whether the explanation is about this result (GR-12):
  * - every field it names, in its lists or its sentences, is one the result names;
@@ -98,17 +86,16 @@ const plain = (line: string) => line.normalize("NFKC").replace(INVISIBLE, "");
  * Anything else is never shown.
  */
 const isAbout = (explanation: Explanation, known: Set<string>): boolean => {
-  const texts = [explanation.summary, ...explanation.points.map(({ text: point }) => point)].map(
-    plain,
-  );
-  const listed = explanation.points.flatMap(({ fields }) => fields.map(plain));
-  const named = [...listed, ...texts.flatMap((line) => line.match(COORDINATE_IN_TEXT) ?? [])];
-  const everything = [...texts, ...listed];
+  const texts = [explanation.summary, ...explanation.points.map(({ text: point }) => point)];
+  const listed = explanation.points.flatMap(({ fields }) => fields.map(asRead));
+  const named = [
+    ...listed,
+    ...texts.flatMap((line) => asRead(line).match(COORDINATE_IN_TEXT) ?? []),
+  ];
   return (
     named.every((field) => known.has(field)) &&
     (known.size === 0 || listed.some((field) => known.has(field))) &&
-    everything.every((line) => LOOKS_LIKE_MARKUP.every((pattern) => !pattern.test(line))) &&
-    everything.every((line) => scrub(line) === line)
+    [...texts, ...listed].every(isPlainText)
   );
 };
 
