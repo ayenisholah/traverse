@@ -60,13 +60,66 @@ export interface AuthSettings {
   sessionKey: Uint8Array;
 }
 
+// Bedrock model and inference profile IDs, such as `eu.anthropic.<model>-v1:0` (U-19 picks one).
+const MODEL_ID = /^[a-z0-9][a-z0-9.:-]{2,199}$/;
+const REGION = /^[a-z]{2}(?:-gov)?-[a-z]+-\d$/;
+// Plain redis:// carries the counts unencrypted, so it's only for this machine or a private name.
+const isTrustedRedisUrl = (value: string): boolean => {
+  if (!URL.canParse(value)) return false;
+  const url = new URL(value);
+  return url.protocol === "rediss:" || (url.protocol === "redis:" && isLocal(url.hostname));
+};
+// Only the local stand-in replaces Bedrock's own address (ADR 0022).
+const isLocalEndpoint = (value: string): boolean =>
+  /^http:\/\/127\.0\.0\.1:\d{1,5}$/.test(value) && isRouterOrigin(value);
+
+const aiSchema = z.object({
+  AI_MODEL_ID: z.string().regex(MODEL_ID),
+  AI_REGION: z.string().regex(REGION),
+  REDIS_URL: z.string().refine(isTrustedRedisUrl),
+  AI_ENDPOINT: z.string().refine(isLocalEndpoint).optional(),
+});
+
+const AI_NAMES = ["AI_MODEL_ID", "AI_REGION", "REDIS_URL", "AI_ENDPOINT"];
+
+export interface AiSettings {
+  modelId: string;
+  region: string;
+  /** Where calls are counted against each user's limit (GR-15). */
+  redisUrl: string;
+  /** The local stand-in's address. Unset, the SDK reaches Bedrock itself. */
+  endpoint: string | undefined;
+}
+
 export interface Settings {
   publicRouterUrl: string;
   /** The sandbox router, which only this server may reach (GR-11). */
   sandboxRouterUrl: string;
   /** Sign-in, when the server has a user pool. Without one, nobody can sign in. */
   auth: AuthSettings | undefined;
+  /** The assistant, when it has a model and a counter. Without them it's off, and says so. */
+  ai: AiSettings | undefined;
 }
+
+const readAi = (
+  env: Record<string, string | undefined>,
+  auth: AuthSettings | undefined,
+): AiSettings | undefined => {
+  if (AI_NAMES.every((name) => env[name] === undefined)) return undefined;
+  const parsed = aiSchema.safeParse(env);
+  // Only signed-in users may ask, so the limit counts a verified user (GR-15).
+  if (!parsed.success || auth === undefined) {
+    throw new Error(
+      "Set AI_MODEL_ID, AI_REGION and REDIS_URL together, with sign-in set up, or none of them",
+    );
+  }
+  return {
+    modelId: parsed.data.AI_MODEL_ID,
+    region: parsed.data.AI_REGION,
+    redisUrl: parsed.data.REDIS_URL,
+    endpoint: parsed.data.AI_ENDPOINT,
+  };
+};
 
 const readAuth = (env: Record<string, string | undefined>): AuthSettings | undefined => {
   if (AUTH_NAMES.every((name) => env[name] === undefined)) return undefined;
@@ -99,9 +152,11 @@ export const readSettings = (env: Record<string, string | undefined>): Settings 
       "Set PUBLIC_ROUTER_URL and SANDBOX_ROUTER_URL to each router's origin, such as http://127.0.0.1:3002",
     );
   }
+  const auth = readAuth(env);
   return {
     publicRouterUrl: parsed.data.PUBLIC_ROUTER_URL,
     sandboxRouterUrl: parsed.data.SANDBOX_ROUTER_URL,
-    auth: readAuth(env),
+    auth,
+    ai: readAi(env, auth),
   };
 };

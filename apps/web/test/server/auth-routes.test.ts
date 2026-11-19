@@ -102,7 +102,7 @@ describe("the sign-in routes", () => {
     expect(done.headers.get("location")).toBe(`${APP}/impact`);
     expect(cookies.names().sort()).toEqual(["traverse-access", "traverse-session"]);
     expect((await viewer(app, cookies.header())).body).toEqual({
-      result: { data: { canSignIn: true, signedIn: true } },
+      result: { data: { canSignIn: true, signedIn: true, canAsk: false } },
     });
   });
 
@@ -118,7 +118,7 @@ describe("the sign-in routes", () => {
     const { answer, body } = await viewer(app, withoutAccess);
 
     expect(issuer.refreshes()).toBe(before + 1);
-    expect(body).toEqual({ result: { data: { canSignIn: true, signedIn: true } } });
+    expect(body).toEqual({ result: { data: { canSignIn: true, signedIn: true, canAsk: false } } });
     expect(answer.headers.getSetCookie()).toEqual([expect.stringMatching(/^traverse-access=/)]);
   });
 
@@ -138,7 +138,7 @@ describe("the sign-in routes", () => {
     const logout = await fetch(out.headers.get("location") ?? "", { redirect: "manual" });
     expect(logout.headers.get("location")).toBe(`${APP}/`);
     expect((await viewer(app, cookies.header())).body).toEqual({
-      result: { data: { canSignIn: true, signedIn: false } },
+      result: { data: { canSignIn: true, signedIn: false, canAsk: false } },
     });
   });
 
@@ -151,7 +151,7 @@ describe("the sign-in routes", () => {
       404,
     );
     expect((await viewer(app, "")).body).toEqual({
-      result: { data: { canSignIn: false, signedIn: false } },
+      result: { data: { canSignIn: false, signedIn: false, canAsk: false } },
     });
   });
 
@@ -164,5 +164,24 @@ describe("the sign-in routes", () => {
 
     // Each access token starts with the same header, so this would find one if it leaked.
     expect(everything).not.toContain(token.split(".")[0]);
+  });
+
+  it("[GR-15] offers the assistant only to someone signed in, where the server has one", async () => {
+    const app = await routes({
+      ...routers,
+      ...authSettings(),
+      AI_MODEL_ID: "eu.test.model-v1:0",
+      AI_REGION: "eu-north-1",
+      REDIS_URL: "redis://127.0.0.1:6379",
+      AI_ENDPOINT: "http://127.0.0.1:4998",
+    });
+    expect((await viewer(app, "")).body).toEqual({
+      result: { data: { canSignIn: true, signedIn: false, canAsk: false } },
+    });
+
+    const { cookies } = await signIn(app);
+    expect((await viewer(app, cookies.header())).body).toEqual({
+      result: { data: { canSignIn: true, signedIn: true, canAsk: true } },
+    });
   });
 });

@@ -23,3 +23,4 @@
 | [0019](0019-route-view-list.md) | Show a route as an ordered list with an SVG outline | Accepted |
 | [0020](0020-server-held-session.md) | Sign in with a server-held session and a bound access token | Accepted |
 | [0021](0021-workspace-store.md) | Keep workspaces in Postgres through `pg`, with plain SQL migrations and no entity key | Accepted |
+| [0022](0022-assistant-model-boundary.md) | Reach the model only through a validated, fenced, counted port | Accepted |

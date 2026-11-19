@@ -232,3 +232,18 @@ Run on 2026-11-19.
 | Saved work survives a restart | `npm run test:router` | A workspace saved through one connection pool read back the same through a new one, and each migration ran once |
 | The subgraph won't start without token settings | `npx vitest run packages/subgraph-kit subgraphs/workspace` | It threw at creation with no `JWKS_URL`, `JWT_AUDIENCE` and `JWT_ISSUER` |
 | Saving works in a browser, by keyboard, with no WCAG 2.2 AA violations | `npm run test:e2e:server` | Saved, signed out, signed in again in a new browser context and reopened from `/workspaces`; deleted; and axe found nothing on the bar or the list in either theme |
+
+## The assistant's model boundary (GR-13, GR-14, GR-15)
+
+Run on 2026-11-19, against the local stand-in in `router/test/support/model-stub.ts`. No real model has been called, so GR-13 is `partial`.
+
+| Check | Command | What it showed |
+|---|---|---|
+| The real SDK reaches Bedrock's wire format | `npx vitest run apps/web/test/server/assistant` | Through `@aws-sdk/client-bedrock-runtime` 3.1162.0, the stand-in received the forced `answer` tool, its JSON schema and `maxTokens` 2048, and each Bedrock error type came back as a fixed reason (A-18) |
+| Only a schema-shaped answer passes | The same | An extra field, a value over its limit, another tool and plain text were each `invalid` |
+| Planted text stays data | The same | An instruction planted in a schema, with a forged closing marker, stayed inside its block, before the one real closing marker |
+| Prompts hold no secrets or identity | The same | A JWT, a bearer token, an AWS key ID, a private key and an email were removed, and the user's subject was in no prompt and no counter key |
+| Calls are bounded | The same, and `npm run test:router` | A user's calls past the daily cap, everyone's past the global cap, and any call when the counter was down were refused before the model. On real Redis 7.4.12 the count held across clients and instances, and `EXPIRE NX` set each key's lapse once |
+| The scrubber can't be made slow | `npx vitest run apps/web/test/server/assistant/prompt.test.ts` | Long runs of letters, `eyJ`, private-key headers, `@` and `Bearer`, each as large as a call may carry, were all scrubbed in under 500 ms together. The first email pattern took over 8 seconds on 60,000 letters, and the review found the first JWT pattern took 4 seconds on repeated `eyJ`; both were replaced |
+| Local runs never use the machine's AWS credentials | `npx vitest run apps/web/test/server/assistant/runtime.test.ts` | With an AWS key in the environment, the stand-in saw requests signed by the test key, never that one |
+| Nothing about a call is written out | The same | An answered call and a failed one wrote nothing to stdout, stderr or the console, and the planted email reached no prompt |
