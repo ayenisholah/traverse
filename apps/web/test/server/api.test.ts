@@ -387,3 +387,44 @@ describe("the package.json check procedure", () => {
     expect(run).not.toHaveBeenCalled();
   });
 });
+
+describe("requests from other sites", () => {
+  const post = (site: string | undefined) =>
+    new Request("http://web.test/api/trpc/route", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        ...(site === undefined ? {} : { "sec-fetch-site": site }),
+      },
+      body: JSON.stringify({ operation: "{ a }" }),
+    });
+
+  it.each(["cross-site", "same-site"])(
+    "[FR-WB-11] refuses a mutation a %s page started, before reading it",
+    async (site) => {
+      const { context, route } = sandboxThat(ROUTE);
+      const response = await handle(post(site), context);
+
+      expect(response.status).toBe(403);
+      expect(await response.json()).toMatchObject({ error: { message: "Forbidden" } });
+      expect(route).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([["same-origin"], [undefined]])(
+    "[FR-WB-11] takes a mutation marked %s, or from no browser at all",
+    async (site) => {
+      const { context, route } = sandboxThat(ROUTE);
+
+      expect((await handle(post(site), context)).status).toBe(200);
+      expect(route).toHaveBeenCalled();
+    },
+  );
+
+  it("[FR-WB-11] still holds every call but a save to the small cap", async () => {
+    const { context } = sandboxThat(ROUTE);
+    const { status } = await askRoute({ operation: "x".repeat(40_000) }, context);
+
+    expect(status).toBe(413);
+  });
+});

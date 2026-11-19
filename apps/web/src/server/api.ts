@@ -142,9 +142,16 @@ const api = t.router({
 export type Api = typeof api;
 
 // Far above the largest call the procedures accept, so only a request no browser would send fails.
-// A saved workspace is the largest: 150,000 characters of SDL, 50,000 of operations and 10,000 of
-// screen map, which JSON escaping can grow.
-const MAX_BODY_BYTES = 512_000;
+const MAX_BODY_BYTES = 32_000;
+// A saved workspace is the one large call: up to 210,000 characters, which UTF-8 and JSON escaping
+// can grow several times. It matches the router's own limit, which the save must pass anyway.
+const MAX_SAVE_BYTES = 1_000_000;
+
+const refused = (status: number, message: string, code: string): Response =>
+  Response.json(
+    { error: { message, data: { code, httpStatus: status } } },
+    { status, headers: { "cache-control": "no-store", "x-content-type-options": "nosniff" } },
+  );
 
 const tooLarge = (): Response =>
   Response.json(
@@ -159,9 +166,17 @@ const tooLarge = (): Response =>
  * before checking it, so a body is read here first, and only up to a size no real call reaches.
  */
 export const handleApiRequest = async (request: Request, context: Context): Promise<Response> => {
+  // A browser marks a request another site started. Mutations change a user's data, so only this
+  // app's own pages may send them (the session cookie is SameSite=Lax, which lets a POST form from
+  // another site through).
+  const site = request.headers.get("sec-fetch-site");
+  if (request.method === "POST" && site !== null && site !== "same-origin") {
+    return refused(403, "Forbidden", "FORBIDDEN");
+  }
   let req = request;
   if (request.body !== null) {
-    const body = await readCapped(request.body, MAX_BODY_BYTES);
+    const isSave = new URL(request.url).pathname === "/api/trpc/saveWorkspace";
+    const body = await readCapped(request.body, isSave ? MAX_SAVE_BYTES : MAX_BODY_BYTES);
     if (body === undefined) return tooLarge();
     req = new Request(request.url, {
       method: request.method,

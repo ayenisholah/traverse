@@ -29,7 +29,8 @@ const responseSchema = z.object({
  * means the router answered, but a subgraph behind it failed for some fields.
  */
 export type RouterResult =
-  { ok: true; data: unknown; incomplete: boolean } | { ok: false; codes?: string[] };
+  | { ok: true; data: unknown; incomplete: boolean; codes?: string[] }
+  | { ok: false; codes?: string[] };
 
 export interface RouterClient {
   /** `accessToken` is the signed-in user's, for operations on their own data. */
@@ -60,10 +61,13 @@ export const createRouterClient = (post: PostGraphql): RouterClient => ({
       const codes = codesIn(body.data.errors ?? []);
       return codes.length > 0 ? { ok: false, codes } : { ok: false };
     }
+    const errors = body.data.errors ?? [];
+    const codes = codesIn(errors);
     return {
       ok: true,
       data: body.data.data,
-      incomplete: (body.data.errors ?? []).length > 0,
+      incomplete: errors.length > 0,
+      ...(codes.length > 0 && { codes }),
     };
   },
 });
