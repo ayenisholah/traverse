@@ -203,3 +203,17 @@ Run on 2026-11-18.
 | A setting with no rule fails the shipped config | `npx vitest run router/test/config.test.ts` | With `override_routing_url.subgraphs.packages` planted in `router/config.yaml`, the new test failed on the old rules, which passed it, and passed on the new ones, which report it |
 | Neither router lets an unruled key through | `npx vitest run packages/repo-checks/test/router-config.test.ts` | A routing override, a second listener, exported variables, plugins, a graph token, printed plans and an empty section each failed both rule sets |
 | The public access log keeps no part of a GET's operation | `npm run test:router` | A GET carrying a planted query and variables failed the new test on the pinned router with the old config, and passed with `access_logs.router.ignore_query_params_list` set: neither planted value was in the log (C-55) |
+
+## Sign-in (FR-WB-10, GR-9)
+
+Run on 2026-11-19, against the local issuer in `router/test/support/issuer.ts`. A real user pool hasn't been tried, so FR-WB-10 is `partial`.
+
+| Check | Command | What it showed |
+|---|---|---|
+| The code flow runs end to end in a browser | `npm run test:e2e:server` | Sign-in returned to the page that asked, the session survived a new page, a dropped access token was refreshed, sign-out cleared both cookies, and the same ran by keyboard |
+| The browser can't read the session | The same | Both cookies were `HttpOnly` and `SameSite=Lax`, and `document.cookie` was empty |
+| The routes work against the issuer over HTTP | `npx vitest run apps/web/test/server/auth-routes.test.ts` | Sign-in, refresh and sign-out ran on the real route modules. The issuer recorded the refresh and the revoked refresh token, and no access token appeared in a cookie or an answer |
+| A changed, expired or foreign cookie opens as nothing | `npx vitest run apps/web/test/server/cookies.test.ts` | Each case gave no session, and a 2,000-character token sealed to under 4,096 bytes |
+| An ID token can't stand in for an access token | `npx vitest run packages/subgraph-kit/test/subgraph.test.ts` | Tokens with `token_use` `id`, missing or `refresh` all gave no user, and failed before the check was added |
+| No sign-in setting reaches the browser | `npm run test:integration` | The browser bundle held none of the six setting names |
+| Every sign-in state meets WCAG 2.2 AA | `npm run test:e2e:server` | axe found no violations signed out, signed in, or on the failed page, in both themes |

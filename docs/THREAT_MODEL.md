@@ -27,6 +27,12 @@
 
 | Threat | Control | Requirement |
 |---|---|---|
+| A session cookie is read or forged | Each cookie holds one token, encrypted and authenticated with the server's key (JWE `dir`, `A256GCM`), `HttpOnly` and `SameSite=Lax`, and `Secure` with the `__Host-` prefix on HTTPS. A changed or expired one opens as no session, and each names its cookie, so one can't stand in for another. The session ends 12 hours after sign-in however often it's refreshed, and no access cookie outlives it (ADR 0020) | FR-WB-10, GR-9 |
+| Someone else's sign-in is planted in a browser, or a code is replayed | The callback needs the `state` from the browser's own sealed flow cookie, compared in constant time, and the code is redeemed with the PKCE verifier only the server holds. The flow cookie lasts ten minutes and is cleared on every callback | FR-WB-10 |
+| The callback's code appears in a load balancer's access log | Accepted: the code lasts five minutes, works once, and is useless without the PKCE verifier and client secret, which only the server holds (A-13) | FR-WB-10, GR-4 |
+| Another site signs a user out | Sign-out is a POST that must come from the app's own origin | FR-WB-10 |
+| A sign-in link sends the user elsewhere afterwards | `returnTo` must be a path on this app, or the user goes home | FR-WB-10 |
+| A token that was signed out keeps working | Sign-out revokes the refresh token, but the routers verify access tokens themselves, so one already issued lasts until it expires. Accepted: the cookie holding it is cleared at once, and the app client's access token lifetime (planned for the CDK user pool) bounds the rest | FR-WB-10 |
 | A user reads another user's workspace | User from the verified token only; every query scoped; property tests | FR-SG-1, GR-3 |
 | A forged user header reaches a subgraph | Subgraphs verify the token themselves, and security groups admit only the router | GR-3 |
 | Arbitrary queries probe or overload the API | Persisted operations only; complexity, size and rate limits; WAF | GR-2, FR-GW-4, FR-GW-5, FR-GW-6 |

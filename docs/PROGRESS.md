@@ -1,6 +1,6 @@
 # Progress
 
-**Updated:** 2026-11-18
+**Updated:** 2026-11-19
 
 Read this first. It says what's done, what's in progress and what's left, so any agent can resume after a session ends unexpectedly. Update it in the same commit as the work.
 
@@ -12,6 +12,7 @@ Traverse is built on WunderGraph Cosmo and helps frontend developers explore a f
 
 | Date | Work | PR |
 |---|---|---|
+| 2026-11-19 | `feat/web-auth`: sign-in in the server build, against a local issuer. Authorization code with PKCE and a resource indicator, so the access token's `aud` is the router (U-22 answered from the AWS docs as A-10 to A-14). No ID token, so no email reaches Traverse. The session is the two tokens, each sealed into an `HttpOnly` cookie, refreshed on the server and ended by a POST from the app's own origin (ADR 0020). `packages/subgraph-kit` now accepts only `token_use: access`. FR-WB-10 and GR-9 are `partial`: the Cognito proof waits for a real user pool. | `feat/web-auth` |
 | 2026-11-18 | `fix/public-router-allow-list`: the public router's rules are an allow-list, as the sandbox's are, so a setting with no rule fails, such as a routing override, a second listener or a telemetry export. Rules both routers share are in one place. `router/config.yaml` now keeps a GET's operation out of the access log (C-55), proven on the pinned image. Approved by the owner on 2026-11-18 (GR-1). | `fix/public-router-allow-list` |
 | 2026-11-18 | `fix/zod-range`: every workspace's `zod` range is `^4.6.6`, so none allows a version with GHSA-mrhx-c7xc-m3w5. The lockfile already installed 4.6.7, so nothing installed changes. The owner approved it on 2026-11-18. | `fix/zod-range` |
 | 2026-11-16 | `feat/package-explorer`, which closes M3. `/packages` looks a package up and checks a pasted `package.json`; `/packages/[...name]` shows a package's facts, advisories, repository, dependencies and newest versions. Two persisted operations (C-58), strict answer schemas, and a check that reads only names and ranges, at the lowest version each range allows (W-34), 100 at most, 4 at a time. Proven against npm and OSV recordings for this repository's own `packages/subgraph-kit` dependencies. FR-WB-8, FR-WB-9 and NFR-9 are done, and M3 is done. | `feat/package-explorer` |
@@ -68,13 +69,13 @@ Traverse is built on WunderGraph Cosmo and helps frontend developers explore a f
 
 ## In progress
 
-M4, run as the owner approved on 2026-11-18 (see the notes): `fix/zod-range` and `fix/public-router-allow-list`, then `feat/web-auth` and `feat/workspace-subgraph`.
+M4, run as the owner approved on 2026-11-18 (see the notes). `fix/zod-range` and `fix/public-router-allow-list` are merged, and `feat/web-auth` is built.
 
 ## Next
 
 In order:
 
-1. `feat/web-auth`, then `feat/workspace-subgraph`, following [the M4 plan](plans/m4-accounts.md), built against a local issuer (owner, 2026-11-18). Answer U-22 from the AWS docs first.
+1. `feat/workspace-subgraph`, following [the M4 plan](plans/m4-accounts.md): Postgres in Docker, `requireUser` in `packages/subgraph-kit`, four persisted operations, and Save and Open on `/impact` for a signed-in user. The router client sends the session's access token only for those operations.
 2. Ask the owner about the release pull request at the end of M4. The 0.10.0 one (#61) was closed by the owner's account on 2026-11-16, with its branch deleted, so it can't be reopened; the next `feat:` or `fix:` merge should open a new one. The owner approved merging it on 2026-11-18.
 3. Set aside by the owner on 2026-11-06: three frontend developers trying Traverse on their own repositories, for `docs/USER_FEEDBACK.md`. It's the last M1 exit item, and only the owner can arrange it.
 
@@ -86,6 +87,8 @@ In order:
 
 ## Notes for the next session
 
+- **Sign-in** (ADR 0020). The server build reads `APP_ORIGIN`, `AUTH_DOMAIN_URL`, `AUTH_CLIENT_ID`, `AUTH_CLIENT_SECRET`, `AUTH_RESOURCE` and `SESSION_KEY` together, or none, and with none nobody can sign in. `router/test/support/issuer.ts` is the local issuer: `apps/web/test/support/serve-live.ts` and `router/test/support/stack.ts` both run it, and `stack.token()` now issues Cognito-shaped access tokens bound to `https://router.traverse.test`. When the CDK user pool arrives: set the resource server's identifier to the router's audience, keep the access token lifetime short (a signed-out access token lasts until it expires), keep refresh token rotation off (the server drops a rotated token), register `${APP_ORIGIN}/auth/callback` and `${APP_ORIGIN}/`, and run the Playwright account spec against it before marking FR-WB-10 done.
+- Browser code learns only whether someone is signed in, through the `viewer` procedure. `Context.accessToken` is for `feat/workspace-subgraph`, which sends it to the router.
 - **The approved run for M4** (owner, 2026-11-18): build M4 locally, against a local OIDC issuer that issues Cognito-shaped tokens and Postgres in Docker, without waiting for account setup. A real user pool needs CDK (GR-6), so FR-WB-10 stays "built, Cognito proof pending" until the auth stack deploys. A workspace saves drafts, screens and operations, and FR-WB-11's wording widens to match. Each branch is its own pull request, merged when green.
 - If `docker` fails with "failed to connect to the docker API at …/.docker/desktop/docker.sock", Docker Desktop isn't running. The system daemon is, so set `DOCKER_CONTEXT=default`.
 - **The approved run for M3** (owner, 2026-11-16): the four branches in order, each its own pull request, merged when green. Release pull requests are left open, and the owner is asked once at the end of M3.

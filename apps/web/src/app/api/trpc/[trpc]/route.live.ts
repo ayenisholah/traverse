@@ -1,21 +1,15 @@
-import { handleApiRequest, type Context } from "../../../../server/api.ts";
-import { createPostGraphql } from "../../../../server/post-graphql.ts";
-import { createRouterClient } from "../../../../server/router-client.ts";
-import { createSandboxClient } from "../../../../server/sandbox-client.ts";
-import { readSettings } from "../../../../server/settings.ts";
+import { handleApiRequest } from "../../../../server/api.ts";
+import { serverRuntime } from "../../../../server/runtime.ts";
 
-let context: Context | undefined;
-
-// Built on the first request, because `next build` loads this module with no settings.
-const handle = (request: Request): Promise<Response> => {
-  if (context === undefined) {
-    const settings = readSettings(process.env);
-    context = {
-      router: createRouterClient(createPostGraphql({ url: settings.publicRouterUrl, fetch })),
-      sandbox: createSandboxClient(createPostGraphql({ url: settings.sandboxRouterUrl, fetch })),
-    };
-  }
-  return handleApiRequest(request, context);
+const handle = async (request: Request): Promise<Response> => {
+  const { base, auth } = serverRuntime();
+  const session = auth ? await auth.session(request) : { accessToken: undefined, setCookies: [] };
+  const answer = await handleApiRequest(request, { ...base, accessToken: session.accessToken });
+  if (session.setCookies.length === 0) return answer;
+  // A refreshed access token travels back on whatever answer this call gets.
+  const headers = new Headers(answer.headers);
+  for (const cookie of session.setCookies) headers.append("set-cookie", cookie);
+  return new Response(answer.body, { status: answer.status, headers });
 };
 
 export { handle as GET, handle as POST };

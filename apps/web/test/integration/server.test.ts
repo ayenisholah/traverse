@@ -198,6 +198,13 @@ const filesUnder = (directory: string): string[] =>
 const SERVER_ONLY = [
   "PUBLIC_ROUTER_URL",
   "SANDBOX_ROUTER_URL",
+  "APP_ORIGIN",
+  "AUTH_DOMAIN_URL",
+  "AUTH_CLIENT_ID",
+  "AUTH_CLIENT_SECRET",
+  "AUTH_RESOURCE",
+  "SESSION_KEY",
+  "oauth2/token",
   "persistedQuery",
   "sha256Hash",
   "queryPlan",

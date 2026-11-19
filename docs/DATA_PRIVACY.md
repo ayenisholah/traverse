@@ -8,6 +8,7 @@ Traverse serves real public data about open-source packages, and stores users' o
 |---|---|---|
 | Saved workspaces: schema drafts and screen maps | RDS Postgres | Until the user deletes them |
 | User identity: Cognito subject and email | Cognito | Until the account is deleted |
+| The user's access and refresh tokens, encrypted with the server's key. Never the email: Traverse asks for no ID token, so it never receives one (ADR 0020) | The user's browser, as `HttpOnly` cookies | The access token until it expires, the session 12 hours at most, both cleared on sign-out |
 | Parsed public npm, GitHub and OSV data, never raw responses, with personal fields dropped before storing | Redis, ElastiCache from M6 | Up to 2 days |
 | Rate-limit counters | ElastiCache | Short-lived |
 | Backups | RDS automated backups | 14 days |

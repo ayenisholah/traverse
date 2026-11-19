@@ -1,6 +1,6 @@
 # Requirements
 
-**Status:** Draft v2 · **Updated:** 2026-11-06
+**Status:** Draft v2 · **Updated:** 2026-11-19
 **Related:** [Specification](../SPEC.md) · [Roadmap](ROADMAP.md) · [Test strategy](TEST_STRATEGY.md)
 
 Every requirement has an ID, a testable acceptance check, how it's verified, the milestone that delivers it and a status. A requirement moves to `done` only when its check has passed and the evidence is recorded, as a test named `[ID]` or an entry in [verification](VERIFICATION.md). `partial` means some of its check is met so far.
@@ -20,7 +20,7 @@ Every requirement has an ID, a testable acceptance check, how it's verified, the
 | FR-WB-7 | Show a query's route. | The route view's subgraphs and fetch order match the plan the router returns for that operation. | e2e | M3 | done |
 | FR-WB-8 | Explore real package data. | A package's versions, repository and advisories render from the graph, and loading, empty and error states all render. | e2e | M3 | done |
 | FR-WB-9 | Vet a project's dependencies. | Pasting a real `package.json` shows licences and advisories that match npm and OSV. | integration | M3 | done |
-| FR-WB-10 | Sign in through Cognito. | Sign-in uses authorization code with PKCE, sessions expire and refresh, and signing out ends the session. | e2e | M4 | planned |
+| FR-WB-10 | Sign in through Cognito. | Sign-in uses authorization code with PKCE, sessions expire and refresh, and signing out ends the session. | e2e | M4 | partial |
 | FR-WB-11 | Save a workspace. | A signed-in user saves schema drafts and a screen map and reopens them in a new session. | e2e | M4 | planned |
 | FR-WB-12 | Use generated, typed operations. | Every operation the app sends is generated from its documents, and a schema mismatch fails the build. | contract | M3 | done |
 | FR-WB-13 | Build the UI from one design system. | Components use semantic tokens only, generated from one source, and each has state tests and an accessibility check. | unit | M1 | done |
@@ -124,7 +124,7 @@ Guardrails are enforced by tests or policy, never by convention alone.
 | GR-6 | All infrastructure comes from CDK. | Scheduled drift detection reports no differences. | infrastructure | M9 | planned |
 | GR-7 | Breaking schema changes can't merge. | The schema check is a required status on `main`. | CI | M9 | planned |
 | GR-8 | Production changes only through the approved pipeline. | Only the pipeline role can change production services. | infrastructure | M9 | planned |
-| GR-9 | Browser code can't read auth tokens or secrets. | Tokens live in `HttpOnly`, `Secure` cookies, and the client bundle contains no secrets. | e2e | M3 | planned |
+| GR-9 | Browser code can't read auth tokens or secrets. | Tokens live in `HttpOnly`, `Secure` cookies, and the client bundle contains no secrets. | e2e | M3 | partial |
 | GR-10 | Licensed design assets enter the repository only after their licence is confirmed. | A written record of the licence check exists before any Frox-derived file is merged. | review | M1 | done |
 | GR-11 | The sandbox router is never reachable from the internet and can't run mutations. | A test finds no public route to it, and a mutation sent to it is rejected. | e2e | M3 | planned |
 | GR-12 | Model output is shown only after validation. | An invalid suggestion or operation from the model never reaches the user. | integration | M5 | planned |
