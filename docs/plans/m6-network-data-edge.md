@@ -2,6 +2,10 @@
 
 **Needs:** [account setup](account-setup.md), and owner approval of the first deployment.
 
+## Status
+
+Built locally, as M4 and M5 were (owner, 2026-11-19): stacks are proven by synthesis, cdk-nag and assertions, and nothing is deployed. Traverse gets its own AWS account, so the stacks name none (ADR 0023). `feat/network-stack` is merged.
+
 ## Work
 
 1. `feat/network-stack`: VPC across 3 zones, NAT, S3 gateway endpoint, flow logs.

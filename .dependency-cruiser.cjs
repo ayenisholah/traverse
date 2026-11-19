@@ -24,6 +24,13 @@ module.exports = {
       to: { path: "^(subgraphs|apps|infra)/" },
     },
     {
+      name: "nothing-imports-infrastructure",
+      comment: "Infrastructure reads the code it deploys; nothing else reads infrastructure.",
+      severity: "error",
+      from: { path: "^(apps|subgraphs|scripts|router)/" },
+      to: { path: "^infra/" },
+    },
+    {
       name: "subgraphs-do-not-import-subgraphs",
       severity: "error",
       from: { path: "^subgraphs/([^/]+)/" },

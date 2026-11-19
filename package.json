@@ -11,7 +11,8 @@
   "workspaces": [
     "apps/*",
     "packages/*",
-    "subgraphs/*"
+    "subgraphs/*",
+    "infra"
   ],
   "scripts": {
     "lint": "eslint . --max-warnings 0",
@@ -27,6 +28,7 @@
     "test:e2e:server": "TRAVERSE_BUILD=server playwright test --config apps/web/playwright.config.ts",
     "test:demo": "BASE_PATH=/traverse npm run build:web && BASE_PATH=/traverse npm run test:e2e",
     "test:router": "vitest run --config vitest.router.config.ts",
+    "synth:infra": "npm run synth -w @traverse/infra",
     "generate:tokens": "node scripts/generate-tokens.ts",
     "generate:demo": "node scripts/generate-demo-graph.ts",
     "generate:router": "node scripts/generate-router.ts",
@@ -36,7 +38,7 @@
     "check:hygiene": "node scripts/repo-check.ts hygiene",
     "check:traceability": "node scripts/repo-check.ts traceability",
     "check:progress": "node scripts/check-progress.ts",
-    "check": "npm run format:check && npm run lint && npm run typecheck && npm run check:deps && npm run check:dupes && npm run check:unused && npm run check:hygiene && npm run check:traceability && npm run check:progress && npm run test:coverage && npm run build:web && npm run build:server && npm run test:integration && npm run test:e2e && npm run test:e2e:server && npm run test:demo",
+    "check": "npm run format:check && npm run lint && npm run typecheck && npm run check:deps && npm run check:dupes && npm run check:unused && npm run check:hygiene && npm run check:traceability && npm run check:progress && npm run test:coverage && npm run synth:infra && npm run build:web && npm run build:server && npm run test:integration && npm run test:e2e && npm run test:e2e:server && npm run test:demo",
     "prepare": "lefthook install"
   },
   "devDependencies": {

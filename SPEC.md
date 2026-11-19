@@ -95,6 +95,8 @@ flowchart TD
 | Staging     | Proving changes, load and resilience tests | Same stacks, smaller, single NAT gateway   |
 | Production  | Live traffic                               | 3 Availability Zones, Multi-AZ data stores |
 
+Both are built from `infra/` in CDK. Stacks name a Region and never an account, so they deploy into the account of whoever deploys them, and synthesis looks nothing up ([ADR 0023](docs/adr/0023-account-free-infrastructure.md)). Traverse gets its own account. The network stack spreads a VPC over three zones, with public subnets for the load balancer, subnets with a NAT route for services, and data subnets with no route out, not even to S3. Flow logs go to a log group encrypted with its own key.
+
 ### Router sizing
 
 Production starts with 3 tasks of 2 vCPU and 4 GB, and scales to 9 on CPU and requests per target. Tasks share their resources with the Service Connect proxy and the ADOT sidecar, so load tests confirm the final size.

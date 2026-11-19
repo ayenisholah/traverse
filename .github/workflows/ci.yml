@@ -47,6 +47,8 @@ jobs:
         run: npm run check:progress -- "${{ github.event.pull_request.base.sha }}"
       - name: Tests with 100% coverage gate
         run: npm run test:coverage
+      - name: Infrastructure synthesized offline, with cdk-nag
+        run: npm run synth:infra
       - name: Static export of the web app
         run: npm run build:web
       - name: Server build of the web app

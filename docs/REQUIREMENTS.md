@@ -120,7 +120,7 @@ Guardrails are enforced by tests or policy, never by convention alone.
 | GR-2 | The public production router runs persisted operations only. | A non-persisted operation is rejected. | e2e | M2 | done |
 | GR-3 | The user ID comes from the verified JWT, never client input. | No operation accepts a user ID, and a forged header has no effect. | integration | M4 | done |
 | GR-4 | GraphQL variables, personal data and secrets never reach logs or telemetry. | Variables sent in a test request appear in no log, span or metric. | e2e | M8 | planned |
-| GR-5 | No long-lived AWS keys anywhere. | A CDK test rejects IAM users and access keys, and CI holds no AWS secrets. | infrastructure | M6 | planned |
+| GR-5 | No long-lived AWS keys anywhere. | A CDK test rejects IAM users and access keys, and CI holds no AWS secrets. | infrastructure | M6 | done |
 | GR-6 | All infrastructure comes from CDK. | Scheduled drift detection reports no differences. | infrastructure | M9 | planned |
 | GR-7 | Breaking schema changes can't merge. | The schema check is a required status on `main`. | CI | M9 | planned |
 | GR-8 | Production changes only through the approved pipeline. | Only the pipeline role can change production services. | infrastructure | M9 | planned |
