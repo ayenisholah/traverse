@@ -247,3 +247,16 @@ Run on 2026-11-19, against the local stand-in in `router/test/support/model-stub
 | The scrubber can't be made slow | `npx vitest run apps/web/test/server/assistant/prompt.test.ts` | Long runs of letters, `eyJ`, private-key headers, `@` and `Bearer`, each as large as a call may carry, were all scrubbed in under 500 ms together. The first email pattern took over 8 seconds on 60,000 letters, and the review found the first JWT pattern took 4 seconds on repeated `eyJ`; both were replaced |
 | Local runs never use the machine's AWS credentials | `npx vitest run apps/web/test/server/assistant/runtime.test.ts` | With an AWS key in the environment, the stand-in saw requests signed by the test key, never that one |
 | Nothing about a call is written out | The same | An answered call and a failed one wrote nothing to stdout, stderr or the console, and the planted email reached no prompt |
+
+## Explanations (FR-AI-1, FR-AI-4, GR-12, GR-14)
+
+Run on 2026-11-19, against the local stand-in. No real model has been called, so FR-AI-1 is `partial`.
+
+| Check | Command | What it showed |
+|---|---|---|
+| A breaking change is explained, naming its field | `npm run test:e2e:server` | After removing `Details.maritalStatus`, the panel showed the stand-in's explanation with `(Details.maritalStatus)` and the AI notice, by mouse and by keyboard |
+| An answer about something else is never shown | The same, and `npx vitest run apps/web/test/server/assistant/explain.test.ts` | An answer naming `Secret.token` showed "Couldn't explain this", and its text never appeared. Also refused: a field named only in a sentence, no field at all about a result that names some, a link in any form (fullwidth, with an invisible character, `mailto:`, `javascript:`, a bare domain), markup, markdown, code, an email address, and a web address taken from an error as if it were a field |
+| With the model blocked, the check's result stands | `npm run test:e2e:server` | The panel said the assistant isn't available, and the result still listed `Details.maritalStatus` as removed. Every other browser test ran with the assistant on |
+| Nobody signed out is offered it | The same | Signed out, the check ran and no explanation panel appeared. The procedure refused a missing session and a token with no subject with 401 |
+| No planted secret reaches a prompt, and nothing is printed | `npm run test:integration` | On the built server, a signed-in explain call carrying a planted email and token sent neither to the stand-in, and the server's output held neither, nor the prompt, the answer or the field it was about, for an answered call and a failed one |
+| Explanations meet WCAG 2.2 AA | `npm run test:e2e:server` | axe found nothing with an explanation shown or refused, in both themes |

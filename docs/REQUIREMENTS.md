@@ -34,10 +34,10 @@ The assistant only adds to deterministic results, through Amazon Bedrock.
 
 | ID | Requirement | Acceptance check | Verified by | Milestone | Status |
 |---|---|---|---|---|---|
-| FR-AI-1 | Explain results. | Composition errors and impact results get a plain explanation that names the real fields involved. | integration | M5 | planned |
+| FR-AI-1 | Explain results. | Composition errors and impact results get a plain explanation that names the real fields involved. | integration | M5 | partial |
 | FR-AI-2 | Suggest a safe change. | A suggested migration is shown only if it passes real composition. | integration | M5 | planned |
 | FR-AI-3 | Draft an operation. | A drafted operation reaches the editor only if it validates against the schema. | integration | M5 | planned |
-| FR-AI-4 | Work without AI. | With Bedrock blocked, every deterministic feature still works and the assistant says it's unavailable. | e2e | M5 | planned |
+| FR-AI-4 | Work without AI. | With Bedrock blocked, every deterministic feature still works and the assistant says it's unavailable. | e2e | M5 | done |
 
 ## Gateway
 
@@ -127,8 +127,8 @@ Guardrails are enforced by tests or policy, never by convention alone.
 | GR-9 | Browser code can't read auth tokens or secrets. | Tokens live in `HttpOnly`, `Secure` cookies, and the client bundle contains no secrets. | e2e | M3 | partial |
 | GR-10 | Licensed design assets enter the repository only after their licence is confirmed. | A written record of the licence check exists before any Frox-derived file is merged. | review | M1 | done |
 | GR-11 | The sandbox router is never reachable from the internet and can't run mutations. | A test finds no public route to it, and a mutation sent to it is rejected. | e2e | M3 | planned |
-| GR-12 | Model output is shown only after validation. | An invalid suggestion or operation from the model never reaches the user. | integration | M5 | planned |
+| GR-12 | Model output is shown only after validation. | An invalid suggestion or operation from the model never reaches the user. | integration | M5 | partial |
 | GR-13 | User schemas and upstream text are data, never instructions. | An instruction planted in a schema comment or README doesn't change the assistant's behaviour. | integration | M5 | partial |
-| GR-14 | Prompts carry no tokens or personal data, and aren't logged. | A test inspects each prompt and the logs for planted secrets. | integration | M5 | partial |
+| GR-14 | Prompts carry no tokens or personal data, and aren't logged. | A test inspects each prompt and the logs for planted secrets. | integration | M5 | done |
 | GR-15 | AI use is bounded. | Calls over the per-session limit are refused, and a spend alarm exists before the first call. | integration | M5 | partial |
 | GR-16 | Maintainer emails are never stored, shown or sent to a model. | A real npm response's emails appear in no field, row or prompt. | integration | M2 | done |

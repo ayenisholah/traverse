@@ -9,7 +9,8 @@ import { parseManifest } from "./manifest.ts";
 import { loadPackagePage } from "./package-page.ts";
 import { readCapped } from "./read-capped.ts";
 import type { RouterClient } from "./router-client.ts";
-import type { Assistant } from "./assistant/assistant.ts";
+import { subjectOf, type Assistant } from "./assistant/assistant.ts";
+import { explain, explainInput } from "./assistant/explain.ts";
 import type { SandboxClient } from "./sandbox-client.ts";
 import {
   deleteWorkspace,
@@ -129,6 +130,15 @@ const api = t.router({
     .mutation(({ ctx, input }) =>
       deleteWorkspace(ctx.router, signedInToken(ctx.accessToken), input.id),
     ),
+
+  // A mutation, so the result travels in a POST body. Only a signed-in user may ask, and the
+  // answer is shown only once it's checked against this result (GR-12, GR-15).
+  explain: t.procedure.input(explainInput).mutation(async ({ ctx, input }) => {
+    const userId = subjectOf(signedInToken(ctx.accessToken));
+    if (userId === undefined) throw new TRPCError({ code: "UNAUTHORIZED" });
+    if (ctx.assistant === undefined) return { kind: "unavailable" as const };
+    return explain(ctx.assistant, userId, input);
+  }),
 
   package: t.procedure.input(packageInput).query(async ({ ctx, input }) => {
     const result = await ctx.router.run(PackageOperation, {

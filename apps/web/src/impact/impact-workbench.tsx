@@ -2,6 +2,7 @@
 
 import type { SubgraphInput } from "@traverse/graph-core";
 import { useMemo, useState } from "react";
+import { ExplainPanel } from "../assistant/explain-panel.tsx";
 import { WorkspaceBar, type WorkbenchState } from "../workspaces/workspace-bar.tsx";
 import { createComposeWorker } from "./create-worker.ts";
 import { SubgraphPicker, TextField } from "./draft-fields.tsx";
@@ -105,6 +106,9 @@ export function ImpactWorkbench({
             Results
           </h2>
           <ImpactResults state={state} />
+          {live ? (
+            <ExplainPanel report={state.status === "done" ? state.report : undefined} />
+          ) : null}
         </section>
       </div>
     </>
