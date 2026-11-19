@@ -1,6 +1,12 @@
 import { createHash } from "node:crypto";
 import { generateKeyPair } from "jose";
-import { PackageOperation } from "../../../apps/web/src/generated/operations.ts";
+import {
+  DeleteWorkspaceOperation,
+  PackageOperation,
+  SaveWorkspaceOperation,
+  WorkspaceOperation,
+  WorkspacesOperation,
+} from "../../../apps/web/src/generated/operations.ts";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { recordings as advisories } from "../../../subgraphs/advisories/test/helpers.ts";
 import { fixture } from "../../../subgraphs/packages/test/helpers.ts";
@@ -265,5 +271,83 @@ describe("the public router", { timeout: 60_000 }, () => {
     });
 
     expect(response.headers.get("access-control-allow-origin")).toBeNull();
+  });
+});
+
+/** The subgraph's own message, which the router wraps in its default mode (C-57). */
+const subgraphMessage = (json: GraphqlResponse) =>
+  (json.errors?.[0] as { extensions?: { errors?: { message: string }[] } } | undefined)?.extensions
+    ?.errors?.[0]?.message;
+
+describe("workspaces through the public router", { timeout: 60_000 }, () => {
+  const drafts = [{ subgraph: "packages", sdl: "type Query { a: String }" }];
+  const saveAs = async (sub: string, name: string, id?: string) =>
+    post(
+      persisted(SaveWorkspaceOperation.sha256, { id, name, drafts, operations: "query A { a }" }),
+      bearer(await stack.token({ sub })),
+    );
+
+  it("[FR-WB-11] saves, lists, reopens and deletes a signed-in user's workspace", async () => {
+    const { json: saved } = await saveAs("ada", "Checkout");
+    const id = (saved.data?.saveWorkspace as { id: string }).id;
+    const ada = bearer(await stack.token({ sub: "ada" }));
+
+    const { json: list } = await post(persisted(WorkspacesOperation.sha256), ada);
+    expect(list.data?.workspaces).toEqual([expect.objectContaining({ id, name: "Checkout" })]);
+    const { json: one } = await post(persisted(WorkspaceOperation.sha256, { id }), ada);
+    expect(one.data?.workspace).toMatchObject({ id, drafts, operations: "query A { a }" });
+    const { json: gone } = await post(persisted(DeleteWorkspaceOperation.sha256, { id }), ada);
+    expect(gone.data).toEqual({ deleteWorkspace: true });
+  });
+
+  it("[FR-SG-1] one user reaches no part of another's workspace through any operation", async () => {
+    const { json: saved } = await saveAs("ada", "Private");
+    const id = (saved.data?.saveWorkspace as { id: string }).id;
+    const grace = bearer(await stack.token({ sub: "grace" }));
+
+    const { json: list } = await post(persisted(WorkspacesOperation.sha256), grace);
+    expect(list.data?.workspaces).toEqual([]);
+    const { json: one } = await post(persisted(WorkspaceOperation.sha256, { id }), grace);
+    expect(one.data?.workspace).toBeNull();
+    const { json: taken } = await saveAs("grace", "Taken", id);
+    expect(subgraphMessage(taken)).toBe("No such workspace.");
+    const { json: deleted } = await post(persisted(DeleteWorkspaceOperation.sha256, { id }), grace);
+    expect(deleted.data).toEqual({ deleteWorkspace: false });
+
+    const ada = bearer(await stack.token({ sub: "ada" }));
+    const { json: still } = await post(persisted(WorkspaceOperation.sha256, { id }), ada);
+    expect(still.data?.workspace).toMatchObject({ id, name: "Private" });
+  });
+
+  it("[GR-3] a forged user header has no effect, with or without a token", async () => {
+    const { json: saved } = await saveAs("ada", "Forged");
+    const id = (saved.data?.saveWorkspace as { id: string }).id;
+
+    const { json: anonymous } = await post(persisted(WorkspaceOperation.sha256, { id }), {
+      "x-user-id": "ada",
+      "x-forwarded-user": "ada",
+    });
+    expect(subgraphMessage(anonymous)).toBe("Sign in first.");
+    const { json: other } = await post(persisted(WorkspaceOperation.sha256, { id }), {
+      ...bearer(await stack.token({ sub: "grace" })),
+      "x-user-id": "ada",
+    });
+    expect(other.data?.workspace).toBeNull();
+  });
+
+  it("[GR-3] refuses every workspace operation with no token, and a bad one before any subgraph", async () => {
+    for (const body of [
+      persisted(WorkspacesOperation.sha256),
+      persisted(SaveWorkspaceOperation.sha256, { name: "x", drafts, operations: "" }),
+    ]) {
+      const { json } = await post(body);
+      expect(subgraphMessage(json)).toBe("Sign in first.");
+    }
+    const before = await stack.subgraphRequests();
+    const idToken = await stack.token({ sub: "ada", audience: "traverse-web" });
+    const { status } = await post(persisted(WorkspacesOperation.sha256), bearer(idToken));
+
+    expect(status).toBe(401);
+    expect(await stack.subgraphRequests()).toBe(before);
   });
 });

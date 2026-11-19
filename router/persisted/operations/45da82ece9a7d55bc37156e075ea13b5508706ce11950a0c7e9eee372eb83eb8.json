@@ -1,0 +1,1 @@
+{"version":1,"body":"query Workspace($id: ID!) {\n  workspace(id: $id) {\n    id\n    name\n    drafts {\n      subgraph\n      sdl\n    }\n    operations\n    screenMap\n    updatedAt\n  }\n}\n"}

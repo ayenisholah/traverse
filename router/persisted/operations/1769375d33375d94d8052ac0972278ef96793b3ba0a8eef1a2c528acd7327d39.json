@@ -1,0 +1,1 @@
+{"version":1,"body":"mutation SaveWorkspace(\n  $id: ID\n  $name: String!\n  $drafts: [SchemaDraftInput!]!\n  $operations: String!\n  $screenMap: String\n) {\n  saveWorkspace(\n    id: $id\n    name: $name\n    drafts: $drafts\n    operations: $operations\n    screenMap: $screenMap\n  ) {\n    id\n    name\n    updatedAt\n  }\n}\n"}
