@@ -1,0 +1,36 @@
+# No entity key: nothing else in the graph refers to a workspace, so there's no lookup by ID that
+# another subgraph's plan could reach. Every field reads the verified user's own rows (GR-3).
+type Workspace {
+  id: ID!
+  name: String!
+  drafts: [SchemaDraft!]!
+  operations: String!
+  screenMap: String
+  updatedAt: String!
+}
+
+type SchemaDraft {
+  subgraph: String!
+  sdl: String!
+}
+
+input SchemaDraftInput {
+  subgraph: String!
+  sdl: String!
+}
+
+type Query {
+  workspaces: [Workspace!]!
+  workspace(id: ID!): Workspace
+}
+
+type Mutation {
+  saveWorkspace(
+    id: ID
+    name: String!
+    drafts: [SchemaDraftInput!]!
+    operations: String!
+    screenMap: String
+  ): Workspace!
+  deleteWorkspace(id: ID!): Boolean!
+}

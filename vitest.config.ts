@@ -20,7 +20,11 @@ export default defineConfig({
             // The web app's server code, which runs in Node and never in a browser.
             "apps/*/test/server/**/*.test.ts",
           ],
-          exclude: ["{packages,subgraphs}/*/test/integration/**"],
+          exclude: [
+            "{packages,subgraphs}/*/test/integration/**",
+            // These need Docker, so they run with test:router.
+            "subgraphs/*/test/postgres/**",
+          ],
           environment: "node",
         },
       },
