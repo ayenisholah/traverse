@@ -16,15 +16,20 @@ beforeAll(async () => {
     ...["run", "--detach", "--rm", "--name", NAME],
     ...["--publish", `127.0.0.1:${String(PORT)}:6379`, REDIS_IMAGE],
   ]);
-  probe = new Redis(URL, { lazyConnect: true });
-  for (let attempt = 0; attempt < 80; attempt += 1) {
-    if (
-      await probe.connect().then(
-        () => true,
-        () => false,
-      )
-    )
+  // Asks Redis itself, because an ioredis client that missed its first connection keeps
+  // reconnecting on its own schedule and refuses a second connect() meanwhile.
+  for (let attempt = 0; attempt < 120; attempt += 1) {
+    const pong = (() => {
+      try {
+        return execFileSync("docker", ["exec", NAME, "redis-cli", "ping"], { encoding: "utf8" });
+      } catch {
+        return "";
+      }
+    })();
+    if (pong.trim() === "PONG") {
+      probe = new Redis(URL);
       return;
+    }
     await new Promise((done) => setTimeout(done, 250));
   }
   throw new Error("Redis never became ready");
