@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.11.0](https://github.com/ayenisholah/traverse/compare/v0.10.0...v0.11.0) (2026-11-20)
+
+
+### Features
+
+* **infra:** add the data stack, encrypted and on TLS only ([1c12b0a](https://github.com/ayenisholah/traverse/commit/1c12b0a069358a72308ce9c2366a68b84af77486))
+* **infra:** add the edge and budget stacks ([8ef90fc](https://github.com/ayenisholah/traverse/commit/8ef90fce24be7215b54a9f29e133c0adf680aa99))
+* **infra:** add the network stack, with guardrails over every stack ([91a55d4](https://github.com/ayenisholah/traverse/commit/91a55d4f3f16ce48157ad664ae8f444529ed48f1))
+* **web:** draft an operation from a description ([50b5025](https://github.com/ayenisholah/traverse/commit/50b50251785f5102583c2ac6cbeae73b7492a7e2))
+* **web:** explain a schema check's result for a signed-in user ([78f58d3](https://github.com/ayenisholah/traverse/commit/78f58d33a864759d14849f27ed9994c8e55a5760))
+* **web:** reach a model only through a validated, fenced, counted port ([71d281a](https://github.com/ayenisholah/traverse/commit/71d281a309aef5fe6850bc9f0307986d2232a903))
+* **web:** suggest a safe change to a breaking draft ([6ec1176](https://github.com/ayenisholah/traverse/commit/6ec1176495e80cb66fca7467d5ab557cde85d0d0))
+
+
+### Bug Fixes
+
+* **web:** hold a drafted operation to what the routers would really run ([0d3c446](https://github.com/ayenisholah/traverse/commit/0d3c4460a72c90d18cdb14d2403b3109b06e6e5f))
+
 ## [0.10.0](https://github.com/ayenisholah/traverse/compare/v0.9.1...v0.10.0) (2026-11-19)
 
 
